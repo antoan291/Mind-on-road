@@ -1,0 +1,838 @@
+import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router';
+import { 
+  PageHeader, Badge, Button 
+} from '../components/shared';
+import { 
+  ArrowLeft, Download, Calendar as CalendarIcon, 
+  Clock, Users, BookOpen, CheckCircle, 
+  ChevronDown, ChevronUp, User, MessageCircle,
+  AlertCircle, TrendingUp, Target, MapPin, Phone
+} from 'lucide-react';
+
+type AttendanceStatus = 'present' | 'absent' | 'excused' | 'late' | 'not-marked';
+
+type Student = {
+  id: number;
+  name: string;
+  phone: string;
+  parentPhone?: string;
+  category: string;
+  attendanceCount: number;
+  absenceCount: number;
+};
+
+type LectureAttendance = {
+  studentId: number;
+  status: AttendanceStatus;
+  viber: boolean;
+  markedAt?: string;
+  markedBy?: string;
+};
+
+type Lecture = {
+  id: number;
+  number: number;
+  title: string;
+  date: string;
+  time: string;
+  endTime: string;
+  instructor: string;
+  location: string;
+  status: 'scheduled' | 'in-progress' | 'completed' | 'canceled';
+  attendance: LectureAttendance[];
+};
+
+type TheoryGroup = {
+  id: number;
+  name: string;
+  category: string;
+  startDate: string;
+  endDate?: string;
+  schedule: string;
+  totalLectures: number;
+  completedLectures: number;
+  students: Student[];
+  lectures: Lecture[];
+};
+
+// Mock data
+const MOCK_GROUP: TheoryGroup = {
+  id: 1,
+  name: 'B-2024-03-Утро',
+  category: 'B',
+  startDate: '2024-03-01',
+  schedule: 'Понеделник и Сряда, 09:00 - 12:00',
+  totalLectures: 28,
+  completedLectures: 12,
+  students: [
+    {
+      id: 1,
+      name: 'Мария Иванова',
+      phone: '+359 88 123 4567',
+      parentPhone: '+359 88 111 2222',
+      category: 'B',
+      attendanceCount: 12,
+      absenceCount: 0,
+    },
+    {
+      id: 2,
+      name: 'Георги Димитров',
+      phone: '+359 88 234 5678',
+      category: 'B',
+      attendanceCount: 11,
+      absenceCount: 1,
+    },
+    {
+      id: 3,
+      name: 'Елена Стоянова',
+      phone: '+359 88 345 6789',
+      parentPhone: '+359 88 333 4444',
+      category: 'B',
+      attendanceCount: 9,
+      absenceCount: 3,
+    },
+    {
+      id: 4,
+      name: 'Иван Петров',
+      phone: '+359 88 456 7890',
+      category: 'B',
+      attendanceCount: 12,
+      absenceCount: 0,
+    },
+    {
+      id: 5,
+      name: 'Александра Георгиева',
+      phone: '+359 88 567 8901',
+      parentPhone: '+359 88 555 6666',
+      category: 'B',
+      attendanceCount: 10,
+      absenceCount: 2,
+    },
+    {
+      id: 6,
+      name: 'Николай Василев',
+      phone: '+359 88 678 9012',
+      category: 'B',
+      attendanceCount: 12,
+      absenceCount: 0,
+    },
+  ],
+  lectures: [
+    {
+      id: 101,
+      number: 13,
+      title: 'Пътни знаци - продължение',
+      date: '2024-03-24',
+      time: '09:00',
+      endTime: '12:00',
+      instructor: 'Иван Петров',
+      location: 'Зала 1',
+      status: 'scheduled',
+      attendance: [],
+    },
+    {
+      id: 102,
+      number: 12,
+      title: 'Основни пътни знаци',
+      date: '2024-03-22',
+      time: '09:00',
+      endTime: '12:00',
+      instructor: 'Иван Петров',
+      location: 'Зала 1',
+      status: 'completed',
+      attendance: [
+        { studentId: 1, status: 'present', viber: false, markedAt: '2024-03-22 09:15', markedBy: 'Иван Петров' },
+        { studentId: 2, status: 'present', viber: false, markedAt: '2024-03-22 09:15', markedBy: 'Иван Петров' },
+        { studentId: 3, status: 'absent', viber: true, markedAt: '2024-03-22 09:20', markedBy: 'Иван Петров' },
+        { studentId: 4, status: 'present', viber: false, markedAt: '2024-03-22 09:15', markedBy: 'Иван Петров' },
+        { studentId: 5, status: 'present', viber: false, markedAt: '2024-03-22 09:15', markedBy: 'Иван Петров' },
+        { studentId: 6, status: 'late', viber: false, markedAt: '2024-03-22 09:30', markedBy: 'Иван Петров' },
+      ],
+    },
+    {
+      id: 103,
+      number: 11,
+      title: 'Пътна маркировка',
+      date: '2024-03-20',
+      time: '09:00',
+      endTime: '12:00',
+      instructor: 'Иван Петров',
+      location: 'Зала 1',
+      status: 'completed',
+      attendance: [
+        { studentId: 1, status: 'present', viber: false },
+        { studentId: 2, status: 'present', viber: false },
+        { studentId: 3, status: 'present', viber: false },
+        { studentId: 4, status: 'present', viber: false },
+        { studentId: 5, status: 'absent', viber: true },
+        { studentId: 6, status: 'present', viber: false },
+      ],
+    },
+  ],
+};
+
+export function TheoryGroupPage() {
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const [expandedLecture, setExpandedLecture] = useState<number | null>(null);
+  const [attendanceData, setAttendanceData] = useState<Record<number, Record<number, AttendanceStatus>>>({});
+  const [viberSent, setViberSent] = useState<Record<string, boolean>>({});
+
+  const group = MOCK_GROUP; // In real app, fetch by id
+  const nextLecture = group.lectures.find(l => l.status === 'scheduled');
+  const remainingLectures = group.totalLectures - group.completedLectures;
+
+  const toggleLecture = (lectureId: number) => {
+    setExpandedLecture(expandedLecture === lectureId ? null : lectureId);
+  };
+
+  const handleMarkAttendance = (lectureId: number, studentId: number, status: AttendanceStatus) => {
+    setAttendanceData(prev => ({
+      ...prev,
+      [lectureId]: {
+        ...(prev[lectureId] || {}),
+        [studentId]: status,
+      },
+    }));
+  };
+
+  const handleSendViber = (lectureId: number, studentId: number) => {
+    const key = `${lectureId}-${studentId}`;
+    setViberSent(prev => ({ ...prev, [key]: true }));
+    
+    // In real app, trigger Viber message API
+    console.log('Sending Viber message for lecture', lectureId, 'student', studentId);
+  };
+
+  const getAttendanceStatus = (lectureId: number, studentId: number): AttendanceStatus => {
+    // Check if manually marked
+    if (attendanceData[lectureId]?.[studentId]) {
+      return attendanceData[lectureId][studentId];
+    }
+    
+    // Check saved attendance
+    const lecture = group.lectures.find(l => l.id === lectureId);
+    const saved = lecture?.attendance.find(a => a.studentId === studentId);
+    if (saved) {
+      return saved.status;
+    }
+    
+    return 'not-marked';
+  };
+
+  const isViberSent = (lectureId: number, studentId: number): boolean => {
+    const key = `${lectureId}-${studentId}`;
+    if (viberSent[key]) return true;
+    
+    const lecture = group.lectures.find(l => l.id === lectureId);
+    const saved = lecture?.attendance.find(a => a.studentId === studentId);
+    return saved?.viber || false;
+  };
+
+  const getAttendanceSummary = (lectureId: number) => {
+    const lecture = group.lectures.find(l => l.id === lectureId);
+    let present = 0;
+    let absent = 0;
+    let late = 0;
+    let notMarked = 0;
+
+    group.students.forEach(student => {
+      const status = getAttendanceStatus(lectureId, student.id);
+      if (status === 'present') present++;
+      else if (status === 'absent') absent++;
+      else if (status === 'late') late++;
+      else notMarked++;
+    });
+
+    return { present, absent, late, notMarked, total: group.students.length };
+  };
+
+  return (
+    <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
+      {/* Page Header */}
+      <PageHeader
+        title={group.name}
+        description={`Категория ${group.category} • ${group.schedule}`}
+        breadcrumbs={[
+          { label: 'Начало', onClick: () => navigate('/') },
+          { label: 'Теория', onClick: () => navigate('/theory') },
+          { label: group.name }
+        ]}
+        actions={
+          <div className="flex items-center gap-3">
+            <Button
+              variant="secondary"
+              icon={<ArrowLeft size={18} />}
+              onClick={() => navigate('/theory')}
+            >
+              Назад към групи
+            </Button>
+            <Button
+              variant="secondary"
+              icon={<Download size={18} />}
+            >
+              Експорт присъствие
+            </Button>
+          </div>
+        }
+      />
+
+      {/* Group Summary */}
+      <div className="px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Total Students */}
+          <div
+            className="rounded-xl p-6"
+            style={{ background: 'var(--bg-card)' }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className="p-2 rounded-lg"
+                style={{ background: 'rgba(99, 102, 241, 0.1)' }}
+              >
+                <Users size={20} style={{ color: 'var(--accent-primary)' }} />
+              </div>
+              <span
+                className="text-2xl font-semibold"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                {group.students.length}
+              </span>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
+              Курсисти
+            </p>
+          </div>
+
+          {/* Completed Lectures */}
+          <div
+            className="rounded-xl p-6"
+            style={{ background: 'var(--bg-card)' }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className="p-2 rounded-lg"
+                style={{ background: 'rgba(34, 197, 94, 0.1)' }}
+              >
+                <CheckCircle size={20} style={{ color: '#22c55e' }} />
+              </div>
+              <span
+                className="text-2xl font-semibold"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                {group.completedLectures}
+              </span>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
+              Проведени лекции
+            </p>
+          </div>
+
+          {/* Remaining Lectures */}
+          <div
+            className="rounded-xl p-6"
+            style={{ background: 'var(--bg-card)' }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className="p-2 rounded-lg"
+                style={{ background: 'rgba(167, 139, 250, 0.1)' }}
+              >
+                <BookOpen size={20} style={{ color: 'var(--accent-ai)' }} />
+              </div>
+              <span
+                className="text-2xl font-semibold"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                {remainingLectures}
+              </span>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
+              Оставащи лекции
+            </p>
+          </div>
+
+          {/* Progress */}
+          <div
+            className="rounded-xl p-6"
+            style={{ background: 'var(--bg-card)' }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className="p-2 rounded-lg"
+                style={{ background: 'rgba(99, 102, 241, 0.1)' }}
+              >
+                <TrendingUp size={20} style={{ color: 'var(--accent-primary)' }} />
+              </div>
+              <span
+                className="text-2xl font-semibold"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                {Math.round((group.completedLectures / group.totalLectures) * 100)}%
+              </span>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
+              Прогрес
+            </p>
+          </div>
+
+          {/* Next Lecture */}
+          <div
+            className="rounded-xl p-6"
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid rgba(99, 102, 241, 0.2)',
+            }}
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div
+                className="p-2 rounded-lg"
+                style={{ background: 'rgba(99, 102, 241, 0.1)' }}
+              >
+                <CalendarIcon size={20} style={{ color: 'var(--accent-primary)' }} />
+              </div>
+              <span
+                className="text-xl font-semibold"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                {nextLecture ? new Date(nextLecture.date).toLocaleDateString('bg-BG', {
+                  day: 'numeric',
+                  month: 'short',
+                }) : '-'}
+              </span>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
+              {nextLecture ? `Следваща: ${nextLecture.time}` : 'Няма планирани'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Lectures List - Main Workspace */}
+      <div className="px-6 lg:px-8 pb-8">
+        <div className="mb-6">
+          <h2
+            className="text-xl font-semibold mb-2"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            Лекции и присъствие
+          </h2>
+          <p style={{ color: 'var(--text-tertiary)', fontSize: '0.9375rem' }}>
+            Кликнете върху лекция, за да маркирате присъствие за всички курсисти
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {group.lectures.map((lecture) => {
+            const isExpanded = expandedLecture === lecture.id;
+            const isToday = lecture.date === '2024-03-24' || lecture.date === '2026-03-24';
+            const summary = getAttendanceSummary(lecture.id);
+
+            return (
+              <div
+                key={lecture.id}
+                className="rounded-xl overflow-hidden"
+                style={{
+                  background: 'var(--bg-card)',
+                  border: isToday ? '2px solid rgba(99, 102, 241, 0.3)' : 'none',
+                }}
+              >
+                {/* Lecture Header */}
+                <button
+                  onClick={() => toggleLecture(lecture.id)}
+                  className="w-full p-6 text-left transition-all hover:bg-white/[0.02]"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <h3
+                          className="text-xl font-semibold"
+                          style={{ color: 'var(--text-primary)' }}
+                        >
+                          Лекция {lecture.number}: {lecture.title}
+                        </h3>
+                        {lecture.status === 'completed' && (
+                          <Badge variant="green">Проведена</Badge>
+                        )}
+                        {lecture.status === 'scheduled' && isToday && (
+                          <Badge variant="purple">Днес</Badge>
+                        )}
+                        {lecture.status === 'scheduled' && !isToday && (
+                          <Badge variant="blue">Планирана</Badge>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-6 mb-3">
+                        <div className="flex items-center gap-2">
+                          <CalendarIcon size={16} style={{ color: 'var(--text-tertiary)' }} />
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
+                            {new Date(lecture.date).toLocaleDateString('bg-BG', {
+                              day: 'numeric',
+                              month: 'long',
+                              year: 'numeric',
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock size={16} style={{ color: 'var(--text-tertiary)' }} />
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
+                            {lecture.time} - {lecture.endTime}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <User size={16} style={{ color: 'var(--text-tertiary)' }} />
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
+                            {lecture.instructor}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin size={16} style={{ color: 'var(--text-tertiary)' }} />
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
+                            {lecture.location}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Attendance Summary */}
+                      <div className="flex items-center gap-4">
+                        {summary.present > 0 && (
+                          <span style={{ color: '#22c55e', fontSize: '0.9375rem', fontWeight: 500 }}>
+                            {summary.present} присъстващи
+                          </span>
+                        )}
+                        {summary.absent > 0 && (
+                          <span style={{ color: '#ef4444', fontSize: '0.9375rem', fontWeight: 500 }}>
+                            {summary.absent} отсъстващи
+                          </span>
+                        )}
+                        {summary.late > 0 && (
+                          <span style={{ color: '#fb923c', fontSize: '0.9375rem', fontWeight: 500 }}>
+                            {summary.late} закъснели
+                          </span>
+                        )}
+                        {summary.notMarked > 0 && (
+                          <span style={{ color: 'var(--text-tertiary)', fontSize: '0.9375rem' }}>
+                            {summary.notMarked} немаркирани
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {isExpanded ? (
+                        <ChevronUp size={24} style={{ color: 'var(--text-tertiary)' }} />
+                      ) : (
+                        <ChevronDown size={24} style={{ color: 'var(--text-tertiary)' }} />
+                      )}
+                    </div>
+                  </div>
+                </button>
+
+                {/* Attendance Workspace - Expanded */}
+                {isExpanded && (
+                  <div
+                    className="px-6 pb-6"
+                    style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}
+                  >
+                    {/* Progress Bar */}
+                    <div className="pt-6 pb-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <p style={{ color: 'var(--text-secondary)', fontSize: '1rem' }}>
+                          {lecture.status === 'scheduled' 
+                            ? 'Маркирайте присъствие за всеки курсист:'
+                            : 'Присъствие за лекцията:'}
+                        </p>
+                        {lecture.status === 'scheduled' && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => {
+                              const newData: Record<number, AttendanceStatus> = {};
+                              group.students.forEach(s => {
+                                newData[s.id] = 'present';
+                              });
+                              setAttendanceData(prev => ({
+                                ...prev,
+                                [lecture.id]: newData,
+                              }));
+                            }}
+                          >
+                            Маркирай всички като присъстващи
+                          </Button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-6 p-4 rounded-lg" style={{ background: 'var(--bg-primary)' }}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ background: '#22c55e' }} />
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
+                            Присъстващи: <span style={{ color: '#22c55e', fontWeight: 600 }}>{summary.present}</span>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ background: '#ef4444' }} />
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
+                            Отсъстващи: <span style={{ color: '#ef4444', fontWeight: 600 }}>{summary.absent}</span>
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ background: '#fb923c' }} />
+                          <span style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
+                            Закъснели: <span style={{ color: '#fb923c', fontWeight: 600 }}>{summary.late}</span>
+                          </span>
+                        </div>
+                        {summary.notMarked > 0 && (
+                          <div className="flex items-center gap-2">
+                            <AlertCircle size={14} style={{ color: 'var(--text-tertiary)' }} />
+                            <span style={{ color: 'var(--text-tertiary)', fontSize: '0.9375rem' }}>
+                              Немаркирани: {summary.notMarked}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="pt-2 space-y-3">
+                      {group.students.map((student) => {
+                        const status = getAttendanceStatus(lecture.id, student.id);
+                        const viberSentStatus = isViberSent(lecture.id, student.id);
+                        const isAbsent = status === 'absent';
+
+                        return (
+                          <div
+                            key={student.id}
+                            className="rounded-xl p-5"
+                            style={{
+                              background: isAbsent 
+                                ? 'rgba(239, 68, 68, 0.03)'
+                                : 'var(--bg-primary)',
+                              border: isAbsent
+                                ? '1px solid rgba(239, 68, 68, 0.15)'
+                                : '1px solid rgba(255, 255, 255, 0.06)',
+                            }}
+                          >
+                            <div className="flex items-center justify-between gap-6">
+                              {/* Student Info */}
+                              <div className="flex items-center gap-4 flex-1 min-w-0">
+                                <div
+                                  className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ background: 'rgba(99, 102, 241, 0.1)' }}
+                                >
+                                  <User size={20} style={{ color: 'var(--accent-primary)' }} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p
+                                    className="font-semibold mb-1 truncate"
+                                    style={{ color: 'var(--text-primary)', fontSize: '1.0625rem' }}
+                                  >
+                                    {student.name}
+                                  </p>
+                                  <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2">
+                                      <Phone size={14} style={{ color: 'var(--text-tertiary)' }} />
+                                      <span style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
+                                        {student.phone}
+                                      </span>
+                                    </div>
+                                    <span style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
+                                      {student.attendanceCount} присъствия
+                                    </span>
+                                    {student.absenceCount > 0 && (
+                                      <span style={{ color: '#fb923c', fontSize: '0.875rem' }}>
+                                        {student.absenceCount} отсъствия
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Attendance Actions */}
+                              <div className="flex items-center gap-3 flex-shrink-0">
+                                {/* Present Button */}
+                                <button
+                                  onClick={() => handleMarkAttendance(lecture.id, student.id, 'present')}
+                                  className="px-8 py-3.5 rounded-xl transition-all font-semibold"
+                                  style={{
+                                    background: status === 'present' 
+                                      ? '#22c55e' 
+                                      : 'rgba(34, 197, 94, 0.1)',
+                                    color: status === 'present' 
+                                      ? '#ffffff' 
+                                      : '#22c55e',
+                                    border: status === 'present'
+                                      ? '2px solid #22c55e'
+                                      : '2px solid rgba(34, 197, 94, 0.3)',
+                                    fontSize: '1rem',
+                                    minWidth: '140px',
+                                  }}
+                                >
+                                  Присъства
+                                </button>
+
+                                {/* Absent Button */}
+                                <button
+                                  onClick={() => handleMarkAttendance(lecture.id, student.id, 'absent')}
+                                  className="px-8 py-3.5 rounded-xl transition-all font-semibold"
+                                  style={{
+                                    background: status === 'absent' 
+                                      ? '#ef4444' 
+                                      : 'rgba(239, 68, 68, 0.1)',
+                                    color: status === 'absent' 
+                                      ? '#ffffff' 
+                                      : '#ef4444',
+                                    border: status === 'absent'
+                                      ? '2px solid #ef4444'
+                                      : '2px solid rgba(239, 68, 68, 0.3)',
+                                    fontSize: '1rem',
+                                    minWidth: '140px',
+                                  }}
+                                >
+                                  Отсъства
+                                </button>
+
+                                {/* Late Button */}
+                                <button
+                                  onClick={() => handleMarkAttendance(lecture.id, student.id, 'late')}
+                                  className="px-6 py-3.5 rounded-xl transition-all font-semibold"
+                                  style={{
+                                    background: status === 'late' 
+                                      ? '#fb923c' 
+                                      : 'rgba(251, 146, 60, 0.1)',
+                                    color: status === 'late' 
+                                      ? '#ffffff' 
+                                      : '#fb923c',
+                                    border: status === 'late'
+                                      ? '2px solid #fb923c'
+                                      : '2px solid rgba(251, 146, 60, 0.3)',
+                                    fontSize: '0.9375rem',
+                                    minWidth: '120px',
+                                  }}
+                                >
+                                  Закъснял
+                                </button>
+
+                                {/* Viber Message Button */}
+                                <button
+                                  onClick={() => handleSendViber(lecture.id, student.id)}
+                                  disabled={viberSentStatus || status !== 'absent'}
+                                  className="px-6 py-3.5 rounded-xl transition-all font-semibold flex items-center gap-2"
+                                  style={{
+                                    background: viberSentStatus
+                                      ? 'rgba(99, 102, 241, 0.15)'
+                                      : status === 'absent'
+                                      ? 'rgba(99, 102, 241, 0.1)'
+                                      : 'rgba(255, 255, 255, 0.03)',
+                                    color: viberSentStatus || status === 'absent'
+                                      ? 'var(--accent-primary)'
+                                      : 'var(--text-tertiary)',
+                                    border: viberSentStatus
+                                      ? '2px solid var(--accent-primary)'
+                                      : status === 'absent'
+                                      ? '2px solid rgba(99, 102, 241, 0.3)'
+                                      : '2px solid rgba(255, 255, 255, 0.06)',
+                                    fontSize: '0.9375rem',
+                                    minWidth: '160px',
+                                    opacity: status !== 'absent' && !viberSentStatus ? 0.4 : 1,
+                                    cursor: status !== 'absent' && !viberSentStatus ? 'not-allowed' : 'pointer',
+                                  }}
+                                >
+                                  <MessageCircle size={18} />
+                                  {viberSentStatus ? 'Viber изпратен' : 'Viber съобщение'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Save Actions */}
+                    {lecture.status === 'scheduled' && (
+                      <div className="flex gap-3 mt-6 pt-6" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
+                        <Button
+                          variant="secondary"
+                          fullWidth
+                          onClick={() => setExpandedLecture(null)}
+                        >
+                          Отказ
+                        </Button>
+                        <Button
+                          variant="primary"
+                          fullWidth
+                          onClick={() => {
+                            console.log('Saving attendance for lecture', lecture.id, attendanceData[lecture.id]);
+                            setExpandedLecture(null);
+                          }}
+                        >
+                          Запази присъствие
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Student Roster - Bottom Section */}
+      <div className="px-6 lg:px-8 pb-8">
+        <div
+          className="rounded-xl p-6"
+          style={{ background: 'var(--bg-card)' }}
+        >
+          <h2
+            className="text-xl font-semibold mb-6"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            Курсисти в групата ({group.students.length})
+          </h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {group.students.map((student) => (
+              <div
+                key={student.id}
+                className="rounded-xl p-5"
+                style={{ background: 'var(--bg-primary)' }}
+              >
+                <div className="flex items-center gap-4">
+                  <div
+                    className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'rgba(99, 102, 241, 0.1)' }}
+                  >
+                    <User size={20} style={{ color: 'var(--accent-primary)' }} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="font-semibold mb-1"
+                      style={{ color: 'var(--text-primary)', fontSize: '1rem' }}
+                    >
+                      {student.name}
+                    </p>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="flex items-center gap-2">
+                        <Phone size={14} style={{ color: 'var(--text-tertiary)' }} />
+                        <span style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
+                          {student.phone}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                        {student.attendanceCount} присъствия
+                      </span>
+                      {student.absenceCount > 0 && (
+                        <span style={{ color: '#fb923c', fontSize: '0.875rem' }}>
+                          {student.absenceCount} отсъствия
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
