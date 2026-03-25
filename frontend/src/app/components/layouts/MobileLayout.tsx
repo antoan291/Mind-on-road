@@ -1,7 +1,7 @@
-import { Outlet, useLocation, Link } from 'react-router';
-import { 
-  LayoutDashboard, Users, CreditCard, Calendar, 
-  Bell, Menu, Search, X 
+﻿import { Outlet, useLocation, Link } from 'react-router';
+import {
+  LayoutDashboard, Users, CreditCard, Calendar,
+  Bell, Menu, Search, X, Bot
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -19,18 +19,17 @@ export function MobileLayout() {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-page)' }}>
-      {/* Mobile Top Bar */}
-      <header 
+      <header
         className="h-14 flex items-center justify-between px-4 border-b sticky top-0 z-40"
-        style={{ 
+        style={{
           background: 'var(--bg-panel)',
           borderColor: 'var(--ghost-border)'
         }}
       >
         <div className="flex items-center gap-2">
-          <div 
+          <div
             className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ 
+            style={{
               background: 'linear-gradient(135deg, var(--primary-accent), var(--primary-accent-dim))'
             }}
           >
@@ -44,7 +43,7 @@ export function MobileLayout() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button 
+          <button
             className="w-9 h-9 rounded-lg flex items-center justify-center"
             style={{ background: 'var(--bg-card)', color: 'var(--text-secondary)' }}
           >
@@ -53,25 +52,23 @@ export function MobileLayout() {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="flex-1 overflow-auto pb-20">
         <Outlet />
       </main>
 
-      {/* Bottom Navigation */}
-      <nav 
+      <nav
         className="fixed bottom-0 left-0 right-0 h-16 border-t z-50"
-        style={{ 
+        style={{
           background: 'var(--bg-panel)',
           borderColor: 'var(--ghost-border)'
         }}
       >
         <div className="h-full flex items-center justify-around px-2">
           {bottomNavItems.map((item) => {
-            const isActive = item.path === '/' 
-              ? location.pathname === '/' 
+            const isActive = item.path === '/'
+              ? location.pathname === '/'
               : location.pathname.startsWith(item.path);
-            
+
             if (item.action) {
               return (
                 <button
@@ -82,16 +79,16 @@ export function MobileLayout() {
                     background: isActive ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
                   }}
                 >
-                  <item.icon 
-                    size={20} 
-                    style={{ 
-                      color: isActive ? 'var(--primary-accent)' : 'var(--text-secondary)' 
-                    }} 
+                  <item.icon
+                    size={20}
+                    style={{
+                      color: isActive ? 'var(--primary-accent)' : 'var(--text-secondary)'
+                    }}
                   />
-                  <span 
+                  <span
                     className="text-xs mt-1 font-medium"
-                    style={{ 
-                      color: isActive ? 'var(--primary-accent)' : 'var(--text-secondary)' 
+                    style={{
+                      color: isActive ? 'var(--primary-accent)' : 'var(--text-secondary)'
                     }}
                   >
                     {item.label}
@@ -108,16 +105,16 @@ export function MobileLayout() {
                     background: isActive ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
                   }}
                 >
-                  <item.icon 
-                    size={20} 
-                    style={{ 
-                      color: isActive ? 'var(--primary-accent)' : 'var(--text-secondary)' 
-                    }} 
+                  <item.icon
+                    size={20}
+                    style={{
+                      color: isActive ? 'var(--primary-accent)' : 'var(--text-secondary)'
+                    }}
                   />
-                  <span 
+                  <span
                     className="text-xs mt-1 font-medium"
-                    style={{ 
-                      color: isActive ? 'var(--primary-accent)' : 'var(--text-secondary)' 
+                    style={{
+                      color: isActive ? 'var(--primary-accent)' : 'var(--text-secondary)'
                     }}
                   >
                     {item.label}
@@ -129,18 +126,17 @@ export function MobileLayout() {
         </div>
       </nav>
 
-      {/* Full Menu Overlay */}
       {menuOpen && (
         <div className="fixed inset-0 z-50" style={{ background: 'var(--bg-page)' }}>
-          <div 
+          <div
             className="h-14 flex items-center justify-between px-4 border-b"
-            style={{ 
+            style={{
               background: 'var(--bg-panel)',
               borderColor: 'var(--ghost-border)'
             }}
           >
             <h2 style={{ color: 'var(--text-primary)' }}>Меню</h2>
-            <button 
+            <button
               onClick={() => setMenuOpen(false)}
               className="w-9 h-9 rounded-lg flex items-center justify-center"
               style={{ background: 'var(--bg-card)', color: 'var(--text-secondary)' }}
@@ -159,13 +155,14 @@ export function MobileLayout() {
             <MenuLink to="/documents" label="Документи" onClick={() => setMenuOpen(false)} />
             <MenuLink to="/road-sheets" label="Пътни листове" onClick={() => setMenuOpen(false)} />
             <MenuLink to="/reports" label="Отчети" onClick={() => setMenuOpen(false)} />
+            <MenuLink to="/ai" label="AI Център" icon={<Bot size={20} />} onClick={() => setMenuOpen(false)} />
             <MenuLink to="/settings" label="Настройки" onClick={() => setMenuOpen(false)} />
 
             <div className="pt-6">
               <div className="flex items-center gap-3 p-4 rounded-xl" style={{ background: 'var(--bg-card)' }}>
-                <div 
+                <div
                   className="w-12 h-12 rounded-full flex items-center justify-center font-semibold"
-                  style={{ 
+                  style={{
                     background: 'linear-gradient(135deg, var(--ai-accent), var(--ai-accent-dim))',
                     color: '#ffffff'
                   }}
@@ -189,15 +186,15 @@ export function MobileLayout() {
   );
 }
 
-function MenuLink({ 
-  to, 
-  label, 
-  icon, 
-  onClick 
-}: { 
-  to: string; 
-  label: string; 
-  icon?: React.ReactNode; 
+function MenuLink({
+  to,
+  label,
+  icon,
+  onClick
+}: {
+  to: string;
+  label: string;
+  icon?: React.ReactNode;
   onClick: () => void;
 }) {
   return (

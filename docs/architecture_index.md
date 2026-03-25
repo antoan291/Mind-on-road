@@ -183,7 +183,7 @@
 - продуктът е multi-tenant SaaS;
 - целевата посока е около `10 000` дневно активни потребители;
 - архитектурният модел е `scale-ready modular monolith`;
-- frontend стекът е `Next.js`;
+- frontend стекът е `React + Vite`;
 - frontend state стратегията е `TanStack Query + Zustand + React Hook Form`;
 - backend посоката е `Node.js` с `NestJS`;
 - базата е `PostgreSQL`;

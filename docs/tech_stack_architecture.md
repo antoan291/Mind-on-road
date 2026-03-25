@@ -18,7 +18,7 @@
 
 Препоръчителен стек:
 
-- Frontend: `Next.js`
+- Frontend: `React`
 - Backend API: `Node.js`
 - Language: `TypeScript`
 - Database: `PostgreSQL`
@@ -31,11 +31,11 @@
 
 ### 3.1 Frontend
 
-- `Next.js`
+- `React`
 - `React`
 - `TypeScript`
-- `App Router`
-- `Server Components` там, където дават стойност
+- `Vite`
+- `react-router`
 - `TanStack Query` за клиентски data fetching
 - `Zustand` за global client state
 - `React Hook Form` за форми
@@ -46,7 +46,8 @@
 Причини:
 
 - excellent developer experience;
-- добра комбинация между SSR, client interactivity и form-heavy admin workflows;
+- бърз и лек frontend build pipeline;
+- добра комбинация между client interactivity, routing и form-heavy admin workflows;
 - добра интеграция с TypeScript;
 - подходящо за административен продукт с богати таблици и форми.
 
@@ -250,7 +251,7 @@
 Причини:
 
 - TLS termination;
-- reverse proxy пред `Next.js` и `NestJS`;
+- reverse proxy пред `React` приложението и `NestJS`;
 - request size limits за document uploads;
 - централизирано прилагане на security headers;
 - базов request filtering и buffering control;
@@ -314,7 +315,7 @@
 
 Препоръчителен минимален production стек:
 
-- `Next.js app`
+- `React app`
 - `NestJS API`
 - `Worker process`
 - `Nginx`
@@ -344,7 +345,7 @@
 
 Най-добрият стек за този продукт е:
 
-- `Next.js + React + TypeScript`
+- `React + Vite + TypeScript`
 - `NestJS + Node.js + TypeScript`
 - `PostgreSQL`
 - `Redis`

@@ -53,7 +53,7 @@
 Продуктът следва да се състои от:
 
 - `Edge / Reverse Proxy Layer` — `Nginx` пред приложението за TLS termination, request filtering, request size limits и reverse proxy контрол;
-- `Web App` — Next.js приложение за администрация, портал за ученици и бъдещ клиентски достъп;
+- `Web App` — React приложение за администрация, портал за ученици и бъдещ клиентски достъп;
 - `API App` — Node.js backend като модулен монолит;
 - `Primary Database` — PostgreSQL;
 - `Cache Layer` — Redis за краткоживеещ cache, rate limiting и distributed coordination;
@@ -331,7 +331,7 @@ AI обработката трябва да следва контролиран 
 Минимална production архитектура:
 
 - `Nginx` reverse proxy layer;
-- Next.js web app;
+- React web app;
 - Node.js API app;
 - background worker;
 - managed PostgreSQL primary + read replica;
@@ -376,7 +376,7 @@ AI обработката трябва да следва контролиран 
 
 Най-добрият архитектурен избор за този продукт е:
 
-- `Next.js` за web layer;
+- `React + Vite` за web layer;
 - `Node.js` backend като модулен монолит;
 - `PostgreSQL` като primary transactional database;
 - `Redis` като cache и coordination layer;

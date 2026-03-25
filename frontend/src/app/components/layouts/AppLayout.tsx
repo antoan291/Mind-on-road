@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, CreditCard, FileText, 
   Car, BookOpen, Calendar, UserCircle, 
   Wrench, FolderOpen, ClipboardList, MessageSquare,
-  BarChart3, ChevronLeft
+  BarChart3, ChevronLeft, Bot
 } from 'lucide-react';
 
 export function AppLayout() {
@@ -27,6 +27,7 @@ export function AppLayout() {
     { path: '/notifications', icon: MessageSquare, label: 'Известия' },
     { path: '/reports', icon: BarChart3, label: 'Отчети' },
     { path: '/settings', icon: Settings, label: 'Настройки' },
+    { path: '/ai', icon: Bot, label: 'AI Център' },
   ];
 
   return (
@@ -224,3 +225,5 @@ function NavItem({
     </Link>
   );
 }
+
+

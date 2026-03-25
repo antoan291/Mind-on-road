@@ -13,6 +13,8 @@ import { ResponsiveDocumentsPage } from "./pages/ResponsiveDocumentsPage";
 import { PaymentsPage } from "./pages/PaymentsPage";
 import { InvoicesPage } from "./pages/InvoicesPage";
 import { PracticalLessonsPage } from "./pages/PracticalLessonsPage";
+import { AIPage } from "./pages/AIPage";
+import { AIChatPage } from "./pages/AIChatPage";
 import { 
   InstructorsPage, 
   VehiclesPage, 
@@ -44,6 +46,8 @@ export const router = createBrowserRouter([
       { path: "notifications", Component: ResponsiveNotificationsPage },
       { path: "reports", Component: ReportsPage },
       { path: "settings", Component: SettingsPage },
+      { path: "ai", Component: AIPage },
+      { path: "ai/chat", Component: AIChatPage },
     ],
   },
 ]);
