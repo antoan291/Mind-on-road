@@ -1215,7 +1215,13 @@ export function TheoryPage() {
                 </div>
               )}
 
-              {/* Actions */}
+              <div className="mb-4 rounded-xl p-4" style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.18)' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', lineHeight: 1.6 }}>
+                След маркиране на присъстващите и отсъстващите натиснете "Запази присъствие", за да се изпрати заявка към базата данни за тази лекция и група.
+              </p>
+            </div>
+
+            {/* Actions */}
               <div className="flex gap-3 pt-4">
                 <Button variant="primary" icon={<Edit2 size={18} />} fullWidth>
                   Редактиране на група
@@ -1413,6 +1419,12 @@ export function TheoryPage() {
                   </div>
                 );
               })}
+            </div>
+
+            <div className="mb-4 rounded-xl p-4" style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.18)' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', lineHeight: 1.6 }}>
+                След маркиране на присъстващите и отсъстващите натиснете "Запази присъствие", за да се изпрати заявка към базата данни за тази лекция и група.
+              </p>
             </div>
 
             {/* Actions */}
@@ -1848,7 +1860,13 @@ export function TheoryPage() {
                 </div>
               </div>
 
-              {/* Actions */}
+              <div className="mb-4 rounded-xl p-4" style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.18)' }}>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem', lineHeight: 1.6 }}>
+                След маркиране на присъстващите и отсъстващите натиснете "Запази присъствие", за да се изпрати заявка към базата данни за тази лекция и група.
+              </p>
+            </div>
+
+            {/* Actions */}
               <div className="flex gap-3 pt-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
                 <Button variant="secondary" icon={<Mail size={18} />} fullWidth>
                   Изпрати напомняне
@@ -1864,3 +1882,9 @@ export function TheoryPage() {
     </div>
   );
 }
+
+
+
+
+
+

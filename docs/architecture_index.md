@@ -289,3 +289,9 @@
 - да държи фиксираните решения видими;
 - да помага нов човек да влезе в проекта бързо;
 - да пази документацията като една система, а не като отделни notes.
+
+## Platform Admin Feature Management
+
+- [platform_admin_feature_management.md](C:/AD/work/My%20company/school/docs/platform_admin_feature_management.md)
+
+Този документ е source of truth за управлението на платени модули, feature flags и platform admin контрол върху това кои функционалности са активни за всяка отделна школа.
