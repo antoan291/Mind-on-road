@@ -1,27 +1,24 @@
-import { createBrowserRouter } from "react-router";
+﻿import { createBrowserRouter } from "react-router";
 import { ResponsiveLayout } from "./components/layouts/ResponsiveLayout";
 import { ResponsiveDashboardPage } from "./pages/ResponsiveDashboardPage";
 import { ResponsiveStudentsPage } from "./pages/ResponsiveStudentsPage";
 import { ResponsiveStudentDetailPage } from "./pages/ResponsiveStudentDetailPage";
 import { ResponsiveStudentFormPage } from "./pages/ResponsiveStudentFormPage";
 import { ResponsiveSchedulePage } from "./pages/ResponsiveSchedulePage";
-import { ResponsiveNotificationsPage } from "./pages/ResponsiveNotificationsPage";
 import { ResponsivePracticalLessonsPage } from "./pages/ResponsivePracticalLessonsPage";
 import { ResponsiveTheoryPage } from "./pages/ResponsiveTheoryPage";
 import { TheoryGroupPage } from "./pages/TheoryGroupPage";
 import { ResponsiveDocumentsPage } from "./pages/ResponsiveDocumentsPage";
 import { PaymentsPage } from "./pages/PaymentsPage";
 import { InvoicesPage } from "./pages/InvoicesPage";
-import { PracticalLessonsPage } from "./pages/PracticalLessonsPage";
 import { AIPage } from "./pages/AIPage";
 import { AIChatPage } from "./pages/AIChatPage";
-import { 
-  InstructorsPage, 
-  VehiclesPage, 
-  RoadSheetsPage, 
-  ReportsPage, 
-  SettingsPage 
-} from "./pages/OtherPages";
+import { InstructorsPage } from "./pages/secondary/InstructorsPage";
+import { VehiclesPage } from "./pages/secondary/VehiclesPage";
+import { RoadSheetsPage } from "./pages/secondary/RoadSheetsPage";
+import { NotificationsPage } from "./pages/secondary/NotificationsPage";
+import { ReportsPage } from "./pages/secondary/ReportsPage";
+import { SettingsPage } from "./pages/secondary/SettingsPage";
 
 export const router = createBrowserRouter([
   {
@@ -43,7 +40,7 @@ export const router = createBrowserRouter([
       { path: "vehicles", Component: VehiclesPage },
       { path: "documents", Component: ResponsiveDocumentsPage },
       { path: "road-sheets", Component: RoadSheetsPage },
-      { path: "notifications", Component: ResponsiveNotificationsPage },
+      { path: "notifications", Component: NotificationsPage },
       { path: "reports", Component: ReportsPage },
       { path: "settings", Component: SettingsPage },
       { path: "ai", Component: AIPage },

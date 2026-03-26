@@ -28,3 +28,8 @@ If a choice changes architecture, security, data model, frontend structure, or A
 - System Design Interview: C:/Users/antoa/Desktop/Top Coding/System Design/SystemDesignInterview.pdf
 - Joga Recommended technologies.docx: C:/AD/work/Bulgarian Software Development/Joga documentation/Joga Recommended technologies.docx
 - Joga Database Schema.docx: C:/AD/work/Bulgarian Software Development/Joga documentation/Joga Database Schema.docx
+
+## Clean Code reference
+- Clean Code (Robert C. Martin) GitHub PDF reference: https://github.com/jnguyen095/clean-code/blob/master/Clean.Code.A.Handbook.of.Agile.Software.Craftsmanship.pdf
+- From now on, code changes in this project should follow clean-code structure, naming, separation of responsibilities, and readability-first principles.
+- Practical project rules are captured in: C:/AD/work/My company/school/docs/clean_code_guidelines.md

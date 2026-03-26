@@ -1,4 +1,4 @@
-interface Column {
+﻿interface Column {
   key: string;
   label: string;
   render?: (value: any, row: any) => React.ReactNode;
@@ -67,3 +67,4 @@ export function DataTable({ columns, data, onRowClick, emptyMessage = 'Няма 
     </div>
   );
 }
+

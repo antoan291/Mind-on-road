@@ -1,4 +1,4 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   PageHeader, Badge, Button, Modal, Input, Select
@@ -74,7 +74,7 @@ type TheoryGroup = {
 const MOCK_THEORY_GROUPS: TheoryGroup[] = [
   {
     id: 1,
-    name: 'B-2024-03-Ð£Ñ‚Ñ€Ð¾',
+    name: 'B-2024-03-Утро',
     category: 'B',
     startDate: '2024-03-01',
     studentCount: 18,
@@ -85,18 +85,18 @@ const MOCK_THEORY_GROUPS: TheoryGroup[] = [
     studentsNeedingRecovery: 2,
     averageAttendance: 94.5,
     status: 'active',
-    schedule: 'ÐŸÐ¾Ð½ÐµÐ´ÐµÐ»Ð½Ð¸Ðº Ð¸ Ð¡Ñ€ÑÐ´Ð°, 09:00 - 12:00',
+    schedule: 'Понеделник и Сряда, 09:00 - 12:00',
     lectures: [
       {
         id: 101,
         number: 13,
-        title: 'ÐŸÑŠÑ‚Ð½Ð¸ Ð·Ð½Ð°Ñ†Ð¸ - Ð¿Ñ€Ð¾Ð´ÑŠÐ»Ð¶ÐµÐ½Ð¸Ðµ',
+        title: 'Пътни знаци - продължение',
         date: '2024-03-24',
         time: '09:00',
         endTime: '12:00',
         duration: 180,
-        instructor: 'Ð˜Ð²Ð°Ð½ ÐŸÐµÑ‚Ñ€Ð¾Ð²',
-        location: 'Ð—Ð°Ð»Ð° 1',
+        instructor: 'Иван Петров',
+        location: 'Зала 1',
         attendanceCount: 16,
         absentCount: 2,
         lateCount: 0,
@@ -105,28 +105,28 @@ const MOCK_THEORY_GROUPS: TheoryGroup[] = [
       {
         id: 102,
         number: 12,
-        title: 'ÐžÑÐ½Ð¾Ð²Ð½Ð¸ Ð¿ÑŠÑ‚Ð½Ð¸ Ð·Ð½Ð°Ñ†Ð¸',
+        title: 'Основни пътни знаци',
         date: '2024-03-22',
         time: '09:00',
         endTime: '12:00',
         duration: 180,
-        instructor: 'Ð˜Ð²Ð°Ð½ ÐŸÐµÑ‚Ñ€Ð¾Ð²',
-        location: 'Ð—Ð°Ð»Ð° 1',
+        instructor: 'Иван Петров',
+        location: 'Зала 1',
         attendanceCount: 17,
         absentCount: 1,
         lateCount: 0,
         status: 'completed',
         students: [
-          { studentId: 1, studentName: 'ÐœÐ°Ñ€Ð¸Ñ Ð˜Ð²Ð°Ð½Ð¾Ð²Ð°', status: 'present' },
-          { studentId: 2, studentName: 'Ð“ÐµÐ¾Ñ€Ð³Ð¸ Ð”Ð¸Ð¼Ð¸Ñ‚Ñ€Ð¾Ð²', status: 'present' },
-          { studentId: 3, studentName: 'Ð•Ð»ÐµÐ½Ð° Ð¡Ñ‚Ð¾ÑÐ½Ð¾Ð²Ð°', status: 'absent', notes: 'Ð˜Ð·Ð¿Ñ€Ð°Ñ‚ÐµÐ½Ð¾ SMS Ð½Ð° Ñ€Ð¾Ð´Ð¸Ñ‚ÐµÐ»' },
+          { studentId: 1, studentName: 'Мария Иванова', status: 'present' },
+          { studentId: 2, studentName: 'Георги Димитров', status: 'present' },
+          { studentId: 3, studentName: 'Елена Стоянова', status: 'absent', notes: 'Изпратено SMS на родител' },
         ],
       },
     ],
     students: [
       {
         id: 1,
-        name: 'ÐœÐ°Ñ€Ð¸Ñ Ð˜Ð²Ð°Ð½Ð¾Ð²Ð°',
+        name: 'Мария Иванова',
         category: 'B',
         phone: '+359 88 123 4567',
         email: 'maria@example.com',
@@ -137,7 +137,7 @@ const MOCK_THEORY_GROUPS: TheoryGroup[] = [
       },
       {
         id: 2,
-        name: 'Ð“ÐµÐ¾Ñ€Ð³Ð¸ Ð”Ð¸Ð¼Ð¸Ñ‚Ñ€Ð¾Ð²',
+        name: 'Георги Димитров',
         category: 'B',
         phone: '+359 88 234 5678',
         email: 'georgi@example.com',
@@ -148,7 +148,7 @@ const MOCK_THEORY_GROUPS: TheoryGroup[] = [
       },
       {
         id: 3,
-        name: 'Ð•Ð»ÐµÐ½Ð° Ð¡Ñ‚Ð¾ÑÐ½Ð¾Ð²Ð°',
+        name: 'Елена Стоянова',
         category: 'B',
         phone: '+359 88 345 6789',
         email: 'elena@example.com',
@@ -163,7 +163,7 @@ const MOCK_THEORY_GROUPS: TheoryGroup[] = [
   },
   {
     id: 2,
-    name: 'B-2024-03-Ð’ÐµÑ‡ÐµÑ€',
+    name: 'B-2024-03-Вечер',
     category: 'B',
     startDate: '2024-03-04',
     studentCount: 22,
@@ -174,18 +174,18 @@ const MOCK_THEORY_GROUPS: TheoryGroup[] = [
     studentsNeedingRecovery: 1,
     averageAttendance: 91.2,
     status: 'active',
-    schedule: 'Ð’Ñ‚Ð¾Ñ€Ð½Ð¸Ðº Ð¸ Ð§ÐµÑ‚Ð²ÑŠÑ€Ñ‚ÑŠÐº, 18:00 - 21:00',
+    schedule: 'Вторник и Четвъртък, 18:00 - 21:00',
     lectures: [
       {
         id: 201,
         number: 12,
-        title: 'ÐŸÑŠÑ‚Ð½Ð° Ð¼Ð°Ñ€ÐºÐ¸Ñ€Ð¾Ð²ÐºÐ°',
+        title: 'Пътна маркировка',
         date: '2024-03-23',
         time: '18:00',
         endTime: '21:00',
         duration: 180,
-        instructor: 'ÐœÐ°Ñ€Ð¸Ñ Ð“ÐµÐ¾Ñ€Ð³Ð¸ÐµÐ²Ð°',
-        location: 'Ð—Ð°Ð»Ð° 2',
+        instructor: 'Мария Георгиева',
+        location: 'Зала 2',
         attendanceCount: 20,
         absentCount: 2,
         lateCount: 0,
@@ -196,7 +196,7 @@ const MOCK_THEORY_GROUPS: TheoryGroup[] = [
   },
   {
     id: 3,
-    name: 'A-2024-02-Ð¡ÑŠÐ±Ð¾Ñ‚Ð°',
+    name: 'A-2024-02-Събота',
     category: 'A',
     startDate: '2024-02-10',
     studentCount: 12,
@@ -207,13 +207,13 @@ const MOCK_THEORY_GROUPS: TheoryGroup[] = [
     studentsNeedingRecovery: 0,
     averageAttendance: 96.8,
     status: 'active',
-    schedule: 'Ð¡ÑŠÐ±Ð¾Ñ‚Ð°, 10:00 - 16:00',
+    schedule: 'Събота, 10:00 - 16:00',
     lectures: [],
     students: [],
   },
   {
     id: 4,
-    name: 'B-2024-02-Ð£Ñ‚Ñ€Ð¾',
+    name: 'B-2024-02-Утро',
     category: 'B',
     startDate: '2024-02-01',
     endDate: '2024-03-15',
@@ -225,7 +225,7 @@ const MOCK_THEORY_GROUPS: TheoryGroup[] = [
     studentsNeedingRecovery: 0,
     averageAttendance: 97.5,
     status: 'completed',
-    schedule: 'ÐŸÐ¾Ð½ÐµÐ´ÐµÐ»Ð½Ð¸Ðº Ð¸ Ð¡Ñ€ÑÐ´Ð°, 09:00 - 12:00',
+    schedule: 'Понеделник и Сряда, 09:00 - 12:00',
     lectures: [],
     students: [],
   },
@@ -234,13 +234,13 @@ const MOCK_THEORY_GROUPS: TheoryGroup[] = [
 const getRecoveryStatusInfo = (status: RecoveryStatus) => {
   switch (status) {
     case 'not-required':
-      return { label: 'ÐÐµ Ðµ Ð½ÑƒÐ¶Ð½Ð¾', color: 'gray' as const };
+      return { label: 'Не е нужно', color: 'gray' as const };
     case 'required':
-      return { label: 'Ð˜Ð·Ð¸ÑÐºÐ²Ð° ÑÐµ', color: 'red' as const };
+      return { label: 'Изисква се', color: 'red' as const };
     case 'in-progress':
-      return { label: 'Ð’ Ð¿Ñ€Ð¾Ñ†ÐµÑ', color: 'orange' as const };
+      return { label: 'В процес', color: 'orange' as const };
     case 'completed':
-      return { label: 'Ð—Ð°Ð²ÑŠÑ€ÑˆÐµÐ½Ð¾', color: 'green' as const };
+      return { label: 'Завършено', color: 'green' as const };
   }
 };
 
@@ -355,11 +355,11 @@ export function TheoryPage() {
     <div className="min-h-screen" style={{ background: 'var(--bg-primary)' }}>
       {/* Page Header */}
       <PageHeader
-        title="Ð¢ÐµÐ¾Ñ€Ð¸Ñ"
-        description="Ð£Ð¿Ñ€Ð°Ð²Ð»ÐµÐ½Ð¸Ðµ Ð½Ð° Ñ‚ÐµÐ¾Ñ€ÐµÑ‚Ð¸Ñ‡Ð½Ð¾ Ð¾Ð±ÑƒÑ‡ÐµÐ½Ð¸Ðµ, Ð³Ñ€ÑƒÐ¿Ð¸, Ð»ÐµÐºÑ†Ð¸Ð¸ Ð¸ Ð¿Ñ€Ð¸ÑÑŠÑÑ‚Ð²Ð¸Ðµ"
+        title="Теория"
+        description="Управление на теоретично обучение, групи, лекции и присъствие"
         breadcrumbs={[
-          { label: 'ÐÐ°Ñ‡Ð°Ð»Ð¾', onClick: () => navigate('/') },
-          { label: 'Ð¢ÐµÐ¾Ñ€Ð¸Ñ' }
+          { label: 'Начало', onClick: () => navigate('/') },
+          { label: 'Теория' }
         ]}
         actions={
           <div className="flex items-center gap-3">
@@ -368,27 +368,27 @@ export function TheoryPage() {
               icon={<AlertTriangle size={18} />}
               onClick={() => addFilter('needs-recovery')}
             >
-              ÐÑƒÐ¶Ð½Ð¾ Ð²ÑŠÐ·ÑÑ‚Ð°Ð½Ð¾Ð²ÑÐ²Ð°Ð½Ðµ ({studentsNeedingRecovery})
+              Нужно възстановяване ({studentsNeedingRecovery})
             </Button>
             <Button
               variant="secondary"
               icon={<CalendarIcon size={18} />}
               onClick={() => addFilter('today')}
             >
-              Ð”Ð½ÐµÑ
+              Днес
             </Button>
             <Button
               variant="secondary"
               icon={<Download size={18} />}
             >
-              Ð•ÐºÑÐ¿Ð¾Ñ€Ñ‚
+              Експорт
             </Button>
             <Button
               variant="primary"
               icon={<Plus size={18} />}
               onClick={() => setIsCreateModalOpen(true)}
             >
-              ÐÐ¾Ð²Ð° Ð³Ñ€ÑƒÐ¿Ð°
+              Нова група
             </Button>
           </div>
         }
@@ -421,7 +421,7 @@ export function TheoryPage() {
               </span>
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-              ÐÐºÑ‚Ð¸Ð²Ð½Ð¸ Ð³Ñ€ÑƒÐ¿Ð¸
+              Активни групи
             </p>
           </button>
 
@@ -446,7 +446,7 @@ export function TheoryPage() {
               </span>
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-              Ð›ÐµÐºÑ†Ð¸Ð¸ Ð´Ð½ÐµÑ
+              Лекции днес
             </p>
           </button>
 
@@ -471,7 +471,7 @@ export function TheoryPage() {
               </span>
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-              ÐŸÑ€Ð¸ÑÑŠÑÑ‚Ð²Ð°Ñ‰Ð¸ Ð´Ð½ÐµÑ
+              Присъстващи днес
             </p>
           </button>
 
@@ -499,7 +499,7 @@ export function TheoryPage() {
               </span>
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-              ÐžÑ‚ÑÑŠÑÑ‚Ð²Ð°Ñ‰Ð¸ Ð´Ð½ÐµÑ
+              Отсъстващи днес
             </p>
           </button>
 
@@ -524,7 +524,7 @@ export function TheoryPage() {
               </span>
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-              Ð˜Ð·Ð¿Ñ€Ð°Ñ‚ÐµÐ½Ð¸ ÑÑŠÐ¾Ð±Ñ‰ÐµÐ½Ð¸Ñ
+              Изпратени съобщения
             </p>
           </button>
 
@@ -552,7 +552,7 @@ export function TheoryPage() {
               </span>
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-              ÐÑƒÐ¶Ð½Ð¾ Ð²ÑŠÐ·ÑÑ‚Ð°Ð½Ð¾Ð²ÑÐ²Ð°Ð½Ðµ
+              Нужно възстановяване
             </p>
           </button>
 
@@ -577,7 +577,7 @@ export function TheoryPage() {
               </span>
             </div>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-              Ð‘Ð»Ð¸Ð·Ð¾ Ð´Ð¾ Ð·Ð°Ð²ÑŠÑ€ÑˆÐ²Ð°Ð½Ðµ
+              Близо до завършване
             </p>
           </button>
         </div>
@@ -600,7 +600,7 @@ export function TheoryPage() {
               />
               <input
                 type="text"
-                placeholder="Ð¢ÑŠÑ€ÑÐµÐ½Ðµ Ð¿Ð¾ Ð¸Ð¼Ðµ Ð½Ð° Ð³Ñ€ÑƒÐ¿Ð° Ð¸Ð»Ð¸ ÐºÑƒÑ€ÑÐ¸ÑÑ‚..."
+                placeholder="Търсене по име на група или курсист..."
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
                 className="w-full pl-10 pr-4 py-2.5 rounded-lg outline-none transition-all"
@@ -621,10 +621,10 @@ export function TheoryPage() {
                 border: '1px solid rgba(255, 255, 255, 0.06)',
               }}
             >
-              <option>Ð’ÑÐ¸Ñ‡ÐºÐ¸ ÐºÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ð¸</option>
-              <option>ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ A</option>
-              <option>ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ B</option>
-              <option>ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ C</option>
+              <option>Всички категории</option>
+              <option>Категория A</option>
+              <option>Категория B</option>
+              <option>Категория C</option>
             </select>
 
             {/* Status Filter */}
@@ -636,10 +636,10 @@ export function TheoryPage() {
                 border: '1px solid rgba(255, 255, 255, 0.06)',
               }}
             >
-              <option>Ð’ÑÐ¸Ñ‡ÐºÐ¸ Ð³Ñ€ÑƒÐ¿Ð¸</option>
-              <option>ÐÐºÑ‚Ð¸Ð²Ð½Ð¸</option>
-              <option>Ð—Ð°Ð²ÑŠÑ€ÑˆÐµÐ½Ð¸</option>
-              <option>ÐŸÑ€ÐµÐ´ÑÑ‚Ð¾ÑÑ‰Ð¸</option>
+              <option>Всички групи</option>
+              <option>Активни</option>
+              <option>Завършени</option>
+              <option>Предстоящи</option>
             </select>
 
             {/* Date Filter */}
@@ -651,15 +651,15 @@ export function TheoryPage() {
                 border: '1px solid rgba(255, 255, 255, 0.06)',
               }}
             >
-              <option>Ð’ÑÐ¸Ñ‡ÐºÐ¸ Ð´Ð°Ñ‚Ð¸</option>
-              <option>Ð”Ð½ÐµÑ</option>
-              <option>Ð¢Ð°Ð·Ð¸ ÑÐµÐ´Ð¼Ð¸Ñ†Ð°</option>
-              <option>Ð¢Ð¾Ð·Ð¸ Ð¼ÐµÑÐµÑ†</option>
+              <option>Всички дати</option>
+              <option>Днес</option>
+              <option>Тази седмица</option>
+              <option>Този месец</option>
             </select>
 
             {/* More Filters Button */}
             <Button variant="secondary" icon={<Filter size={16} />}>
-              Ð¤Ð¸Ð»Ñ‚Ñ€Ð¸
+              Филтри
             </Button>
           </div>
 
@@ -667,7 +667,7 @@ export function TheoryPage() {
           {activeFilters.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
               <span style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
-                ÐÐºÑ‚Ð¸Ð²Ð½Ð¸ Ñ„Ð¸Ð»Ñ‚Ñ€Ð¸:
+                Активни филтри:
               </span>
               {activeFilters.map((filter) => (
                 <button
@@ -690,7 +690,7 @@ export function TheoryPage() {
                 className="text-sm transition-all hover:opacity-80"
                 style={{ color: 'var(--text-tertiary)' }}
               >
-                Ð˜Ð·Ñ‡Ð¸ÑÑ‚Ð¸ Ð²ÑÐ¸Ñ‡ÐºÐ¸
+                Изчисти всички
               </button>
             </div>
           )}
@@ -715,20 +715,20 @@ export function TheoryPage() {
               className="text-xl font-semibold mb-3"
               style={{ color: 'var(--text-primary)' }}
             >
-              ÐÑÐ¼Ð° Ñ‚ÐµÐ¾Ñ€ÐµÑ‚Ð¸Ñ‡Ð½Ð¸ Ð³Ñ€ÑƒÐ¿Ð¸
+              Няма теоретични групи
             </h3>
             <p
               className="mb-8 max-w-md mx-auto"
               style={{ color: 'var(--text-tertiary)', fontSize: '0.9375rem' }}
             >
-              Ð¡ÑŠÐ·Ð´Ð°Ð¹Ñ‚Ðµ Ð¿ÑŠÑ€Ð²Ð°Ñ‚Ð° Ñ‚ÐµÐ¾Ñ€ÐµÑ‚Ð¸Ñ‡Ð½Ð° Ð³Ñ€ÑƒÐ¿Ð°, Ð·Ð° Ð´Ð° Ð·Ð°Ð¿Ð¾Ñ‡Ð½ÐµÑ‚Ðµ ÑƒÐ¿Ñ€Ð°Ð²Ð»ÐµÐ½Ð¸ÐµÑ‚Ð¾ Ð½Ð° Ð»ÐµÐºÑ†Ð¸Ð¸ Ð¸ Ð¿Ñ€Ð¸ÑÑŠÑÑ‚Ð²Ð¸Ðµ
+              Създайте първата теоретична група, за да започнете управлението на лекции и присъствие
             </p>
             <Button
               variant="primary"
               icon={<Plus size={18} />}
               onClick={() => setIsCreateModalOpen(true)}
             >
-              Ð¡ÑŠÐ·Ð´Ð°Ð¹ Ð¿ÑŠÑ€Ð²Ð° Ð³Ñ€ÑƒÐ¿Ð°
+              Създай първа група
             </Button>
           </div>
         ) : (
@@ -773,7 +773,7 @@ export function TheoryPage() {
                             fontSize: '0.875rem',
                           }}
                         >
-                          ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ {group.category}
+                          Категория {group.category}
                         </span>
                       </div>
                       <p style={{ color: 'var(--text-tertiary)', fontSize: '0.9375rem', marginBottom: '12px' }}>
@@ -785,26 +785,26 @@ export function TheoryPage() {
                         <div className="flex items-center gap-2">
                           <Users size={16} style={{ color: 'var(--text-tertiary)' }} />
                           <span style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
-                            {group.studentCount} ÐºÑƒÑ€ÑÐ¸ÑÑ‚Ð¸
+                            {group.studentCount} курсисти
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <BookOpen size={16} style={{ color: 'var(--text-tertiary)' }} />
                           <span style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
-                            {group.completedLectures} / {group.totalLectures} Ð»ÐµÐºÑ†Ð¸Ð¸
+                            {group.completedLectures} / {group.totalLectures} лекции
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <TrendingUp size={16} style={{ color: 'var(--text-tertiary)' }} />
                           <span style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
-                            {group.averageAttendance.toFixed(1)}% Ð¿Ñ€Ð¸ÑÑŠÑÑ‚Ð²Ð¸Ðµ
+                            {group.averageAttendance.toFixed(1)}% присъствие
                           </span>
                         </div>
                         {group.studentsWithAbsences > 0 && (
                           <div className="flex items-center gap-2">
                             <AlertCircle size={16} style={{ color: '#fb923c' }} />
                             <span style={{ color: '#fb923c', fontSize: '0.9375rem' }}>
-                              {group.studentsWithAbsences} Ñ Ð¾Ñ‚ÑÑŠÑÑ‚Ð²Ð¸Ñ
+                              {group.studentsWithAbsences} с отсъствия
                             </span>
                           </div>
                         )}
@@ -812,7 +812,7 @@ export function TheoryPage() {
                           <div className="flex items-center gap-2">
                             <AlertTriangle size={16} style={{ color: '#ef4444' }} />
                             <span style={{ color: '#ef4444', fontSize: '0.9375rem', fontWeight: 500 }}>
-                              {group.studentsNeedingRecovery} Ð½ÑƒÐ¶Ð½Ð¾ Ð²ÑŠÐ·ÑÑ‚Ð°Ð½Ð¾Ð²ÑÐ²Ð°Ð½Ðµ
+                              {group.studentsNeedingRecovery} нужно възстановяване
                             </span>
                           </div>
                         )}
@@ -842,7 +842,7 @@ export function TheoryPage() {
                           </div>
                         </div>
                         <p style={{ color: 'var(--text-tertiary)', fontSize: '0.75rem' }}>
-                          ÐŸÑ€Ð¾Ð³Ñ€ÐµÑ
+                          Прогрес
                         </p>
                       </div>
 
@@ -932,7 +932,7 @@ export function TheoryPage() {
                   <div className="flex items-center gap-2 mb-2">
                     <Users size={18} style={{ color: 'var(--accent-primary)' }} />
                     <span style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
-                      ÐšÑƒÑ€ÑÐ¸ÑÑ‚Ð¸
+                      Курсисти
                     </span>
                   </div>
                   <p
@@ -949,7 +949,7 @@ export function TheoryPage() {
                   <div className="flex items-center gap-2 mb-2">
                     <BookOpen size={18} style={{ color: 'var(--accent-ai)' }} />
                     <span style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
-                      Ð›ÐµÐºÑ†Ð¸Ð¸
+                      Лекции
                     </span>
                   </div>
                   <p
@@ -966,7 +966,7 @@ export function TheoryPage() {
                   <div className="flex items-center gap-2 mb-2">
                     <BarChart3 size={18} style={{ color: '#22c55e' }} />
                     <span style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
-                      Ð¡Ñ€ÐµÐ´Ð½Ð¾ Ð¿Ñ€Ð¸ÑÑŠÑÑ‚Ð²Ð¸Ðµ
+                      Средно присъствие
                     </span>
                   </div>
                   <p
@@ -984,7 +984,7 @@ export function TheoryPage() {
                   className="font-medium mb-4"
                   style={{ color: 'var(--text-primary)', fontSize: '1.125rem' }}
                 >
-                  Ð›ÐµÐºÑ†Ð¸Ð¸
+                  Лекции
                 </h3>
                 <div className="space-y-3">
                   {selectedGroup.lectures.map((lecture) => {
@@ -1011,13 +1011,13 @@ export function TheoryPage() {
                                   className="font-medium"
                                   style={{ color: 'var(--text-primary)', fontSize: '1rem' }}
                                 >
-                                  Ð›ÐµÐºÑ†Ð¸Ñ {lecture.number}: {lecture.title}
+                                  Лекция {lecture.number}: {lecture.title}
                                 </span>
                                 {lecture.status === 'completed' && (
                                   <CheckCircle size={16} style={{ color: '#22c55e' }} />
                                 )}
                                 {lecture.status === 'scheduled' && isToday && (
-                                  <Badge variant="purple">Ð”Ð½ÐµÑ</Badge>
+                                  <Badge variant="purple">Днес</Badge>
                                 )}
                               </div>
                               <div className="flex items-center gap-4">
@@ -1025,7 +1025,7 @@ export function TheoryPage() {
                                   {new Date(lecture.date).toLocaleDateString('bg-BG', {
                                     day: 'numeric',
                                     month: 'short',
-                                  })} â€¢ {lecture.time} - {lecture.endTime}
+                                  })} • {lecture.time} - {lecture.endTime}
                                 </span>
                                 <span style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
                                   {lecture.instructor}
@@ -1033,11 +1033,11 @@ export function TheoryPage() {
                                 {lecture.status === 'completed' && (
                                   <>
                                     <span style={{ color: '#22c55e', fontSize: '0.875rem' }}>
-                                      {lecture.attendanceCount} Ð¿Ñ€Ð¸ÑÑŠÑÑ‚Ð²Ð°Ñ‰Ð¸
+                                      {lecture.attendanceCount} присъстващи
                                     </span>
                                     {lecture.absentCount > 0 && (
                                       <span style={{ color: '#ef4444', fontSize: '0.875rem' }}>
-                                        {lecture.absentCount} Ð¾Ñ‚ÑÑŠÑÑ‚Ð²Ð°Ñ‰Ð¸
+                                        {lecture.absentCount} отсъстващи
                                       </span>
                                     )}
                                   </>
@@ -1052,7 +1052,7 @@ export function TheoryPage() {
                                   icon={<ClipboardList size={16} />}
                                   onClick={(e) => handleOpenAttendance(e, lecture, selectedGroup)}
                                 >
-                                  ÐœÐ°Ñ€ÐºÐ¸Ñ€Ð°Ð¹ Ð¿Ñ€Ð¸ÑÑŠÑÑ‚Ð²Ð¸Ðµ
+                                  Маркирай присъствие
                                 </Button>
                               )}
                               {lecture.status === 'completed' && lecture.students && (
@@ -1065,7 +1065,7 @@ export function TheoryPage() {
                                     toggleLecture(lecture.id);
                                   }}
                                 >
-                                  ÐŸÑ€ÐµÐ³Ð»ÐµÐ´
+                                  Преглед
                                 </Button>
                               )}
                               <div>
@@ -1089,7 +1089,7 @@ export function TheoryPage() {
                               className="font-medium mb-3"
                               style={{ color: 'var(--text-primary)', fontSize: '0.9375rem' }}
                             >
-                              ÐŸÑ€Ð¸ÑÑŠÑÑ‚Ð²Ð¸Ðµ
+                              Присъствие
                             </h4>
                             <div className="space-y-2">
                               {lecture.students.map((student) => {
@@ -1150,7 +1150,7 @@ export function TheoryPage() {
                     className="font-medium mb-4"
                     style={{ color: 'var(--text-primary)', fontSize: '1.125rem' }}
                   >
-                    ÐšÑƒÑ€ÑÐ¸ÑÑ‚Ð¸ ({selectedGroup.students.length})
+                    Курсисти ({selectedGroup.students.length})
                   </h3>
                   <div className="space-y-2">
                     {selectedGroup.students.map((student) => {
@@ -1183,11 +1183,11 @@ export function TheoryPage() {
                                 </p>
                                 <div className="flex items-center gap-3">
                                   <span style={{ color: 'var(--text-tertiary)', fontSize: '0.8125rem' }}>
-                                    {student.attendanceCount} Ð¿Ñ€Ð¸ÑÑŠÑÑ‚Ð²Ð¸Ñ
+                                    {student.attendanceCount} присъствия
                                   </span>
                                   {student.absenceCount > 0 && (
                                     <span style={{ color: '#fb923c', fontSize: '0.8125rem' }}>
-                                      {student.absenceCount} Ð¾Ñ‚ÑÑŠÑÑ‚Ð²Ð¸Ñ
+                                      {student.absenceCount} отсъствия
                                     </span>
                                   )}
                                 </div>
@@ -1201,7 +1201,7 @@ export function TheoryPage() {
                                 <div
                                   className="p-2 rounded-lg"
                                   style={{ background: 'rgba(99, 102, 241, 0.1)' }}
-                                  title="Ð¡ÑŠÐ¾Ð±Ñ‰ÐµÐ½Ð¸Ðµ Ð¸Ð·Ð¿Ñ€Ð°Ñ‚ÐµÐ½Ð¾"
+                                  title="Съобщение изпратено"
                                 >
                                   <Mail size={14} style={{ color: 'var(--accent-primary)' }} />
                                 </div>
@@ -1218,10 +1218,10 @@ export function TheoryPage() {
               {/* Actions */}
               <div className="flex gap-3 pt-4">
                 <Button variant="primary" icon={<Edit2 size={18} />} fullWidth>
-                  Ð ÐµÐ´Ð°ÐºÑ‚Ð¸Ñ€Ð°Ð½Ðµ Ð½Ð° Ð³Ñ€ÑƒÐ¿Ð°
+                  Редактиране на група
                 </Button>
                 <Button variant="secondary" icon={<FileText size={18} />}>
-                  ÐžÑ‚Ñ‡ÐµÑ‚
+                  Отчет
                 </Button>
               </div>
             </div>
@@ -1234,7 +1234,7 @@ export function TheoryPage() {
         <Modal
           isOpen={isCreateModalOpen}
           onClose={() => setIsCreateModalOpen(false)}
-          title="ÐÐ¾Ð²Ð° Ñ‚ÐµÐ¾Ñ€ÐµÑ‚Ð¸Ñ‡Ð½Ð° Ð³Ñ€ÑƒÐ¿Ð°"
+          title="Нова теоретична група"
           maxWidth="2xl"
         >
           <div className="space-y-6 p-6">
@@ -1243,15 +1243,15 @@ export function TheoryPage() {
               style={{ background: 'var(--bg-primary)' }}
             >
               <p style={{ color: 'var(--text-tertiary)' }}>
-                Ð¤Ð¾Ñ€Ð¼Ð° Ð·Ð° ÑÑŠÐ·Ð´Ð°Ð²Ð°Ð½Ðµ Ð½Ð° Ð½Ð¾Ð²Ð° Ð³Ñ€ÑƒÐ¿Ð° Ñ‰Ðµ Ð±ÑŠÐ´Ðµ Ð´Ð¾Ð±Ð°Ð²ÐµÐ½Ð°
+                Форма за създаване на нова група ще бъде добавена
               </p>
             </div>
             <div className="flex gap-3 justify-end">
               <Button variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
-                ÐžÑ‚ÐºÐ°Ð·
+                Отказ
               </Button>
               <Button variant="primary">
-                Ð¡ÑŠÐ·Ð´Ð°Ð¹ Ð³Ñ€ÑƒÐ¿Ð°
+                Създай група
               </Button>
             </div>
           </div>
@@ -1263,7 +1263,7 @@ export function TheoryPage() {
         <Modal
           isOpen={isAttendanceModalOpen}
           onClose={() => setIsAttendanceModalOpen(false)}
-          title={`ÐœÐ°Ñ€ÐºÐ¸Ñ€Ð°Ð½Ðµ Ð½Ð° Ð¿Ñ€Ð¸ÑÑŠÑÑ‚Ð²Ð¸Ðµ`}
+          title={`Маркиране на присъствие`}
           maxWidth="3xl"
         >
           <div className="p-6">
@@ -1284,14 +1284,14 @@ export function TheoryPage() {
                     className="font-semibold mb-1"
                     style={{ color: 'var(--text-primary)', fontSize: '1.125rem' }}
                   >
-                    Ð›ÐµÐºÑ†Ð¸Ñ {attendanceLecture.number}: {attendanceLecture.title}
+                    Лекция {attendanceLecture.number}: {attendanceLecture.title}
                   </h3>
                   <p style={{ color: 'var(--text-tertiary)', fontSize: '0.9375rem' }}>
                     {new Date(attendanceLecture.date).toLocaleDateString('bg-BG', {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric',
-                    })} â€¢ {attendanceLecture.time} - {attendanceLecture.endTime} â€¢ {attendanceLecture.instructor}
+                    })} • {attendanceLecture.time} - {attendanceLecture.endTime} • {attendanceLecture.instructor}
                   </p>
                 </div>
               </div>
@@ -1300,14 +1300,14 @@ export function TheoryPage() {
             {/* Quick Actions Bar */}
             <div className="flex items-center justify-between mb-6 p-4 rounded-xl" style={{ background: 'var(--bg-primary)' }}>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
-                ÐšÑƒÑ€ÑÐ¸ÑÑ‚Ð¸: {selectedGroup.students.length}
+                Курсисти: {selectedGroup.students.length}
               </p>
               <Button
                 variant="secondary"
                 icon={<UserCheck size={16} />}
                 onClick={handleMarkAllPresent}
               >
-                ÐœÐ°Ñ€ÐºÐ¸Ñ€Ð°Ð¹ Ð²ÑÐ¸Ñ‡ÐºÐ¸ ÐºÐ°Ñ‚Ð¾ Ð¿Ñ€Ð¸ÑÑŠÑÑ‚Ð²Ð°Ñ‰Ð¸
+                Маркирай всички като присъстващи
               </Button>
             </div>
 
@@ -1351,11 +1351,11 @@ export function TheoryPage() {
                           </p>
                           <div className="flex items-center gap-4">
                             <span style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
-                              {student.attendanceCount} Ð¿Ñ€Ð¸ÑÑŠÑÑ‚Ð²Ð¸Ñ
+                              {student.attendanceCount} присъствия
                             </span>
                             {student.absenceCount > 0 && (
                               <span style={{ color: '#fb923c', fontSize: '0.875rem' }}>
-                                {student.absenceCount} Ð¾Ñ‚ÑÑŠÑÑ‚Ð²Ð¸Ñ
+                                {student.absenceCount} отсъствия
                               </span>
                             )}
                           </div>
@@ -1373,7 +1373,7 @@ export function TheoryPage() {
                             color: currentStatus === 'present' ? '#22c55e' : 'var(--text-secondary)',
                           }}
                         >
-                          ÐŸÑ€Ð¸ÑÑŠÑÑ‚Ð²Ð°
+                          Присъства
                         </button>
                         <button
                           onClick={() => setAttendanceData({ ...attendanceData, [student.id]: 'late' })}
@@ -1384,7 +1384,7 @@ export function TheoryPage() {
                             color: currentStatus === 'late' ? '#fb923c' : 'var(--text-secondary)',
                           }}
                         >
-                          Ð—Ð°ÐºÑŠÑÐ½ÑÐ»
+                          Закъснял
                         </button>
                         <button
                           onClick={() => setAttendanceData({ ...attendanceData, [student.id]: 'absent' })}
@@ -1395,7 +1395,7 @@ export function TheoryPage() {
                             color: currentStatus === 'absent' ? '#ef4444' : 'var(--text-secondary)',
                           }}
                         >
-                          ÐžÑ‚ÑÑŠÑÑ‚Ð²Ð°
+                          Отсъства
                         </button>
                         <button
                           onClick={() => setAttendanceData({ ...attendanceData, [student.id]: 'excused' })}
@@ -1406,7 +1406,7 @@ export function TheoryPage() {
                             color: currentStatus === 'excused' ? 'var(--accent-primary)' : 'var(--text-secondary)',
                           }}
                         >
-                          ÐžÐ¿Ñ€Ð°Ð²Ð´Ð°Ð½
+                          Оправдан
                         </button>
                       </div>
                     </div>
@@ -1422,14 +1422,14 @@ export function TheoryPage() {
                 onClick={() => setIsAttendanceModalOpen(false)}
                 fullWidth
               >
-                ÐžÑ‚ÐºÐ°Ð·
+                Отказ
               </Button>
               <Button
                 variant="primary"
                 onClick={handleSubmitAttendance}
                 fullWidth
               >
-                Ð—Ð°Ð¿Ð°Ð·Ð¸ Ð¿Ñ€Ð¸ÑÑŠÑÑ‚Ð²Ð¸Ðµ
+                Запази присъствие
               </Button>
             </div>
           </div>
@@ -1464,15 +1464,15 @@ export function TheoryPage() {
                   className="text-2xl font-semibold mb-2"
                   style={{ color: 'var(--text-primary)' }}
                 >
-                  Ð”ÐµÑ‚Ð°Ð¹Ð»Ð¸ Ð·Ð° Ð¾Ñ‚ÑÑŠÑÑ‚Ð²Ð¸Ðµ
+                  Детайли за отсъствие
                 </h2>
                 <div className="flex items-center gap-2">
-                  <Badge variant="red">ÐžÑ‚ÑÑŠÑÑ‚Ð²Ð°</Badge>
+                  <Badge variant="red">Отсъства</Badge>
                   {selectedAbsentStudent.student.messageStatus === 'sent' && (
-                    <Badge variant="blue">Ð˜Ð·Ð¿Ñ€Ð°Ñ‚ÐµÐ½Ð¾ ÑÑŠÐ¾Ð±Ñ‰ÐµÐ½Ð¸Ðµ</Badge>
+                    <Badge variant="blue">Изпратено съобщение</Badge>
                   )}
                   {selectedAbsentStudent.student.recoveryStatus === 'required' && (
-                    <Badge variant="red">ÐÑƒÐ¶Ð½Ð¾ Ð²ÑŠÐ·ÑÑ‚Ð°Ð½Ð¾Ð²ÑÐ²Ð°Ð½Ðµ</Badge>
+                    <Badge variant="red">Нужно възстановяване</Badge>
                   )}
                 </div>
               </div>
@@ -1506,14 +1506,14 @@ export function TheoryPage() {
                       {selectedAbsentStudent.student.name}
                     </h3>
                     <p style={{ color: 'var(--text-tertiary)', fontSize: '0.9375rem' }}>
-                      {selectedAbsentStudent.group.name} â€¢ ÐšÐ°Ñ‚ÐµÐ³Ð¾Ñ€Ð¸Ñ {selectedAbsentStudent.student.category}
+                      {selectedAbsentStudent.group.name} • Категория {selectedAbsentStudent.student.category}
                     </p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem', marginBottom: '4px' }}>
-                      ÐŸÑ€Ð¸ÑÑŠÑÑ‚Ð²Ð¸Ñ
+                      Присъствия
                     </p>
                     <p
                       className="font-semibold"
@@ -1524,7 +1524,7 @@ export function TheoryPage() {
                   </div>
                   <div>
                     <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem', marginBottom: '4px' }}>
-                      ÐžÑ‚ÑÑŠÑÑ‚Ð²Ð¸Ñ
+                      Отсъствия
                     </p>
                     <p
                       className="font-semibold"
@@ -1542,7 +1542,7 @@ export function TheoryPage() {
                   className="font-medium mb-3"
                   style={{ color: 'var(--text-primary)', fontSize: '1rem' }}
                 >
-                  ÐŸÑ€Ð¾Ð¿ÑƒÑÐ½Ð°Ñ‚Ð° Ð»ÐµÐºÑ†Ð¸Ñ
+                  Пропусната лекция
                 </h3>
                 <div
                   className="rounded-xl p-5"
@@ -1559,7 +1559,7 @@ export function TheoryPage() {
                       className="font-medium"
                       style={{ color: 'var(--text-primary)', fontSize: '1rem' }}
                     >
-                      Ð›ÐµÐºÑ†Ð¸Ñ {selectedAbsentStudent.lecture.number}: {selectedAbsentStudent.lecture.title}
+                      Лекция {selectedAbsentStudent.lecture.number}: {selectedAbsentStudent.lecture.title}
                     </h4>
                   </div>
                   <div className="space-y-2 pl-11">
@@ -1595,7 +1595,7 @@ export function TheoryPage() {
                   className="font-medium mb-3"
                   style={{ color: 'var(--text-primary)', fontSize: '1rem' }}
                 >
-                  Ð¡Ñ‚Ð°Ñ‚ÑƒÑ Ð¸ Ð¿Ð¾ÑÐ»ÐµÐ´Ð²Ð°Ñ‰Ð¸ Ð´ÐµÐ¹ÑÑ‚Ð²Ð¸Ñ
+                  Статус и последващи действия
                 </h3>
                 <div className="space-y-3">
                   {/* Recovery Status */}
@@ -1621,12 +1621,12 @@ export function TheoryPage() {
                             className="font-medium mb-1"
                             style={{ color: 'var(--text-primary)', fontSize: '0.9375rem' }}
                           >
-                            Ð’ÑŠÐ·ÑÑ‚Ð°Ð½Ð¾Ð²ÑÐ²Ð°Ð½Ðµ Ð½Ð° Ñ‡Ð°ÑÐ¾Ð²Ðµ
+                            Възстановяване на часове
                           </p>
                           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
                             {selectedAbsentStudent.student.recoveryStatus === 'required'
-                              ? 'ÐšÑƒÑ€ÑÐ¸ÑÑ‚ÑŠÑ‚ Ñ‚Ñ€ÑÐ±Ð²Ð° Ð´Ð° Ð¿Ð¾ÑÐµÑ‚Ð¸ Ð´Ð¾Ð¿ÑŠÐ»Ð½Ð¸Ñ‚ÐµÐ»Ð½Ð° Ð»ÐµÐºÑ†Ð¸Ñ'
-                              : 'ÐÐµ ÑÐµ Ð¸Ð·Ð¸ÑÐºÐ²Ð° Ð²ÑŠÐ·ÑÑ‚Ð°Ð½Ð¾Ð²ÑÐ²Ð°Ð½Ðµ'}
+                              ? 'Курсистът трябва да посети допълнителна лекция'
+                              : 'Не се изисква възстановяване'}
                           </p>
                         </div>
                       </div>
@@ -1649,17 +1649,17 @@ export function TheoryPage() {
                             className="font-medium mb-1"
                             style={{ color: 'var(--text-primary)', fontSize: '0.9375rem' }}
                           >
-                            ÐÐ²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡Ð½Ð¾ ÑÑŠÐ¾Ð±Ñ‰ÐµÐ½Ð¸Ðµ
+                            Автоматично съобщение
                           </p>
                           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
                             {selectedAbsentStudent.student.messageStatus === 'sent'
-                              ? 'SMS Ð¸Ð·Ð¿Ñ€Ð°Ñ‚ÐµÐ½Ð¾ Ð´Ð¾ Ñ€Ð¾Ð´Ð¸Ñ‚ÐµÐ» Ð·Ð° Ð¾Ñ‚ÑÑŠÑÑ‚Ð²Ð¸ÐµÑ‚Ð¾'
-                              : 'Ð¡ÑŠÐ¾Ð±Ñ‰ÐµÐ½Ð¸Ðµ Ð½Ðµ Ðµ Ð¸Ð·Ð¿Ñ€Ð°Ñ‰Ð°Ð½Ð¾'}
+                              ? 'SMS изпратено до родител за отсъствието'
+                              : 'Съобщение не е изпращано'}
                           </p>
                         </div>
                       </div>
                       {selectedAbsentStudent.student.messageStatus === 'sent' && (
-                        <Badge variant="blue">Ð˜Ð·Ð¿Ñ€Ð°Ñ‚ÐµÐ½Ð¾</Badge>
+                        <Badge variant="blue">Изпратено</Badge>
                       )}
                     </div>
                   </div>
@@ -1681,10 +1681,10 @@ export function TheoryPage() {
                               className="font-medium mb-1"
                               style={{ color: 'var(--text-primary)', fontSize: '0.9375rem' }}
                             >
-                              Ð¢Ð°ÐºÑÐ° Ð·Ð° Ð²ÑŠÐ·ÑÑ‚Ð°Ð½Ð¾Ð²ÑÐ²Ð°Ð½Ðµ
+                              Такса за възстановяване
                             </p>
                             <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
-                              Ð”ÑŠÐ»Ð¶Ð¸Ð¼Ð° ÑÑƒÐ¼Ð° Ð·Ð° Ð´Ð¾Ð¿ÑŠÐ»Ð½Ð¸Ñ‚ÐµÐ»Ð½Ð° Ð»ÐµÐºÑ†Ð¸Ñ
+                              Дължима сума за допълнителна лекция
                             </p>
                           </div>
                         </div>
@@ -1692,7 +1692,7 @@ export function TheoryPage() {
                           className="font-semibold"
                           style={{ color: '#fb923c', fontSize: '1.125rem' }}
                         >
-                          {selectedAbsentStudent.student.dueAmount} Ð»Ð²
+                          {selectedAbsentStudent.student.dueAmount} лв
                         </span>
                       </div>
                     </div>
@@ -1706,7 +1706,7 @@ export function TheoryPage() {
                   className="font-medium mb-4"
                   style={{ color: 'var(--text-primary)', fontSize: '1rem' }}
                 >
-                  Ð˜ÑÑ‚Ð¾Ñ€Ð¸Ñ Ð½Ð° Ð°ÐºÑ‚Ð¸Ð²Ð½Ð¾ÑÑ‚
+                  История на активност
                 </h3>
                 <div className="space-y-4">
                   {/* Timeline Item 1 */}
@@ -1728,17 +1728,17 @@ export function TheoryPage() {
                         className="font-medium mb-1"
                         style={{ color: 'var(--text-primary)', fontSize: '0.9375rem' }}
                       >
-                        ÐžÑ‚ÑÑŠÑÑ‚Ð²Ð¸Ðµ Ñ€ÐµÐ³Ð¸ÑÑ‚Ñ€Ð¸Ñ€Ð°Ð½Ð¾
+                        Отсъствие регистрирано
                       </p>
                       <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem', marginBottom: '6px' }}>
-                        ÐšÑƒÑ€ÑÐ¸ÑÑ‚ÑŠÑ‚ Ð½Ðµ ÑÐµ ÑÐ²Ð¸ Ð½Ð° Ð»ÐµÐºÑ†Ð¸ÑÑ‚Ð°
+                        Курсистът не се яви на лекцията
                       </p>
                       <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8125rem' }}>
                         {new Date(selectedAbsentStudent.lecture.date).toLocaleDateString('bg-BG', {
                           day: 'numeric',
                           month: 'short',
                           year: 'numeric',
-                        })} â€¢ 12:05
+                        })} • 12:05
                       </p>
                     </div>
                   </div>
@@ -1763,17 +1763,17 @@ export function TheoryPage() {
                           className="font-medium mb-1"
                           style={{ color: 'var(--text-primary)', fontSize: '0.9375rem' }}
                         >
-                          SMS Ð¸Ð·Ð¿Ñ€Ð°Ñ‚ÐµÐ½Ð¾ Ð´Ð¾ Ñ€Ð¾Ð´Ð¸Ñ‚ÐµÐ»
+                          SMS изпратено до родител
                         </p>
                         <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem', marginBottom: '6px' }}>
-                          ÐÐ²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡Ð½Ð¾ ÑƒÐ²ÐµÐ´Ð¾Ð¼Ð»ÐµÐ½Ð¸Ðµ Ð·Ð° Ð¿Ñ€Ð¾Ð¿ÑƒÑÐ½Ð°Ñ‚Ð°Ñ‚Ð° Ð»ÐµÐºÑ†Ð¸Ñ
+                          Автоматично уведомление за пропуснатата лекция
                         </p>
                         <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8125rem' }}>
                           {new Date(selectedAbsentStudent.lecture.date).toLocaleDateString('bg-BG', {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric',
-                          })} â€¢ 12:10
+                          })} • 12:10
                         </p>
                       </div>
                     </div>
@@ -1795,17 +1795,17 @@ export function TheoryPage() {
                           className="font-medium mb-1"
                           style={{ color: 'var(--text-primary)', fontSize: '0.9375rem' }}
                         >
-                          ÐœÐ°Ñ€ÐºÐ¸Ñ€Ð°Ð½Ð¾ Ð·Ð° Ð²ÑŠÐ·ÑÑ‚Ð°Ð½Ð¾Ð²ÑÐ²Ð°Ð½Ðµ
+                          Маркирано за възстановяване
                         </p>
                         <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem', marginBottom: '6px' }}>
-                          ÐšÑƒÑ€ÑÐ¸ÑÑ‚ÑŠÑ‚ Ñ‚Ñ€ÑÐ±Ð²Ð° Ð´Ð° Ð¿Ð¾ÑÐµÑ‚Ð¸ Ð´Ð¾Ð¿ÑŠÐ»Ð½Ð¸Ñ‚ÐµÐ»Ð½Ð° Ð»ÐµÐºÑ†Ð¸Ñ
+                          Курсистът трябва да посети допълнителна лекция
                         </p>
                         <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8125rem' }}>
                           {new Date(selectedAbsentStudent.lecture.date).toLocaleDateString('bg-BG', {
                             day: 'numeric',
                             month: 'short',
                             year: 'numeric',
-                          })} â€¢ 12:15
+                          })} • 12:15
                         </p>
                       </div>
                     </div>
@@ -1822,27 +1822,27 @@ export function TheoryPage() {
                   className="font-medium mb-3"
                   style={{ color: 'var(--text-primary)', fontSize: '0.9375rem' }}
                 >
-                  Ð¡Ð¸ÑÑ‚ÐµÐ¼Ð½Ð° Ð¸Ð½Ñ„Ð¾Ñ€Ð¼Ð°Ñ†Ð¸Ñ
+                  Системна информация
                 </h4>
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
-                      Ð¡ÑŠÐ·Ð´Ð°Ð´ÐµÐ½Ð¾ Ð¾Ñ‚:
+                      Създадено от:
                     </span>
                     <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                      Ð¡Ð¸ÑÑ‚ÐµÐ¼Ð° (Ð°Ð²Ñ‚Ð¾Ð¼Ð°Ñ‚Ð¸Ñ‡Ð½Ð¾)
+                      Система (автоматично)
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem' }}>
-                      ÐŸÐ¾ÑÐ»ÐµÐ´Ð½Ð° Ð¿Ñ€Ð¾Ð¼ÑÐ½Ð°:
+                      Последна промяна:
                     </span>
                     <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
                       {new Date(selectedAbsentStudent.lecture.date).toLocaleDateString('bg-BG', {
                         day: 'numeric',
                         month: 'short',
                         year: 'numeric',
-                      })} â€¢ 12:15
+                      })} • 12:15
                     </span>
                   </div>
                 </div>
@@ -1851,10 +1851,10 @@ export function TheoryPage() {
               {/* Actions */}
               <div className="flex gap-3 pt-4" style={{ borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
                 <Button variant="secondary" icon={<Mail size={18} />} fullWidth>
-                  Ð˜Ð·Ð¿Ñ€Ð°Ñ‚Ð¸ Ð½Ð°Ð¿Ð¾Ð¼Ð½ÑÐ½Ðµ
+                  Изпрати напомняне
                 </Button>
                 <Button variant="primary" icon={<CalendarIcon size={18} />} fullWidth>
-                  ÐŸÐ»Ð°Ð½Ð¸Ñ€Ð°Ð¹ Ð²ÑŠÐ·ÑÑ‚Ð°Ð½Ð¾Ð²ÑÐ²Ð°Ð½Ðµ
+                  Планирай възстановяване
                 </Button>
               </div>
             </div>
