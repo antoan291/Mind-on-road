@@ -1,0 +1,2 @@
+[console_scripts]
+extract-bg-document = document_intelligence.cli:main

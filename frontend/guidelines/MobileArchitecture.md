@@ -1,4 +1,4 @@
-# KursantAI / DriveAdmin - Mobile Architecture
+# MindOnRoad / DriveAdmin - Mobile Architecture
 
 ## Mobile Obsidian Navigator Design System
 
@@ -9,7 +9,9 @@ Same premium, dark-themed interface adapted for mobile devices with touch-optimi
 ## Mobile Navigation Model
 
 ### Bottom Navigation Bar
+
 Fixed navigation with 5 primary sections:
+
 1. **Табло** (Dashboard) - Home screen
 2. **Курсисти** (Students) - Student management
 3. **График** (Schedule) - Daily schedule
@@ -17,12 +19,14 @@ Fixed navigation with 5 primary sections:
 5. **Меню** (Menu) - Full menu overlay
 
 ### Top Bar
+
 - Compact logo (KA badge)
 - Page context
 - Search icon
-- 56px height (14 * 4px)
+- 56px height (14 \* 4px)
 
 ### Full Menu Overlay
+
 - Slides in from bottom navigation
 - Full-screen experience
 - All secondary navigation items
@@ -46,6 +50,7 @@ Fixed navigation with 5 primary sections:
 ```
 
 **Key Measurements:**
+
 - Top bar: 56px (h-14)
 - Bottom nav: 64px (h-16)
 - Safe padding from bottom nav: 80px (pb-20)
@@ -61,12 +66,14 @@ Fixed navigation with 5 primary sections:
 ### 1. Mobile Dashboard
 
 **Components:**
+
 - Quick stats (2-column grid)
 - Today's schedule cards
 - AI insights card
 - Quick action buttons
 
 **Features:**
+
 - Swipeable stat cards (future)
 - Tappable schedule items
 - Direct navigation to student details
@@ -78,6 +85,7 @@ Fixed navigation with 5 primary sections:
 ### 2. Mobile List Page (Students)
 
 **Components:**
+
 - Search bar with filter button
 - Student cards with:
   - Avatar
@@ -87,6 +95,7 @@ Fixed navigation with 5 primary sections:
   - Next lesson info
 
 **Interactions:**
+
 - Pull to refresh (future)
 - Tap card to view details
 - Search filters
@@ -98,6 +107,7 @@ Fixed navigation with 5 primary sections:
 ### 3. Mobile Detail Page
 
 **Components:**
+
 - Back navigation
 - Action menu (3-dot)
 - Profile card
@@ -107,6 +117,7 @@ Fixed navigation with 5 primary sections:
 - Sticky bottom actions
 
 **Features:**
+
 - Action sheet for quick actions
 - Direct call/edit buttons
 - Scrollable content with sticky CTAs
@@ -118,12 +129,14 @@ Fixed navigation with 5 primary sections:
 ### 4. Mobile Form Page
 
 **Components:**
+
 - Sectioned form cards
 - Large input fields (48px height)
 - Dropdowns with native feel
 - Sticky submit button
 
 **Features:**
+
 - One section at a time
 - Clear field labels
 - Helpful validation
@@ -136,6 +149,7 @@ Fixed navigation with 5 primary sections:
 ### 5. Mobile Schedule Page
 
 **Components:**
+
 - Date selector
 - Timeline view
 - Schedule cards with:
@@ -145,6 +159,7 @@ Fixed navigation with 5 primary sections:
   - Status badges
 
 **Features:**
+
 - Swipe between dates (future)
 - Tap to view details
 - Visual timeline
@@ -156,6 +171,7 @@ Fixed navigation with 5 primary sections:
 ### 6. Mobile Notifications Page
 
 **Components:**
+
 - Unread count in header
 - Notification cards with:
   - Type icon
@@ -164,6 +180,7 @@ Fixed navigation with 5 primary sections:
   - Unread indicator
 
 **Features:**
+
 - Mark all read button
 - Tap to view details
 - Visual grouping by read status
@@ -175,6 +192,7 @@ Fixed navigation with 5 primary sections:
 ## Mobile UI Components
 
 ### MobilePageHeader
+
 ```tsx
 <MobilePageHeader
   title="Заглавие"
@@ -185,6 +203,7 @@ Fixed navigation with 5 primary sections:
 ```
 
 **Features:**
+
 - Back button when needed
 - Title with optional subtitle
 - Action buttons (right side)
@@ -193,6 +212,7 @@ Fixed navigation with 5 primary sections:
 ---
 
 ### BottomSheet
+
 ```tsx
 <BottomSheet
   isOpen={isOpen}
@@ -205,11 +225,13 @@ Fixed navigation with 5 primary sections:
 ```
 
 **Snap Points:**
+
 - `auto` - Fits content (max 85vh)
 - `half` - 50vh
 - `full` - 100vh
 
 **Features:**
+
 - Drag handle
 - Backdrop blur
 - Slide-up animation
@@ -218,6 +240,7 @@ Fixed navigation with 5 primary sections:
 ---
 
 ### ActionSheet
+
 ```tsx
 <ActionSheet
   isOpen={isOpen}
@@ -225,16 +248,17 @@ Fixed navigation with 5 primary sections:
   title="Действия"
   actions={[
     {
-      label: 'Редактирай',
+      label: "Редактирай",
       icon: <Edit />,
       onClick: () => {},
-      variant: 'primary',
+      variant: "primary",
     },
   ]}
 />
 ```
 
 **Variants:**
+
 - `default` - Card background
 - `primary` - Indigo gradient
 - `destructive` - Error red
@@ -244,36 +268,42 @@ Fixed navigation with 5 primary sections:
 ## Mobile-Specific Design Decisions
 
 ### Touch Targets
+
 - **Minimum:** 44x44px (iOS guideline)
 - **Comfortable:** 48x48px
 - **Primary actions:** 56px height
 - **Bottom nav items:** 64px width minimum
 
 ### Typography
+
 - Same Inter font family
 - Slightly smaller headings on mobile
 - Generous line-height maintained
 - Text truncation with ellipsis
 
 ### Spacing
+
 - Consistent 16px padding
 - 12px gaps between cards
 - 16px between sections
 - No horizontal scroll
 
 ### Colors
+
 - Exact same color palette
 - Same tonal layering
 - Indigo primary accent
 - Purple AI accent (sparingly)
 
 ### Cards
+
 - Rounded corners: 12px (rounded-xl)
 - Tonal backgrounds (no borders)
 - Touch-optimized padding
 - Clear active states
 
 ### Interactions
+
 - Tap feedback (subtle bg change)
 - Smooth transitions (200ms)
 - Native-feeling scrolling
@@ -284,10 +314,12 @@ Fixed navigation with 5 primary sections:
 ## Responsive Strategy
 
 ### Breakpoint
+
 - Mobile: < 1024px (lg breakpoint)
 - Desktop: ≥ 1024px
 
 ### Implementation
+
 ```tsx
 // ResponsiveLayout.tsx
 const [isMobile, setIsMobile] = useState(false);
@@ -297,8 +329,8 @@ useEffect(() => {
     setIsMobile(window.innerWidth < 1024);
   };
   checkMobile();
-  window.addEventListener('resize', checkMobile);
-  return () => window.removeEventListener('resize', checkMobile);
+  window.addEventListener("resize", checkMobile);
+  return () => window.removeEventListener("resize", checkMobile);
 }, []);
 
 return isMobile ? <MobileLayout /> : <AppLayout />;
@@ -311,24 +343,31 @@ Each major page has a responsive wrapper that renders the appropriate version.
 ## Mobile Patterns Library
 
 ### 1. Stat Card
+
 Small metric display with icon, label, value, and subtitle.
 
 ### 2. Schedule Card
+
 Timeline-style card with time, student, instructor, location.
 
 ### 3. Student Card
+
 List item with avatar, name, category, progress bar, status.
 
 ### 4. Notification Card
+
 Alert-style card with icon, title, message, timestamp, unread indicator.
 
 ### 5. Info Row
+
 Contact detail row with icon, label, and value.
 
 ### 6. Progress Item
+
 Small progress indicator with icon, label, and status.
 
 ### 7. Lesson Card
+
 Compact lesson history item with date, time, type, status.
 
 ---
@@ -336,12 +375,13 @@ Compact lesson history item with date, time, type, status.
 ## Sticky Bottom Actions
 
 For detail and form pages:
+
 ```tsx
-<div 
+<div
   className="fixed bottom-16 left-0 right-0 p-4 border-t"
-  style={{ 
-    background: 'var(--bg-panel)',
-    borderColor: 'var(--ghost-border)'
+  style={{
+    background: "var(--bg-panel)",
+    borderColor: "var(--ghost-border)",
   }}
 >
   <button>Primary Action</button>
@@ -349,6 +389,7 @@ For detail and form pages:
 ```
 
 **Key Points:**
+
 - `bottom-16` - Above bottom nav (64px)
 - Full width with 16px padding
 - Subtle top border
@@ -372,6 +413,7 @@ For detail and form pages:
 ## Animation & Transitions
 
 ### Bottom Sheet
+
 ```css
 @keyframes slide-up {
   from {
@@ -390,6 +432,7 @@ For detail and form pages:
 ```
 
 ### Transitions
+
 - All interactive elements: 200ms
 - Easing: cubic-bezier(0.4, 0, 0.2, 1)
 - Properties: background, shadow, transform
@@ -399,6 +442,7 @@ For detail and form pages:
 ## Mobile Performance
 
 ### Optimizations
+
 - Lazy load images
 - Virtual scrolling for long lists (future)
 - Debounced search input
@@ -406,6 +450,7 @@ For detail and form pages:
 - Minimal re-renders
 
 ### Loading States
+
 - Skeleton screens (future)
 - Loading spinners
 - Progressive enhancement
@@ -472,6 +517,7 @@ For detail and form pages:
 ## Mobile vs Desktop: Same Product
 
 ### Same
+
 ✅ Color palette (exact)  
 ✅ Typography (Inter font)  
 ✅ Tonal layering  
@@ -481,9 +527,10 @@ For detail and form pages:
 ✅ Border radius (12px)  
 ✅ Component logic  
 ✅ Data structures  
-✅ Business rules  
+✅ Business rules
 
 ### Adapted
+
 📱 Navigation model (bottom nav)  
 📱 Layout density (more spacious)  
 📱 Touch targets (larger)  
@@ -491,7 +538,7 @@ For detail and form pages:
 📱 Form layout (single column)  
 📱 Table → Card lists  
 📱 Sticky actions  
-📱 Simplified headers  
+📱 Simplified headers
 
 ---
 

@@ -1,10 +1,10 @@
-# KursantAI / DriveAdmin
+# MindOnRoad / DriveAdmin
 
 ## Архитектура на базата данни
 
 ## 1. Цел на документа
 
-Този документ описва препоръчителната database architecture за продукта KursantAI / DriveAdmin.
+Този документ описва препоръчителната database architecture за продукта MindOnRoad / DriveAdmin.
 
 Фокусът е върху:
 

@@ -1,10 +1,10 @@
-# KursantAI / DriveAdmin
+# MindOnRoad / DriveAdmin
 
 ## Архитектура на сигурността
 
 ## 1. Цел на документа
 
-Този документ описва security architecture за продукта KursantAI / DriveAdmin.
+Този документ описва security architecture за продукта MindOnRoad / DriveAdmin.
 
 Сигурността е критична, защото системата съхранява:
 

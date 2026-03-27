@@ -1,4 +1,4 @@
-# KursantAI / DriveAdmin
+# MindOnRoad / DriveAdmin
 
 ## Индекс на архитектурата и source of truth
 

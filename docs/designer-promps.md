@@ -1,8 +1,8 @@
-# Stitch Prompts for KursantAI / DriveAdmin
+# Stitch Prompts for MindOnRoad / DriveAdmin
 
 ## Purpose of this file
 
-This file contains ready-to-use prompts for Stitch to design the full KursantAI / DriveAdmin system. The prompts are written to reduce common Stitch problems:
+This file contains ready-to-use prompts for Stitch to design the full MindOnRoad / DriveAdmin system. The prompts are written to reduce common Stitch problems:
 
 - changing the visual style from screen to screen;
 - inheriting random styling from a previously generated screen;
@@ -47,7 +47,7 @@ All UI copy inside the product must be in Bulgarian.
 ## 1. Master prompt for the design system
 
 ```text
-Create a complete design system for a web-based driving school management platform called KursantAI / DriveAdmin.
+Create a complete design system for a web-based driving school management platform called MindOnRoad / DriveAdmin.
 
 The system will be used mainly by administrative staff, including older women who are not very confident with computers. The interface must be extremely clear, friendly, calm, professional, and easy to use.
 
@@ -160,7 +160,7 @@ All UI copy inside the product must be in Bulgarian.
 ## 2. Master prompt for desktop system architecture
 
 ```text
-Use the already established design system and create the main desktop architecture for the KursantAI / DriveAdmin admin platform.
+Use the already established design system and create the main desktop architecture for the MindOnRoad / DriveAdmin admin platform.
 
 I want one persistent layout template for the whole project. This template should repeat across most internal screens so users are never confused.
 
@@ -224,7 +224,7 @@ All UI copy inside the product must be in Bulgarian.
 ## 3. Master prompt for mobile adaptation
 
 ```text
-Use the same design system and the same visual language from the desktop version of KursantAI / DriveAdmin and create the mobile version of the product.
+Use the same design system and the same visual language from the desktop version of MindOnRoad / DriveAdmin and create the mobile version of the product.
 
 The mobile experience must not feel like a different product. It must feel like the same system, carefully adapted for a phone.
 
@@ -273,7 +273,7 @@ All UI copy inside the product must be in Bulgarian.
 ## 4. Prompt for the dashboard
 
 ```text
-Use the established KursantAI / DriveAdmin template and create a desktop admin dashboard.
+Use the established MindOnRoad / DriveAdmin template and create a desktop admin dashboard.
 
 The dashboard must be very clear and show the most important daily operational information without visual noise.
 
@@ -345,7 +345,7 @@ Use the same design language, spacing rules, table patterns, and detail patterns
 ## 6. Prompt for the Payments Table
 
 ```text
-Use the established template and create the desktop screen for the Payments Table in KursantAI / DriveAdmin.
+Use the established template and create the desktop screen for the Payments Table in MindOnRoad / DriveAdmin.
 
 This is one of the most important Version 1 screens. It must feel like the operational financial control center for a driving school administration team.
 
@@ -517,7 +517,7 @@ Keep the template consistent with the rest of the product.
 ## 6A. Prompt for the Invoices Page
 
 ```text
-Use the established template and create the desktop screen for the Invoices page in KursantAI / DriveAdmin.
+Use the established template and create the desktop screen for the Invoices page in MindOnRoad / DriveAdmin.
 
 This page is a critical operational and document-control screen. It must help the administration create, monitor, find, verify, and follow invoices without stress. It is not just a list of documents. It is the main invoice workspace for daily administration.
 
@@ -708,7 +708,7 @@ Keep the template fully consistent with the rest of the product.
 ## 7. Prompt for practical lessons
 
 ```text
-Use the established template and create the desktop page for the Practical Lessons module in KursantAI / DriveAdmin.
+Use the established template and create the desktop page for the Practical Lessons module in MindOnRoad / DriveAdmin.
 
 This page already exists conceptually with this structure in Bulgarian:
 - Начало
@@ -936,7 +936,7 @@ Keep the same project template and the same visual system.
 ## 8. Prompt for theory and attendance
 
 ```text
-Use the established template and create the desktop page for the Theory module in KursantAI / DriveAdmin.
+Use the established template and create the desktop page for the Theory module in MindOnRoad / DriveAdmin.
 
 This page must be designed as a real operational workspace for theory groups, lectures, attendance, absences, and follow-up actions. It must not feel like an empty educational page or a generic course management screen.
 
@@ -1263,7 +1263,7 @@ It should feel reliable and structured, not legally heavy or visually bureaucrat
 ## 10A. Prompt for instructors
 
 ```text
-Use the established template and create the desktop page for the Instructors module in KursantAI / DriveAdmin.
+Use the established template and create the desktop page for the Instructors module in MindOnRoad / DriveAdmin.
 
 This page must be a real operational workspace for the school administration. It must help the client and the admin understand every instructor clearly, manage their status, follow their workload, and see whether they are ready to work.
 
@@ -1467,7 +1467,7 @@ Keep the same project template and the same visual system.
 ## 11. Prompt for schedule
 
 ```text
-Use the established template and create the desktop Schedule page for KursantAI / DriveAdmin.
+Use the established template and create the desktop Schedule page for MindOnRoad / DriveAdmin.
 
 This page must be one of the most important operational screens in the system. It is the real planning center for the driving school and must allow the administration to understand the entire day quickly and make changes with confidence.
 
@@ -1778,7 +1778,7 @@ Do not invent a different mobile aesthetic. Adapt the same system.
 ## 13. Prompt for final consistency pass
 
 ```text
-Review all screens created so far for KursantAI / DriveAdmin and unify them into one fully consistent design system.
+Review all screens created so far for MindOnRoad / DriveAdmin and unify them into one fully consistent design system.
 
 Check and correct:
 - sidebar;

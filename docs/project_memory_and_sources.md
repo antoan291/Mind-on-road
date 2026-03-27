@@ -68,3 +68,9 @@ If a choice changes architecture, security, data model, frontend structure, or A
 - Backend structure guide: C:/AD/work/My company/school/backend/STRUCTURE_GUIDE.md
 - Backend naming conventions: C:/AD/work/My company/school/backend/NAMING_CONVENTIONS.md
 - Backend module template: C:/AD/work/My company/school/backend/MODULE_TEMPLATE.md
+
+## Automation scaffold
+
+- Automation root: C:/AD/work/My company/school/automation
+- Bulgarian document extraction package: C:/AD/work/My company/school/automation/src/document_intelligence
+- CLI script: C:/AD/work/My company/school/automation/scripts/extract_bg_document.py

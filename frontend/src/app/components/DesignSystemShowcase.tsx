@@ -1,30 +1,53 @@
-import { useState } from 'react';
-import { Plus, Save, X, Check, AlertTriangle, Info, Search, Filter, Download, Upload, Edit, Trash2, Eye, ChevronDown, Calendar as CalendarIcon, Clock, MapPin, User, Mail, Phone, Car } from 'lucide-react';
+import { useState } from "react";
+import {
+  Plus,
+  Save,
+  X,
+  Check,
+  AlertTriangle,
+  Info,
+  Search,
+  Filter,
+  Download,
+  Upload,
+  Edit,
+  Trash2,
+  Eye,
+  ChevronDown,
+  Calendar as CalendarIcon,
+  Clock,
+  MapPin,
+  User,
+  Mail,
+  Phone,
+  Car,
+} from "lucide-react";
 
 export function DesignSystemShowcase() {
-  const [selectedTab, setSelectedTab] = useState('colors');
+  const [selectedTab, setSelectedTab] = useState("colors");
   const [showModal, setShowModal] = useState(false);
-  const [inputValue, setInputValue] = useState('');
-  const [selectValue, setSelectValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
+  const [selectValue, setSelectValue] = useState("");
   const [checkboxChecked, setCheckboxChecked] = useState(false);
 
   return (
     <div className="p-6 lg:p-8 space-y-8">
       {/* Header */}
       <div className="space-y-2">
-        <h1 style={{ color: 'var(--text-primary)' }}>
-          The Obsidian Navigator
-        </h1>
-        <p className="text-lg" style={{ color: 'var(--text-secondary)' }}>
-          Премиум дизайн система за KursantAI / DriveAdmin
+        <h1 style={{ color: "var(--text-primary)" }}>The Obsidian Navigator</h1>
+        <p className="text-lg" style={{ color: "var(--text-secondary)" }}>
+          Премиум дизайн система за MindOnRoad / DriveAdmin
         </p>
       </div>
 
       {/* Color System */}
       <section className="space-y-4">
         <div>
-          <h2 style={{ color: 'var(--text-primary)' }}>Цветова Система</h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+          <h2 style={{ color: "var(--text-primary)" }}>Цветова Система</h2>
+          <p
+            className="text-sm mt-1"
+            style={{ color: "var(--text-secondary)" }}
+          >
             Тонално наслояване и смокинг гласови повърхности
           </p>
         </div>
@@ -40,11 +63,7 @@ export function DesignSystemShowcase() {
             value="#091328"
             description="Панели"
           />
-          <ColorSwatch
-            name="Card Level"
-            value="#192540"
-            description="Карти"
-          />
+          <ColorSwatch name="Card Level" value="#192540" description="Карти" />
           <ColorSwatch
             name="Modal Level"
             value="#1f2b49"
@@ -66,8 +85,8 @@ export function DesignSystemShowcase() {
 
       {/* Status Colors */}
       <section className="space-y-4">
-        <h2 style={{ color: 'var(--text-primary)' }}>Статусни Цветове</h2>
-        
+        <h2 style={{ color: "var(--text-primary)" }}>Статусни Цветове</h2>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <StatusExample status="success" label="Успешно" />
           <StatusExample status="warning" label="Внимание" />
@@ -80,38 +99,57 @@ export function DesignSystemShowcase() {
 
       {/* Typography */}
       <section className="space-y-4">
-        <h2 style={{ color: 'var(--text-primary)' }}>Типография</h2>
-        
-        <div className="p-6 rounded-lg space-y-6" style={{ background: 'var(--bg-card)' }}>
+        <h2 style={{ color: "var(--text-primary)" }}>Типография</h2>
+
+        <div
+          className="p-6 rounded-lg space-y-6"
+          style={{ background: "var(--bg-card)" }}
+        >
           <div>
             <h1>Heading 1 - Заглавие 1 (2rem)</h1>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+            <p
+              className="text-xs mt-1"
+              style={{ color: "var(--text-tertiary)" }}
+            >
               Font: Inter Semibold, Letter-spacing: -0.02em
             </p>
           </div>
           <div>
             <h2>Heading 2 - Заглавие 2 (1.25rem)</h2>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+            <p
+              className="text-xs mt-1"
+              style={{ color: "var(--text-tertiary)" }}
+            >
               Font: Inter Semibold, Letter-spacing: -0.01em
             </p>
           </div>
           <div>
             <h3>Heading 3 - Заглавие 3 (1.125rem)</h3>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+            <p
+              className="text-xs mt-1"
+              style={{ color: "var(--text-tertiary)" }}
+            >
               Font: Inter Medium
             </p>
           </div>
           <div>
             <p className="text-base">
-              Body Text - Основен текст с генерозна междуредие разстояние за отлична четимост на български кирилица.
+              Body Text - Основен текст с генерозна междуредие разстояние за
+              отлична четимост на български кирилица.
             </p>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+            <p
+              className="text-xs mt-1"
+              style={{ color: "var(--text-tertiary)" }}
+            >
               Font: Inter Regular, Line-height: 1.6
             </p>
           </div>
           <div>
             <p className="label-utility">UTILITY LABEL - ЕТИКЕТ</p>
-            <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+            <p
+              className="text-xs mt-1"
+              style={{ color: "var(--text-tertiary)" }}
+            >
               Font: Inter Semibold, Uppercase, Letter-spacing: 0.08em
             </p>
           </div>
@@ -120,12 +158,17 @@ export function DesignSystemShowcase() {
 
       {/* Buttons */}
       <section className="space-y-4">
-        <h2 style={{ color: 'var(--text-primary)' }}>Бутони</h2>
-        
+        <h2 style={{ color: "var(--text-primary)" }}>Бутони</h2>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Primary Buttons */}
-          <div className="p-6 rounded-lg space-y-4" style={{ background: 'var(--bg-card)' }}>
-            <h3 className="text-sm" style={{ color: 'var(--text-primary)' }}>Primary Buttons</h3>
+          <div
+            className="p-6 rounded-lg space-y-4"
+            style={{ background: "var(--bg-card)" }}
+          >
+            <h3 className="text-sm" style={{ color: "var(--text-primary)" }}>
+              Primary Buttons
+            </h3>
             <div className="flex flex-wrap gap-3">
               <Button variant="primary" icon={<Plus size={18} />}>
                 Добави Курсист
@@ -140,24 +183,36 @@ export function DesignSystemShowcase() {
           </div>
 
           {/* Secondary Buttons */}
-          <div className="p-6 rounded-lg space-y-4" style={{ background: 'var(--bg-card)' }}>
-            <h3 className="text-sm" style={{ color: 'var(--text-primary)' }}>Secondary Buttons</h3>
+          <div
+            className="p-6 rounded-lg space-y-4"
+            style={{ background: "var(--bg-card)" }}
+          >
+            <h3 className="text-sm" style={{ color: "var(--text-primary)" }}>
+              Secondary Buttons
+            </h3>
             <div className="flex flex-wrap gap-3">
               <Button variant="secondary" icon={<Filter size={18} />}>
                 Филтри
               </Button>
-              <Button variant="secondary">
-                Отказ
-              </Button>
-              <Button variant="secondary" size="small" icon={<Download size={16} />}>
+              <Button variant="secondary">Отказ</Button>
+              <Button
+                variant="secondary"
+                size="small"
+                icon={<Download size={16} />}
+              >
                 Изтегли
               </Button>
             </div>
           </div>
 
           {/* Ghost Buttons */}
-          <div className="p-6 rounded-lg space-y-4" style={{ background: 'var(--bg-card)' }}>
-            <h3 className="text-sm" style={{ color: 'var(--text-primary)' }}>Ghost Buttons</h3>
+          <div
+            className="p-6 rounded-lg space-y-4"
+            style={{ background: "var(--bg-card)" }}
+          >
+            <h3 className="text-sm" style={{ color: "var(--text-primary)" }}>
+              Ghost Buttons
+            </h3>
             <div className="flex flex-wrap gap-3">
               <Button variant="ghost" icon={<Edit size={18} />}>
                 Редактирай
@@ -169,8 +224,13 @@ export function DesignSystemShowcase() {
           </div>
 
           {/* Destructive Buttons */}
-          <div className="p-6 rounded-lg space-y-4" style={{ background: 'var(--bg-card)' }}>
-            <h3 className="text-sm" style={{ color: 'var(--text-primary)' }}>Destructive Buttons</h3>
+          <div
+            className="p-6 rounded-lg space-y-4"
+            style={{ background: "var(--bg-card)" }}
+          >
+            <h3 className="text-sm" style={{ color: "var(--text-primary)" }}>
+              Destructive Buttons
+            </h3>
             <div className="flex flex-wrap gap-3">
               <Button variant="destructive" icon={<Trash2 size={18} />}>
                 Изтрий
@@ -185,12 +245,17 @@ export function DesignSystemShowcase() {
 
       {/* Form Elements */}
       <section className="space-y-4">
-        <h2 style={{ color: 'var(--text-primary)' }}>Форми</h2>
-        
+        <h2 style={{ color: "var(--text-primary)" }}>Форми</h2>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Text Inputs */}
-          <div className="p-6 rounded-lg space-y-4" style={{ background: 'var(--bg-card)' }}>
-            <h3 className="text-sm" style={{ color: 'var(--text-primary)' }}>Text Inputs</h3>
+          <div
+            className="p-6 rounded-lg space-y-4"
+            style={{ background: "var(--bg-card)" }}
+          >
+            <h3 className="text-sm" style={{ color: "var(--text-primary)" }}>
+              Text Inputs
+            </h3>
             <div className="space-y-4">
               <InputField
                 label="Име на курсист"
@@ -213,32 +278,42 @@ export function DesignSystemShowcase() {
           </div>
 
           {/* Select Dropdowns */}
-          <div className="p-6 rounded-lg space-y-4" style={{ background: 'var(--bg-card)' }}>
-            <h3 className="text-sm" style={{ color: 'var(--text-primary)' }}>Dropdowns</h3>
+          <div
+            className="p-6 rounded-lg space-y-4"
+            style={{ background: "var(--bg-card)" }}
+          >
+            <h3 className="text-sm" style={{ color: "var(--text-primary)" }}>
+              Dropdowns
+            </h3>
             <div className="space-y-4">
               <SelectField
                 label="Категория книжка"
                 value={selectValue}
                 onChange={setSelectValue}
                 options={[
-                  { value: 'b', label: 'Категория B' },
-                  { value: 'a', label: 'Категория A' },
-                  { value: 'c', label: 'Категория C' },
+                  { value: "b", label: "Категория B" },
+                  { value: "a", label: "Категория A" },
+                  { value: "c", label: "Категория C" },
                 ]}
               />
               <SelectField
                 label="Инструктор"
                 options={[
-                  { value: '1', label: 'Георги Петров' },
-                  { value: '2', label: 'Иван Димитров' },
+                  { value: "1", label: "Георги Петров" },
+                  { value: "2", label: "Иван Димитров" },
                 ]}
               />
             </div>
           </div>
 
           {/* Textarea */}
-          <div className="p-6 rounded-lg space-y-4" style={{ background: 'var(--bg-card)' }}>
-            <h3 className="text-sm" style={{ color: 'var(--text-primary)' }}>Textarea</h3>
+          <div
+            className="p-6 rounded-lg space-y-4"
+            style={{ background: "var(--bg-card)" }}
+          >
+            <h3 className="text-sm" style={{ color: "var(--text-primary)" }}>
+              Textarea
+            </h3>
             <TextareaField
               label="Бележки"
               placeholder="Добавете бележки..."
@@ -247,8 +322,13 @@ export function DesignSystemShowcase() {
           </div>
 
           {/* Checkbox & Radio */}
-          <div className="p-6 rounded-lg space-y-4" style={{ background: 'var(--bg-card)' }}>
-            <h3 className="text-sm" style={{ color: 'var(--text-primary)' }}>Checkbox & Radio</h3>
+          <div
+            className="p-6 rounded-lg space-y-4"
+            style={{ background: "var(--bg-card)" }}
+          >
+            <h3 className="text-sm" style={{ color: "var(--text-primary)" }}>
+              Checkbox & Radio
+            </h3>
             <div className="space-y-3">
               <CheckboxField
                 label="Приемам условията"
@@ -264,14 +344,14 @@ export function DesignSystemShowcase() {
 
       {/* Tabs */}
       <section className="space-y-4">
-        <h2 style={{ color: 'var(--text-primary)' }}>Tabs</h2>
-        
+        <h2 style={{ color: "var(--text-primary)" }}>Tabs</h2>
+
         <Tabs
           tabs={[
-            { id: 'overview', label: 'Общ преглед' },
-            { id: 'students', label: 'Курсисти' },
-            { id: 'schedule', label: 'График' },
-            { id: 'reports', label: 'Отчети' },
+            { id: "overview", label: "Общ преглед" },
+            { id: "students", label: "Курсисти" },
+            { id: "schedule", label: "График" },
+            { id: "reports", label: "Отчети" },
           ]}
           activeTab={selectedTab}
           onChange={setSelectedTab}
@@ -280,8 +360,8 @@ export function DesignSystemShowcase() {
 
       {/* Cards */}
       <section className="space-y-4">
-        <h2 style={{ color: 'var(--text-primary)' }}>Карти</h2>
-        
+        <h2 style={{ color: "var(--text-primary)" }}>Карти</h2>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <TelemetryCard
             title="Активни курсисти"
@@ -305,16 +385,19 @@ export function DesignSystemShowcase() {
 
       {/* Tables */}
       <section className="space-y-4">
-        <h2 style={{ color: 'var(--text-primary)' }}>Таблици</h2>
-        
+        <h2 style={{ color: "var(--text-primary)" }}>Таблици</h2>
+
         <DataTable />
       </section>
 
       {/* Status Badges */}
       <section className="space-y-4">
-        <h2 style={{ color: 'var(--text-primary)' }}>Статусни Етикети</h2>
-        
-        <div className="p-6 rounded-lg" style={{ background: 'var(--bg-card)' }}>
+        <h2 style={{ color: "var(--text-primary)" }}>Статусни Етикети</h2>
+
+        <div
+          className="p-6 rounded-lg"
+          style={{ background: "var(--bg-card)" }}
+        >
           <div className="flex flex-wrap gap-3">
             <Badge status="success">Завършен</Badge>
             <Badge status="warning">В процес</Badge>
@@ -328,9 +411,12 @@ export function DesignSystemShowcase() {
 
       {/* Modal Example */}
       <section className="space-y-4">
-        <h2 style={{ color: 'var(--text-primary)' }}>Модални Прозорци</h2>
-        
-        <div className="p-6 rounded-lg" style={{ background: 'var(--bg-card)' }}>
+        <h2 style={{ color: "var(--text-primary)" }}>Модални Прозорци</h2>
+
+        <div
+          className="p-6 rounded-lg"
+          style={{ background: "var(--bg-card)" }}
+        >
           <Button variant="primary" onClick={() => setShowModal(true)}>
             Отвори Модал
           </Button>
@@ -339,22 +425,23 @@ export function DesignSystemShowcase() {
 
       {/* Modal */}
       {showModal && (
-        <Modal
-          title="Добави нов курсист"
-          onClose={() => setShowModal(false)}
-        >
+        <Modal title="Добави нов курсист" onClose={() => setShowModal(false)}>
           <div className="space-y-4">
             <InputField label="Име" placeholder="Въведете име..." />
             <InputField label="Фамилия" placeholder="Въведете фамилия..." />
-            <InputField label="Телефон" placeholder="+359 ..." icon={<Phone size={18} />} />
+            <InputField
+              label="Телефон"
+              placeholder="+359 ..."
+              icon={<Phone size={18} />}
+            />
             <SelectField
               label="Категория"
               options={[
-                { value: 'b', label: 'Категория B' },
-                { value: 'a', label: 'Категория A' },
+                { value: "b", label: "Категория B" },
+                { value: "a", label: "Категория A" },
               ]}
             />
-            
+
             <div className="flex gap-3 pt-4">
               <Button variant="primary" icon={<Save size={18} />}>
                 Запази
@@ -372,9 +459,19 @@ export function DesignSystemShowcase() {
 
 // Component Implementations
 
-function ColorSwatch({ name, value, description, gradient }: { name: string; value: string; description: string; gradient?: boolean }) {
+function ColorSwatch({
+  name,
+  value,
+  description,
+  gradient,
+}: {
+  name: string;
+  value: string;
+  description: string;
+  gradient?: boolean;
+}) {
   return (
-    <div className="p-4 rounded-lg" style={{ background: 'var(--bg-card)' }}>
+    <div className="p-4 rounded-lg" style={{ background: "var(--bg-card)" }}>
       <div
         className="w-full h-20 rounded-lg mb-3"
         style={{
@@ -384,13 +481,19 @@ function ColorSwatch({ name, value, description, gradient }: { name: string; val
         }}
       />
       <div className="space-y-1">
-        <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+        <p
+          className="text-sm font-medium"
+          style={{ color: "var(--text-primary)" }}
+        >
           {name}
         </p>
-        <p className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
+        <p
+          className="text-xs font-mono"
+          style={{ color: "var(--text-secondary)" }}
+        >
           {value}
         </p>
-        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+        <p className="text-xs" style={{ color: "var(--text-tertiary)" }}>
           {description}
         </p>
       </div>
@@ -399,14 +502,39 @@ function ColorSwatch({ name, value, description, gradient }: { name: string; val
 }
 
 function StatusExample({ status, label }: { status: string; label: string }) {
-  const colors = {
-    success: { bg: 'var(--status-success-bg)', border: 'var(--status-success-border)', text: 'var(--status-success)' },
-    warning: { bg: 'var(--status-warning-bg)', border: 'var(--status-warning-border)', text: 'var(--status-warning)' },
-    error: { bg: 'var(--status-error-bg)', border: 'var(--status-error-border)', text: 'var(--status-error)' },
-    overdue: { bg: 'var(--status-overdue-bg)', border: 'var(--status-overdue-border)', text: 'var(--status-overdue)' },
-    info: { bg: 'var(--status-info-bg)', border: 'var(--status-info-border)', text: 'var(--status-info)' },
-    neutral: { bg: 'var(--status-neutral-bg)', border: 'var(--status-neutral-border)', text: 'var(--status-neutral)' },
-  }[status] || colors.neutral;
+  const colors =
+    {
+      success: {
+        bg: "var(--status-success-bg)",
+        border: "var(--status-success-border)",
+        text: "var(--status-success)",
+      },
+      warning: {
+        bg: "var(--status-warning-bg)",
+        border: "var(--status-warning-border)",
+        text: "var(--status-warning)",
+      },
+      error: {
+        bg: "var(--status-error-bg)",
+        border: "var(--status-error-border)",
+        text: "var(--status-error)",
+      },
+      overdue: {
+        bg: "var(--status-overdue-bg)",
+        border: "var(--status-overdue-border)",
+        text: "var(--status-overdue)",
+      },
+      info: {
+        bg: "var(--status-info-bg)",
+        border: "var(--status-info-border)",
+        text: "var(--status-info)",
+      },
+      neutral: {
+        bg: "var(--status-neutral-bg)",
+        border: "var(--status-neutral-border)",
+        text: "var(--status-neutral)",
+      },
+    }[status] || colors.neutral;
 
   return (
     <div
@@ -417,7 +545,10 @@ function StatusExample({ status, label }: { status: string; label: string }) {
       }}
     >
       <div className="flex items-center gap-2">
-        <div className="w-2 h-2 rounded-full" style={{ background: colors.text }} />
+        <div
+          className="w-2 h-2 rounded-full"
+          style={{ background: colors.text }}
+        />
         <span className="text-sm font-medium" style={{ color: colors.text }}>
           {label}
         </span>
@@ -428,44 +559,45 @@ function StatusExample({ status, label }: { status: string; label: string }) {
 
 function Button({
   children,
-  variant = 'primary',
-  size = 'medium',
+  variant = "primary",
+  size = "medium",
   icon,
   onClick,
 }: {
   children: React.ReactNode;
-  variant?: 'primary' | 'secondary' | 'ghost' | 'destructive';
-  size?: 'small' | 'medium' | 'large';
+  variant?: "primary" | "secondary" | "ghost" | "destructive";
+  size?: "small" | "medium" | "large";
   icon?: React.ReactNode;
   onClick?: () => void;
 }) {
   const sizeClasses = {
-    small: 'h-9 px-4 text-sm',
-    medium: 'h-11 px-6 text-base',
-    large: 'h-12 px-8 text-base',
+    small: "h-9 px-4 text-sm",
+    medium: "h-11 px-6 text-base",
+    large: "h-12 px-8 text-base",
   }[size];
 
   const variantStyles = {
     primary: {
-      background: 'linear-gradient(135deg, var(--primary-accent), var(--primary-accent-dim))',
-      color: '#ffffff',
-      hover: 'shadow-[var(--glow-indigo)]',
+      background:
+        "linear-gradient(135deg, var(--primary-accent), var(--primary-accent-dim))",
+      color: "#ffffff",
+      hover: "shadow-[var(--glow-indigo)]",
     },
     secondary: {
-      background: 'var(--bg-card)',
-      color: 'var(--text-primary)',
-      border: '1px solid var(--ghost-border-medium)',
-      hover: 'shadow-[var(--glow-indigo)]',
+      background: "var(--bg-card)",
+      color: "var(--text-primary)",
+      border: "1px solid var(--ghost-border-medium)",
+      hover: "shadow-[var(--glow-indigo)]",
     },
     ghost: {
-      background: 'transparent',
-      color: 'var(--text-secondary)',
-      hover: 'shadow-[var(--glow-indigo)]',
+      background: "transparent",
+      color: "var(--text-secondary)",
+      hover: "shadow-[var(--glow-indigo)]",
     },
     destructive: {
-      background: 'var(--status-error)',
-      color: '#ffffff',
-      hover: 'opacity-90',
+      background: "var(--status-error)",
+      color: "#ffffff",
+      hover: "opacity-90",
     },
   }[variant];
 
@@ -496,7 +628,7 @@ function InputField({
   placeholder,
   value,
   onChange,
-  type = 'text',
+  type = "text",
   icon,
 }: {
   label: string;
@@ -508,12 +640,18 @@ function InputField({
 }) {
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+      <label
+        className="text-sm font-medium"
+        style={{ color: "var(--text-primary)" }}
+      >
         {label}
       </label>
       <div className="relative">
         {icon && (
-          <div className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-tertiary)' }}>
+          <div
+            className="absolute left-4 top-1/2 -translate-y-1/2"
+            style={{ color: "var(--text-tertiary)" }}
+          >
             {icon}
           </div>
         )}
@@ -524,14 +662,14 @@ function InputField({
           onChange={(e) => onChange?.(e.target.value)}
           className={`
             w-full h-12 rounded-lg px-4
-            ${icon ? 'pl-12' : ''}
+            ${icon ? "pl-12" : ""}
             border transition-all
             focus:outline-none focus:shadow-[var(--glow-indigo)]
           `}
           style={{
-            background: 'var(--bg-panel)',
-            borderColor: 'var(--ghost-border-medium)',
-            color: 'var(--text-primary)',
+            background: "var(--bg-panel)",
+            borderColor: "var(--ghost-border-medium)",
+            color: "var(--text-primary)",
           }}
         />
       </div>
@@ -552,7 +690,10 @@ function SelectField({
 }) {
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+      <label
+        className="text-sm font-medium"
+        style={{ color: "var(--text-primary)" }}
+      >
         {label}
       </label>
       <div className="relative">
@@ -561,9 +702,9 @@ function SelectField({
           onChange={(e) => onChange?.(e.target.value)}
           className="w-full h-12 rounded-lg px-4 pr-10 border transition-all appearance-none focus:outline-none focus:shadow-[var(--glow-indigo)]"
           style={{
-            background: 'var(--bg-panel)',
-            borderColor: 'var(--ghost-border-medium)',
-            color: 'var(--text-primary)',
+            background: "var(--bg-panel)",
+            borderColor: "var(--ghost-border-medium)",
+            color: "var(--text-primary)",
           }}
         >
           <option value="">Изберете...</option>
@@ -576,7 +717,7 @@ function SelectField({
         <ChevronDown
           size={18}
           className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"
-          style={{ color: 'var(--text-tertiary)' }}
+          style={{ color: "var(--text-tertiary)" }}
         />
       </div>
     </div>
@@ -594,7 +735,10 @@ function TextareaField({
 }) {
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+      <label
+        className="text-sm font-medium"
+        style={{ color: "var(--text-primary)" }}
+      >
         {label}
       </label>
       <textarea
@@ -602,9 +746,9 @@ function TextareaField({
         rows={rows}
         className="w-full rounded-lg px-4 py-3 border transition-all focus:outline-none focus:shadow-[var(--glow-indigo)] resize-none"
         style={{
-          background: 'var(--bg-panel)',
-          borderColor: 'var(--ghost-border-medium)',
-          color: 'var(--text-primary)',
+          background: "var(--bg-panel)",
+          borderColor: "var(--ghost-border-medium)",
+          color: "var(--text-primary)",
         }}
       />
     </div>
@@ -632,13 +776,15 @@ function CheckboxField({
         <div
           className="w-5 h-5 rounded border-2 transition-all peer-checked:border-[var(--primary-accent)] peer-checked:bg-[var(--primary-accent)] flex items-center justify-center"
           style={{
-            borderColor: checked ? 'var(--primary-accent)' : 'var(--ghost-border-strong)',
+            borderColor: checked
+              ? "var(--primary-accent)"
+              : "var(--ghost-border-strong)",
           }}
         >
           {checked && <Check size={14} color="#ffffff" />}
         </div>
       </div>
-      <span className="text-sm" style={{ color: 'var(--text-primary)' }}>
+      <span className="text-sm" style={{ color: "var(--text-primary)" }}>
         {label}
       </span>
     </label>
@@ -655,7 +801,7 @@ function Tabs({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="border-b" style={{ borderColor: 'var(--ghost-border)' }}>
+    <div className="border-b" style={{ borderColor: "var(--ghost-border)" }}>
       <div className="flex gap-1">
         {tabs.map((tab) => (
           <button
@@ -664,11 +810,15 @@ function Tabs({
             className={`
               px-6 h-12 font-medium text-sm
               border-b-2 transition-all
-              ${activeTab === tab.id ? '' : 'hover:shadow-[var(--glow-indigo)]'}
+              ${activeTab === tab.id ? "" : "hover:shadow-[var(--glow-indigo)]"}
             `}
             style={{
-              borderColor: activeTab === tab.id ? 'var(--primary-accent)' : 'transparent',
-              color: activeTab === tab.id ? 'var(--primary-accent)' : 'var(--text-secondary)',
+              borderColor:
+                activeTab === tab.id ? "var(--primary-accent)" : "transparent",
+              color:
+                activeTab === tab.id
+                  ? "var(--primary-accent)"
+                  : "var(--text-secondary)",
             }}
           >
             {tab.label}
@@ -690,19 +840,25 @@ function TelemetryCard({
   value: string;
   subtitle?: string;
   change?: string;
-  trend?: 'up' | 'down';
+  trend?: "up" | "down";
 }) {
   return (
-    <div className="p-6 rounded-lg" style={{ background: 'var(--bg-card)' }}>
+    <div className="p-6 rounded-lg" style={{ background: "var(--bg-card)" }}>
       <div className="space-y-3">
         <p className="label-utility">{title}</p>
         <div className="flex items-end justify-between">
           <div>
-            <p className="text-3xl font-semibold" style={{ color: 'var(--text-primary)' }}>
+            <p
+              className="text-3xl font-semibold"
+              style={{ color: "var(--text-primary)" }}
+            >
               {value}
             </p>
             {subtitle && (
-              <p className="text-sm mt-1" style={{ color: 'var(--text-tertiary)' }}>
+              <p
+                className="text-sm mt-1"
+                style={{ color: "var(--text-tertiary)" }}
+              >
                 {subtitle}
               </p>
             )}
@@ -711,7 +867,10 @@ function TelemetryCard({
             <div
               className="text-sm font-medium"
               style={{
-                color: trend === 'up' ? 'var(--status-success)' : 'var(--status-error)',
+                color:
+                  trend === "up"
+                    ? "var(--status-success)"
+                    : "var(--status-error)",
               }}
             >
               {change}
@@ -725,18 +884,49 @@ function TelemetryCard({
 
 function DataTable() {
   const students = [
-    { id: 1, name: 'Петър Георгиев', category: 'B', instructor: 'Георги Петров', lessons: 12, status: 'success' },
-    { id: 2, name: 'Елена Димитрова', category: 'B', instructor: 'Иван Димитров', lessons: 8, status: 'warning' },
-    { id: 3, name: 'Мартин Иванов', category: 'A', instructor: 'Георги Петров', lessons: 15, status: 'success' },
-    { id: 4, name: 'София Николова', category: 'B', instructor: 'Иван Димитров', lessons: 5, status: 'info' },
+    {
+      id: 1,
+      name: "Петър Георгиев",
+      category: "B",
+      instructor: "Георги Петров",
+      lessons: 12,
+      status: "success",
+    },
+    {
+      id: 2,
+      name: "Елена Димитрова",
+      category: "B",
+      instructor: "Иван Димитров",
+      lessons: 8,
+      status: "warning",
+    },
+    {
+      id: 3,
+      name: "Мартин Иванов",
+      category: "A",
+      instructor: "Георги Петров",
+      lessons: 15,
+      status: "success",
+    },
+    {
+      id: 4,
+      name: "София Николова",
+      category: "B",
+      instructor: "Иван Димитров",
+      lessons: 5,
+      status: "info",
+    },
   ];
 
   return (
-    <div className="rounded-lg overflow-hidden" style={{ background: 'var(--bg-card)' }}>
+    <div
+      className="rounded-lg overflow-hidden"
+      style={{ background: "var(--bg-card)" }}
+    >
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead>
-            <tr style={{ background: 'var(--bg-panel)' }}>
+            <tr style={{ background: "var(--bg-panel)" }}>
               <th className="px-6 py-4 text-left">
                 <span className="label-utility">Име</span>
               </th>
@@ -762,38 +952,57 @@ function DataTable() {
               <tr
                 key={student.id}
                 className="border-t transition-colors hover:bg-[var(--bg-panel)]"
-                style={{ borderColor: 'var(--ghost-border)' }}
+                style={{ borderColor: "var(--ghost-border)" }}
               >
                 <td className="px-6 py-4">
-                  <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                  <span
+                    className="font-medium"
+                    style={{ color: "var(--text-primary)" }}
+                  >
                     {student.name}
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <span style={{ color: 'var(--text-secondary)' }}>{student.category}</span>
+                  <span style={{ color: "var(--text-secondary)" }}>
+                    {student.category}
+                  </span>
                 </td>
                 <td className="px-6 py-4">
-                  <span style={{ color: 'var(--text-secondary)' }}>{student.instructor}</span>
+                  <span style={{ color: "var(--text-secondary)" }}>
+                    {student.instructor}
+                  </span>
                 </td>
                 <td className="px-6 py-4">
-                  <span style={{ color: 'var(--text-secondary)' }}>{student.lessons}</span>
+                  <span style={{ color: "var(--text-secondary)" }}>
+                    {student.lessons}
+                  </span>
                 </td>
                 <td className="px-6 py-4">
                   <Badge status={student.status}>
-                    {student.status === 'success' ? 'Активен' : student.status === 'warning' ? 'В процес' : 'Планиран'}
+                    {student.status === "success"
+                      ? "Активен"
+                      : student.status === "warning"
+                        ? "В процес"
+                        : "Планиран"}
                   </Badge>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-end gap-2">
                     <button
                       className="w-9 h-9 rounded-lg flex items-center justify-center transition-all hover:shadow-[var(--glow-indigo)]"
-                      style={{ background: 'var(--bg-panel)', color: 'var(--text-secondary)' }}
+                      style={{
+                        background: "var(--bg-panel)",
+                        color: "var(--text-secondary)",
+                      }}
                     >
                       <Eye size={16} />
                     </button>
                     <button
                       className="w-9 h-9 rounded-lg flex items-center justify-center transition-all hover:shadow-[var(--glow-indigo)]"
-                      style={{ background: 'var(--bg-panel)', color: 'var(--text-secondary)' }}
+                      style={{
+                        background: "var(--bg-panel)",
+                        color: "var(--text-secondary)",
+                      }}
                     >
                       <Edit size={16} />
                     </button>
@@ -808,18 +1017,48 @@ function DataTable() {
   );
 }
 
-function Badge({ status, children }: { status: string; children: React.ReactNode }) {
+function Badge({
+  status,
+  children,
+}: {
+  status: string;
+  children: React.ReactNode;
+}) {
   const colors = {
-    success: { bg: 'var(--status-success-bg)', border: 'var(--status-success-border)', text: 'var(--status-success)' },
-    warning: { bg: 'var(--status-warning-bg)', border: 'var(--status-warning-border)', text: 'var(--status-warning)' },
-    error: { bg: 'var(--status-error-bg)', border: 'var(--status-error-border)', text: 'var(--status-error)' },
-    overdue: { bg: 'var(--status-overdue-bg)', border: 'var(--status-overdue-border)', text: 'var(--status-overdue)' },
-    info: { bg: 'var(--status-info-bg)', border: 'var(--status-info-border)', text: 'var(--status-info)' },
-    neutral: { bg: 'var(--status-neutral-bg)', border: 'var(--status-neutral-border)', text: 'var(--status-neutral)' },
+    success: {
+      bg: "var(--status-success-bg)",
+      border: "var(--status-success-border)",
+      text: "var(--status-success)",
+    },
+    warning: {
+      bg: "var(--status-warning-bg)",
+      border: "var(--status-warning-border)",
+      text: "var(--status-warning)",
+    },
+    error: {
+      bg: "var(--status-error-bg)",
+      border: "var(--status-error-border)",
+      text: "var(--status-error)",
+    },
+    overdue: {
+      bg: "var(--status-overdue-bg)",
+      border: "var(--status-overdue-border)",
+      text: "var(--status-overdue)",
+    },
+    info: {
+      bg: "var(--status-info-bg)",
+      border: "var(--status-info-border)",
+      text: "var(--status-info)",
+    },
+    neutral: {
+      bg: "var(--status-neutral-bg)",
+      border: "var(--status-neutral-border)",
+      text: "var(--status-neutral)",
+    },
   }[status] || {
-    bg: 'var(--status-neutral-bg)',
-    border: 'var(--status-neutral-border)',
-    text: 'var(--status-neutral)',
+    bg: "var(--status-neutral-bg)",
+    border: "var(--status-neutral-border)",
+    text: "var(--status-neutral)",
   };
 
   return (
@@ -831,7 +1070,10 @@ function Badge({ status, children }: { status: string; children: React.ReactNode
         color: colors.text,
       }}
     >
-      <span className="w-1.5 h-1.5 rounded-full" style={{ background: colors.text }} />
+      <span
+        className="w-1.5 h-1.5 rounded-full"
+        style={{ background: colors.text }}
+      />
       {children}
     </span>
   );
@@ -851,22 +1093,25 @@ function Modal({
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/60"
-        style={{ backdropFilter: 'blur(12px)' }}
+        style={{ backdropFilter: "blur(12px)" }}
         onClick={onClose}
       />
 
       {/* Modal */}
       <div
         className="relative w-full max-w-md rounded-xl p-6 shadow-[var(--shadow-xl)]"
-        style={{ background: 'var(--bg-modal)' }}
+        style={{ background: "var(--bg-modal)" }}
       >
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
-          <h2 style={{ color: 'var(--text-primary)' }}>{title}</h2>
+          <h2 style={{ color: "var(--text-primary)" }}>{title}</h2>
           <button
             onClick={onClose}
             className="w-9 h-9 rounded-lg flex items-center justify-center transition-all hover:shadow-[var(--glow-indigo)]"
-            style={{ background: 'var(--bg-card)', color: 'var(--text-secondary)' }}
+            style={{
+              background: "var(--bg-card)",
+              color: "var(--text-secondary)",
+            }}
           >
             <X size={18} />
           </button>

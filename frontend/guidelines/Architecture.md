@@ -1,4 +1,4 @@
-# KursantAI / DriveAdmin - Архитектурна Документация
+# MindOnRoad / DriveAdmin - Архитектурна Документация
 
 ## Obsidian Navigator Design System
 
@@ -29,6 +29,7 @@
 ### Визуална Система
 
 **Цветова Палета:**
+
 - Page Background: `#060e20`
 - Panel Background: `#091328`
 - Card Level: `#192540`
@@ -37,6 +38,7 @@
 - AI Accent: `#A78BFA` (Purple Violet)
 
 **Статусни Цветове:**
+
 - Success: `#10b981`
 - Warning: `#f59e0b`
 - Error: `#ef4444`
@@ -45,12 +47,14 @@
 - Neutral: `#64748b`
 
 **Типография:**
+
 - Font Family: Inter
 - Headings: Semibold, tight letter-spacing
 - Body: Regular, generous line-height (1.6)
 - Utility Labels: Uppercase, 0.08em tracking
 
 **Spacing:**
+
 - XS: 8px
 - SM: 12px
 - MD: 16px
@@ -59,6 +63,7 @@
 - 2XL: 48px
 
 **Border Radius:**
+
 - SM: 6px
 - MD: 8px
 - LG: 12px
@@ -71,12 +76,14 @@
 ### 1. Dashboard / Overview Page
 
 **Характеристики:**
+
 - Telemetry-style metric cards
 - Today's schedule
 - Recent activity feed
 - AI insights (purple accent module)
 
 **Компоненти:**
+
 - `PageHeader` - Title + CTA buttons
 - Metric cards grid (4 columns)
 - Schedule list
@@ -87,12 +94,14 @@
 ### 2. Table Management Page
 
 **Характеристики:**
+
 - List/table view of entities
 - Search and filters
 - Bulk actions
 - Row-level actions
 
 **Компоненти:**
+
 - `PageHeader` - Title + breadcrumbs + actions
 - `FilterBar` - Search + filters + actions
 - `DataTable` - Clean table with tonal row grouping
@@ -105,12 +114,14 @@
 ### 3. Detail Page
 
 **Характеристики:**
+
 - Entity overview
 - Key metrics and progress
 - Related data tables
 - Contextual actions
 
 **Компоненти:**
+
 - `PageHeader` - Entity name + edit button
 - Info cards grid
 - Progress indicators
@@ -123,12 +134,14 @@
 ### 4. Create/Edit Form Page
 
 **Характеристики:**
+
 - Sectioned forms
 - Large, clear inputs
 - Helpful validation messages
 - Clear submit/cancel actions
 
 **Компоненти:**
+
 - `PageHeader` - Form title + breadcrumbs
 - Card sections (grouped fields)
 - `InputField`, `SelectField`, `TextareaField`
@@ -141,16 +154,18 @@
 ## UI Components
 
 ### PageHeader
+
 ```tsx
 <PageHeader
   title="Заглавие"
   description="Описание"
-  breadcrumbs={[{ label: 'Начало' }, { label: 'Страница' }]}
+  breadcrumbs={[{ label: "Начало" }, { label: "Страница" }]}
   actions={<Button>Действие</Button>}
 />
 ```
 
 ### FilterBar
+
 ```tsx
 <FilterBar
   searchPlaceholder="Търсене..."
@@ -162,6 +177,7 @@
 ```
 
 ### DataTable
+
 ```tsx
 <DataTable
   columns={columns}
@@ -171,6 +187,7 @@
 ```
 
 ### Button
+
 ```tsx
 <Button variant="primary" icon={<Plus />}>
   Действие
@@ -181,15 +198,15 @@
 ```
 
 ### StatusBadge
+
 ```tsx
-<StatusBadge status="success">
-  Активен
-</StatusBadge>
+<StatusBadge status="success">Активен</StatusBadge>
 
 // Status: success, warning, error, overdue, info, neutral
 ```
 
 ### Form Fields
+
 ```tsx
 <InputField
   label="Име"
@@ -215,6 +232,7 @@
 ```
 
 ### Modal
+
 ```tsx
 <Modal
   isOpen={isOpen}
@@ -229,13 +247,9 @@
 ```
 
 ### Alert
+
 ```tsx
-<Alert
-  type="success"
-  title="Заглавие"
-  message="Съобщение"
-  onClose={() => {}}
-/>
+<Alert type="success" title="Заглавие" message="Съобщение" onClose={() => {}} />
 
 // Types: success, warning, error, info
 ```
@@ -305,26 +319,31 @@
 ## Color Usage Guidelines
 
 **Page Background** (`#060e20`):
+
 - Main app background
 - Never changes
 
 **Panel Background** (`#091328`):
+
 - Sidebar
 - Top bar
 - Filter bar
 - Table headers
 
 **Card Background** (`#192540`):
+
 - Content cards
 - Form sections
 - Table rows (hover state)
 
 **Modal Background** (`#1f2b49`):
+
 - Modal dialogs
 - Popovers
 - Dropdowns
 
 **Primary Accent** (Indigo):
+
 - Primary buttons (with gradient)
 - Active navigation items
 - Progress bars
@@ -332,11 +351,13 @@
 - Focus states (glow effect)
 
 **AI Accent** (Purple):
+
 - AI-powered features ONLY
 - Use sparingly as signature highlight
 - AI insights cards
 
 **Ghost Borders**:
+
 - Use at low opacity (0.15-0.4)
 - Only when tonal separation isn't enough
 - High-density data tables

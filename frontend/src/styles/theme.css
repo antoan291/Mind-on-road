@@ -3,18 +3,18 @@
 :root {
   /* ========================================
      The Obsidian Navigator Design System
-     KursantAI / DriveAdmin
+     MindOnRoad / DriveAdmin
      ======================================== */
 
   /* Typography Scale */
   --font-size: 16px;
-  --text-xs: 0.75rem;    /* 12px */
-  --text-sm: 0.875rem;   /* 14px */
-  --text-base: 1rem;     /* 16px */
-  --text-lg: 1.125rem;   /* 18px */
-  --text-xl: 1.25rem;    /* 20px */
-  --text-2xl: 2rem;      /* 32px */
-  --text-3xl: 2.5rem;    /* 40px */
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-base: 1rem; /* 16px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.25rem; /* 20px */
+  --text-2xl: 2rem; /* 32px */
+  --text-3xl: 2.5rem; /* 40px */
 
   /* Font Weights */
   --font-weight-normal: 400;
@@ -23,13 +23,13 @@
   --font-weight-bold: 700;
 
   /* Spacing System - Generous for clarity */
-  --spacing-xs: 0.5rem;   /* 8px */
-  --spacing-sm: 0.75rem;  /* 12px */
-  --spacing-md: 1rem;     /* 16px */
-  --spacing-lg: 1.5rem;   /* 24px */
-  --spacing-xl: 2rem;     /* 32px */
-  --spacing-2xl: 3rem;    /* 48px */
-  --spacing-3xl: 4rem;    /* 64px */
+  --spacing-xs: 0.5rem; /* 8px */
+  --spacing-sm: 0.75rem; /* 12px */
+  --spacing-md: 1rem; /* 16px */
+  --spacing-lg: 1.5rem; /* 24px */
+  --spacing-xl: 2rem; /* 32px */
+  --spacing-2xl: 3rem; /* 48px */
+  --spacing-3xl: 4rem; /* 64px */
 
   /* Border Radius - Premium, refined */
   --radius-sm: 6px;
@@ -44,49 +44,49 @@
   --bg-panel: #091328;
   --bg-card: #192540;
   --bg-modal: #1f2b49;
-  
+
   /* Primary Indigo Accent */
-  --primary-accent: #6366F1;
+  --primary-accent: #6366f1;
   --primary-accent-dim: #6063ee;
   --primary-accent-hover: #7c7ff5;
   --primary-accent-dark: #4f52d9;
-  
+
   /* AI Purple Violet Accent - use sparingly */
-  --ai-accent: #A78BFA;
+  --ai-accent: #a78bfa;
   --ai-accent-dim: #9f7ef7;
-  
+
   /* Ghost borders - ultra subtle */
   --ghost-border: rgba(64, 72, 93, 0.15);
   --ghost-border-medium: rgba(64, 72, 93, 0.25);
   --ghost-border-strong: rgba(64, 72, 93, 0.4);
-  
+
   /* Text hierarchy */
   --text-primary: rgba(255, 255, 255, 0.95);
   --text-secondary: rgba(255, 255, 255, 0.65);
   --text-tertiary: rgba(255, 255, 255, 0.45);
   --text-dim: rgba(255, 255, 255, 0.3);
-  
+
   /* Status Colors - Automotive telemetry inspired */
   --status-success: #10b981;
   --status-success-bg: rgba(16, 185, 129, 0.1);
   --status-success-border: rgba(16, 185, 129, 0.25);
-  
+
   --status-warning: #f59e0b;
   --status-warning-bg: rgba(245, 158, 11, 0.1);
   --status-warning-border: rgba(245, 158, 11, 0.25);
-  
+
   --status-error: #ef4444;
   --status-error-bg: rgba(239, 68, 68, 0.1);
   --status-error-border: rgba(239, 68, 68, 0.25);
-  
+
   --status-overdue: #dc2626;
   --status-overdue-bg: rgba(220, 38, 38, 0.1);
   --status-overdue-border: rgba(220, 38, 38, 0.25);
-  
+
   --status-info: #3b82f6;
   --status-info-bg: rgba(59, 130, 246, 0.1);
   --status-info-border: rgba(59, 130, 246, 0.25);
-  
+
   --status-neutral: #64748b;
   --status-neutral-bg: rgba(100, 116, 139, 0.1);
   --status-neutral-border: rgba(100, 116, 139, 0.25);
@@ -96,7 +96,7 @@
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
   --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
-  
+
   /* Glow effects for interactive states */
   --glow-indigo: 0 0 20px rgba(99, 102, 241, 0.4);
   --glow-purple: 0 0 20px rgba(167, 139, 250, 0.4);
@@ -130,44 +130,44 @@
   --color-bg-panel: var(--bg-panel);
   --color-bg-card: var(--bg-card);
   --color-bg-modal: var(--bg-modal);
-  
+
   --color-primary-accent: var(--primary-accent);
   --color-primary-accent-dim: var(--primary-accent-dim);
   --color-primary-accent-hover: var(--primary-accent-hover);
   --color-primary-accent-dark: var(--primary-accent-dark);
-  
+
   --color-ai-accent: var(--ai-accent);
   --color-ai-accent-dim: var(--ai-accent-dim);
-  
+
   --color-ghost-border: var(--ghost-border);
   --color-ghost-border-medium: var(--ghost-border-medium);
   --color-ghost-border-strong: var(--ghost-border-strong);
-  
+
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
   --color-text-tertiary: var(--text-tertiary);
   --color-text-dim: var(--text-dim);
-  
+
   --color-status-success: var(--status-success);
   --color-status-success-bg: var(--status-success-bg);
   --color-status-success-border: var(--status-success-border);
-  
+
   --color-status-warning: var(--status-warning);
   --color-status-warning-bg: var(--status-warning-bg);
   --color-status-warning-border: var(--status-warning-border);
-  
+
   --color-status-error: var(--status-error);
   --color-status-error-bg: var(--status-error-bg);
   --color-status-error-border: var(--status-error-border);
-  
+
   --color-status-overdue: var(--status-overdue);
   --color-status-overdue-bg: var(--status-overdue-bg);
   --color-status-overdue-border: var(--status-overdue-border);
-  
+
   --color-status-info: var(--status-info);
   --color-status-info-bg: var(--status-info-bg);
   --color-status-info-border: var(--status-info-border);
-  
+
   --color-status-neutral: var(--status-neutral);
   --color-status-neutral-bg: var(--status-neutral-bg);
   --color-status-neutral-border: var(--status-neutral-border);
@@ -192,7 +192,7 @@
   --color-input: var(--input);
   --color-input-background: var(--input-background);
   --color-ring: var(--ring);
-  
+
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
@@ -210,7 +210,12 @@
 
   body {
     @apply bg-[var(--bg-page)] text-[var(--text-primary)];
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family:
+      "Inter",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
     font-weight: var(--font-weight-normal);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
@@ -270,7 +275,9 @@
     line-height: 1.5;
   }
 
-  input, textarea, select {
+  input,
+  textarea,
+  select {
     font-size: var(--text-base);
     font-weight: var(--font-weight-normal);
     line-height: 1.6;

@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "driveadmin-automation"
+version = "0.2.0"
+description = "Automation and document intelligence scripts for DriveAdmin."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "paddleocr==3.3.3",
+  "pydantic>=2.8.0",
+  "PyMuPDF>=1.24.0",
+  "python-dotenv>=1.0.1"
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.scripts]
+extract-bg-document = "document_intelligence.cli:main"

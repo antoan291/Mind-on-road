@@ -1,10 +1,10 @@
-# KursantAI / DriveAdmin
+# MindOnRoad / DriveAdmin
 
 ## Архитектура за backups и disaster recovery с Hetzner
 
 ## 1. Цел на документа
 
-Този документ описва най-добрия practically-safe backup и disaster recovery модел за продукта KursantAI / DriveAdmin, ако основната production инфраструктура е върху Hetzner.
+Този документ описва най-добрия practically-safe backup и disaster recovery модел за продукта MindOnRoad / DriveAdmin, ако основната production инфраструктура е върху Hetzner.
 
 Фокусът е:
 
