@@ -19,7 +19,7 @@
 Препоръчителен стек:
 
 - Frontend: `React`
-- Backend API: `Node.js`
+- Backend API: `Node.js + Express`
 - Language: `TypeScript`
 - Database: `PostgreSQL`
 - Cache / coordination: `Redis`
@@ -76,12 +76,13 @@
 Препоръка:
 
 - `Node.js`
-- `NestJS`
+- `Express`
+- `Node.js HTTP/GraphQL backend`
 - `TypeScript`
 
 Причини:
 
-- NestJS дава ясна модулна структура;
+- Express backend слоят трябва да следва ясна модулна структура;
 - подходящ е за modular monolith;
 - добре обслужва RBAC, validation, interceptors, jobs и clean layering;
 - прави по-лесно архитектурното дисциплиниране на растящ продукт.
@@ -251,7 +252,7 @@
 Причини:
 
 - TLS termination;
-- reverse proxy пред `React` приложението и `NestJS`;
+- reverse proxy пред `React` приложението и Node.js backend слоя;
 - request size limits за document uploads;
 - централизирано прилагане на security headers;
 - базов request filtering и buffering control;
@@ -316,7 +317,7 @@
 Препоръчителен минимален production стек:
 
 - `React app`
-- `NestJS API`
+- `Node.js + Express API`
 - `Worker process`
 - `Nginx`
 - `Managed PostgreSQL`
@@ -346,7 +347,7 @@
 Най-добрият стек за този продукт е:
 
 - `React + Vite + TypeScript`
-- `NestJS + Node.js + TypeScript`
+- `Node.js + Express + TypeScript`
 - `PostgreSQL`
 - `Redis`
 - `Prisma ORM + targeted raw SQL`

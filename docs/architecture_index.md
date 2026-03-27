@@ -185,7 +185,7 @@
 - архитектурният модел е `scale-ready modular monolith`;
 - frontend стекът е `React + Vite`;
 - frontend state стратегията е `TanStack Query + Zustand + React Hook Form`;
-- backend посоката е `Node.js` с `NestJS`;
+- backend посоката е `Node.js + Express`;
 - базата е `PostgreSQL`;
 - ORM слоят е `Prisma`;
 - cache и distributed coordination слоят е `Redis`;

@@ -54,7 +54,7 @@
 
 - `Edge / Reverse Proxy Layer` — `Nginx` пред приложението за TLS termination, request filtering, request size limits и reverse proxy контрол;
 - `Web App` — React приложение за администрация, портал за ученици и бъдещ клиентски достъп;
-- `API App` — Node.js backend като модулен монолит;
+- `API App` — Node.js + Express backend като модулен монолит;
 - `Primary Database` — PostgreSQL;
 - `Cache Layer` — Redis за краткоживеещ cache, rate limiting и distributed coordination;
 - `Object Storage` — S3-съвместимо хранилище за документи;
@@ -70,7 +70,7 @@
 1. Потребителят отваря приложението.
 2. `Nginx` приема трафика, прилага базови edge security правила и го маршрутизира към приложението.
 3. Приложението валидира сесията и tenant контекста.
-4. Заявките към домейн логиката минават през Node.js API слоя.
+4. Заявките към домейн логиката минават през Node.js + Express API слоя.
 5. API слоят изпълнява бизнес правила и транзакции в PostgreSQL.
 6. Документите се съхраняват в object storage, а metadata остава в PostgreSQL.
 7. OCR и AI обработките се изпълняват асинхронно чрез AI services layer и worker процеси.
@@ -332,7 +332,7 @@ AI обработката трябва да следва контролиран 
 
 - `Nginx` reverse proxy layer;
 - React web app;
-- Node.js API app;
+- Node.js + Express API app;
 - background worker;
 - managed PostgreSQL primary + read replica;
 - Redis;
@@ -377,7 +377,7 @@ AI обработката трябва да следва контролиран 
 Най-добрият архитектурен избор за този продукт е:
 
 - `React + Vite` за web layer;
-- `Node.js` backend като модулен монолит;
+- `Node.js + Express` backend като модулен монолит;
 - `PostgreSQL` като primary transactional database;
 - `Redis` като cache и coordination layer;
 - `S3-compatible object storage` за документи;

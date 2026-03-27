@@ -251,7 +251,7 @@ Backend API трябва да прилага:
 
 Задължително:
 
-- `React` приложението и `NestJS` инстанциите да не са директно публично достъпни;
+- `React` приложението и Node.js backend инстанциите да не са директно публично достъпни;
 - да има allowlist на trusted proxy headers;
 - да има upload size ограничения за document endpoints;
 - да се ограничат ненужните HTTP methods;
