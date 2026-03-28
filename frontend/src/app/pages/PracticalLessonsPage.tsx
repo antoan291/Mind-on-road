@@ -1,7 +1,7 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { 
-  PageHeader, Badge, Button, Modal, Input, Select
+import {
+  PageHeader, Badge, Button, Modal, Input, Select, Textarea
 } from '../components/shared';
 import { 
   Plus, Download, Calendar as CalendarIcon, AlertTriangle, 
@@ -286,11 +286,29 @@ export function PracticalLessonsPage() {
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [lessons, setLessons] = useState<PracticalLesson[]>(MOCK_LESSONS);
   const [selectedLesson, setSelectedLesson] = useState<PracticalLesson | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [evaluationLesson, setEvaluationLesson] = useState<PracticalLesson | null>(null);
+  const [editingLessonId, setEditingLessonId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState({
+    student: '',
+    instructor: '',
+    vehicle: '',
+    category: '',
+    date: '',
+    time: '',
+    endTime: '',
+    status: 'scheduled' as LessonStatus,
+    paymentStatus: 'pending' as PaymentStatus,
+    route: '',
+    startLocation: '',
+    endLocation: '',
+    notes: '',
+  });
   const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
   const [quickRating, setQuickRating] = useState<number>(0);
   const [quickComment, setQuickComment] = useState('');
@@ -298,13 +316,13 @@ export function PracticalLessonsPage() {
 
   // Calculate summary statistics
   const today = '2026-03-24';
-  const todayLessons = MOCK_LESSONS.filter(l => l.date === today);
-  const completedLessons = MOCK_LESSONS.filter(l => l.status === 'completed');
-  const lateLessons = MOCK_LESSONS.filter(l => l.status === 'late');
-  const noShowLessons = MOCK_LESSONS.filter(l => l.status === 'no-show');
-  const canceledLessons = MOCK_LESSONS.filter(l => l.status === 'canceled');
-  const unpaidLessons = MOCK_LESSONS.filter(l => l.paymentStatus === 'pending' || l.paymentStatus === 'overdue');
-  const needsEvaluation = MOCK_LESSONS.filter(l => l.evaluationStatus === 'pending');
+  const todayLessons = lessons.filter(l => l.date === today);
+  const completedLessons = lessons.filter(l => l.status === 'completed');
+  const lateLessons = lessons.filter(l => l.status === 'late');
+  const noShowLessons = lessons.filter(l => l.status === 'no-show');
+  const canceledLessons = lessons.filter(l => l.status === 'canceled');
+  const unpaidLessons = lessons.filter(l => l.paymentStatus === 'pending' || l.paymentStatus === 'overdue');
+  const needsEvaluation = lessons.filter(l => l.evaluationStatus === 'pending');
 
   const handleRowClick = (lesson: PracticalLesson) => {
     setSelectedLesson(lesson);
@@ -320,6 +338,94 @@ export function PracticalLessonsPage() {
     setNeedsFollowUp(false);
     setIsEvaluationModalOpen(true);
     setActionMenuOpen(null);
+  };
+
+  const handleOpenEditLesson = (lesson: PracticalLesson, event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    setEditingLessonId(lesson.id);
+    setEditForm({
+      student: lesson.student,
+      instructor: lesson.instructor,
+      vehicle: lesson.vehicle,
+      category: lesson.category,
+      date: lesson.date,
+      time: lesson.time,
+      endTime: lesson.endTime,
+      status: lesson.status,
+      paymentStatus: lesson.paymentStatus,
+      route: lesson.route || '',
+      startLocation: lesson.startLocation || '',
+      endLocation: lesson.endLocation || '',
+      notes: lesson.notes || '',
+    });
+    setActionMenuOpen(null);
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditLesson = () => {
+    setIsEditModalOpen(false);
+    setEditingLessonId(null);
+  };
+
+  const handleEditFieldChange = (field: keyof typeof editForm, value: string) => {
+    setEditForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+  };
+
+  const handleSaveEditedLesson = () => {
+    if (editingLessonId === null) {
+      return;
+    }
+
+    setLessons((current) =>
+      current.map((lesson) =>
+        lesson.id === editingLessonId
+          ? {
+              ...lesson,
+              student: editForm.student,
+              instructor: editForm.instructor,
+              vehicle: editForm.vehicle,
+              category: editForm.category,
+              date: editForm.date,
+              time: editForm.time,
+              endTime: editForm.endTime,
+              status: editForm.status,
+              paymentStatus: editForm.paymentStatus,
+              route: editForm.route || undefined,
+              startLocation: editForm.startLocation || undefined,
+              endLocation: editForm.endLocation || undefined,
+              notes: editForm.notes || undefined,
+            }
+          : lesson,
+      ),
+    );
+
+    if (selectedLesson?.id === editingLessonId) {
+      setSelectedLesson((current) =>
+        current
+          ? {
+              ...current,
+              student: editForm.student,
+              instructor: editForm.instructor,
+              vehicle: editForm.vehicle,
+              category: editForm.category,
+              date: editForm.date,
+              time: editForm.time,
+              endTime: editForm.endTime,
+              status: editForm.status,
+              paymentStatus: editForm.paymentStatus,
+              route: editForm.route || undefined,
+              startLocation: editForm.startLocation || undefined,
+              endLocation: editForm.endLocation || undefined,
+              notes: editForm.notes || undefined,
+            }
+          : current,
+      );
+    }
+
+    handleCloseEditLesson();
   };
 
   const handleSubmitEvaluation = () => {
@@ -809,7 +915,7 @@ export function PracticalLessonsPage() {
                 </tr>
               </thead>
               <tbody>
-                {MOCK_LESSONS.map((lesson) => {
+                {lessons.map((lesson) => {
                   const statusInfo = getStatusInfo(lesson.status);
                   const paymentInfo = getPaymentStatusInfo(lesson.paymentStatus);
                   const evaluationInfo = getEvaluationStatusInfo(lesson.evaluationStatus);
@@ -967,7 +1073,7 @@ export function PracticalLessonsPage() {
                                 </span>
                               </button>
                               <button
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) => handleOpenEditLesson(lesson, e)}
                                 className="w-full flex items-center gap-3 px-4 py-2.5 transition-all hover:bg-white/[0.05]"
                               >
                                 <Edit2 size={16} style={{ color: 'var(--text-tertiary)' }} />
@@ -994,7 +1100,7 @@ export function PracticalLessonsPage() {
                                 style={{ height: '1px', background: 'rgba(255, 255, 255, 0.06)' }}
                               />
                               <button
-                                onClick={(e) => e.stopPropagation()}
+                                onClick={(e) => handleOpenEditLesson(lesson, e)}
                                 className="w-full flex items-center gap-3 px-4 py-2.5 transition-all hover:bg-white/[0.05]"
                               >
                                 <Trash2 size={16} style={{ color: '#ef4444' }} />
@@ -1645,8 +1751,13 @@ export function PracticalLessonsPage() {
                     Добави оценка
                   </Button>
                 )}
-                <Button variant="secondary" icon={<Edit2 size={18} />} fullWidth>
-                  Редактиране
+                <Button
+                  variant="secondary"
+                  icon={<Edit2 size={18} />}
+                  fullWidth
+                  onClick={() => selectedLesson && handleOpenEditLesson(selectedLesson)}
+                >
+                  {'Редактиране'}
                 </Button>
                 <Button variant="secondary" icon={<FileText size={18} />}>
                   Протокол
@@ -1655,6 +1766,138 @@ export function PracticalLessonsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {isEditModalOpen && editingLessonId !== null && (
+        <Modal
+          isOpen={isEditModalOpen}
+          onClose={handleCloseEditLesson}
+          title={'\u0420\u0435\u0434\u0430\u043a\u0446\u0438\u044f \u043d\u0430 \u043f\u0440\u0430\u043a\u0442\u0438\u043a\u0430\u0442\u0430'}
+          maxWidth="2xl"
+        >
+          <div className="space-y-6 p-6">
+            <div
+              className="rounded-2xl p-4"
+              style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+              }}
+            >
+              <p style={{ color: 'var(--text-primary)', fontSize: '0.95rem', fontWeight: 600 }}>
+                {'\u041f\u043e\u043f\u044a\u043b\u043d\u0435\u0442\u0435 \u0430\u043a\u0442\u0443\u0430\u043b\u043d\u0438\u0442\u0435 \u0434\u0430\u043d\u043d\u0438 \u0437\u0430 \u043f\u0440\u0430\u043a\u0442\u0438\u0447\u0435\u0441\u043a\u043e\u0442\u043e \u0437\u0430\u043d\u044f\u0442\u0438\u0435'}
+              </p>
+              <p style={{ color: 'var(--text-tertiary)', fontSize: '0.875rem', marginTop: '0.35rem' }}>
+                {'\u0422\u0443\u043a \u0430\u0434\u043c\u0438\u043d\u0438\u0441\u0442\u0440\u0430\u0442\u043e\u0440\u044a\u0442 \u043c\u043e\u0436\u0435 \u0434\u0430 \u043a\u043e\u0440\u0438\u0433\u0438\u0440\u0430 \u0443\u0447\u0430\u0441\u0442\u043d\u0438\u0446\u0438\u0442\u0435, \u0447\u0430\u0441\u0430, \u043c\u0430\u0440\u0448\u0440\u0443\u0442\u0430, \u0441\u0442\u0430\u0442\u0443\u0441\u0430 \u0438 \u0431\u0435\u043b\u0435\u0436\u043a\u0438\u0442\u0435 \u043f\u043e \u043f\u0440\u0430\u043a\u0442\u0438\u043a\u0430\u0442\u0430.'}
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Input
+                label={'\u041a\u0443\u0440\u0441\u0438\u0441\u0442'}
+                value={editForm.student}
+                onChange={(value) => handleEditFieldChange('student', value)}
+                placeholder={'\u0412\u044a\u0432\u0435\u0434\u0435\u0442\u0435 \u0438\u043c\u0435 \u043d\u0430 \u043a\u0443\u0440\u0441\u0438\u0441\u0442'}
+              />
+              <Input
+                label={'\u0418\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440'}
+                value={editForm.instructor}
+                onChange={(value) => handleEditFieldChange('instructor', value)}
+                placeholder={'\u0412\u044a\u0432\u0435\u0434\u0435\u0442\u0435 \u0438\u043c\u0435 \u043d\u0430 \u0438\u043d\u0441\u0442\u0440\u0443\u043a\u0442\u043e\u0440'}
+              />
+              <Input
+                label={'\u0410\u0432\u0442\u043e\u043c\u043e\u0431\u0438\u043b'}
+                value={editForm.vehicle}
+                onChange={(value) => handleEditFieldChange('vehicle', value)}
+                placeholder={'\u041d\u0430\u043f\u0440\u0438\u043c\u0435\u0440 Toyota Yaris'}
+              />
+              <Input
+                label={'\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u044f'}
+                value={editForm.category}
+                onChange={(value) => handleEditFieldChange('category', value)}
+                placeholder={'\u041d\u0430\u043f\u0440\u0438\u043c\u0435\u0440 B'}
+              />
+              <Input
+                label={'\u0414\u0430\u0442\u0430'}
+                type="date"
+                value={editForm.date}
+                onChange={(value) => handleEditFieldChange('date', value)}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label={'\u041d\u0430\u0447\u0430\u043b\u0435\u043d \u0447\u0430\u0441'}
+                  type="time"
+                  value={editForm.time}
+                  onChange={(value) => handleEditFieldChange('time', value)}
+                />
+                <Input
+                  label={'\u041a\u0440\u0430\u0435\u043d \u0447\u0430\u0441'}
+                  type="time"
+                  value={editForm.endTime}
+                  onChange={(value) => handleEditFieldChange('endTime', value)}
+                />
+              </div>
+              <Select
+                label={'\u0421\u0442\u0430\u0442\u0443\u0441 \u043d\u0430 \u0447\u0430\u0441\u0430'}
+                value={editForm.status}
+                onChange={(value) => handleEditFieldChange('status', value)}
+                options={[
+                  { value: 'scheduled', label: '\u041f\u043b\u0430\u043d\u0438\u0440\u0430\u043d' },
+                  { value: 'in-progress', label: '\u0412 \u0445\u043e\u0434' },
+                  { value: 'completed', label: '\u0417\u0430\u0432\u044a\u0440\u0448\u0435\u043d' },
+                  { value: 'late', label: '\u0417\u0430\u043a\u044a\u0441\u043d\u044f\u043b' },
+                  { value: 'no-show', label: '\u041d\u0435\u044f\u0432\u044f\u0432\u0430\u043d\u0435' },
+                  { value: 'canceled', label: '\u041e\u0442\u043c\u0435\u043d\u0435\u043d' },
+                ]}
+              />
+              <Select
+                label={'\u0421\u0442\u0430\u0442\u0443\u0441 \u043d\u0430 \u043f\u043b\u0430\u0449\u0430\u043d\u0435'}
+                value={editForm.paymentStatus}
+                onChange={(value) => handleEditFieldChange('paymentStatus', value)}
+                options={[
+                  { value: 'paid', label: '\u041f\u043b\u0430\u0442\u0435\u043d\u043e' },
+                  { value: 'pending', label: '\u0427\u0430\u043a\u0430 \u043f\u043b\u0430\u0449\u0430\u043d\u0435' },
+                  { value: 'overdue', label: '\u041f\u0440\u043e\u0441\u0440\u043e\u0447\u0435\u043d\u043e' },
+                  { value: 'not-required', label: '\u041d\u0435 \u0441\u0435 \u0438\u0437\u0438\u0441\u043a\u0432\u0430' },
+                ]}
+              />
+              <Input
+                label={'\u041c\u0430\u0440\u0448\u0440\u0443\u0442'}
+                value={editForm.route}
+                onChange={(value) => handleEditFieldChange('route', value)}
+                placeholder={'\u041d\u0430\u043f\u0440\u0438\u043c\u0435\u0440 \u0426\u0435\u043d\u0442\u044a\u0440 - \u041b\u0435\u0432\u0441\u043a\u0438'}
+              />
+              <Input
+                label={'\u041d\u0430\u0447\u0430\u043b\u043d\u0430 \u0442\u043e\u0447\u043a\u0430'}
+                value={editForm.startLocation}
+                onChange={(value) => handleEditFieldChange('startLocation', value)}
+                placeholder={'\u041d\u0430\u043f\u0440\u0438\u043c\u0435\u0440 \u0410\u0432\u0442\u043e\u043f\u043e\u043b\u0438\u0433\u043e\u043d'}
+              />
+              <Input
+                label={'\u041a\u0440\u0430\u0439\u043d\u0430 \u0442\u043e\u0447\u043a\u0430'}
+                value={editForm.endLocation}
+                onChange={(value) => handleEditFieldChange('endLocation', value)}
+                placeholder={'\u041d\u0430\u043f\u0440\u0438\u043c\u0435\u0440 \u041a\u0410\u0422 \u0412\u0430\u0440\u043d\u0430'}
+              />
+            </div>
+
+            <Textarea
+              label={'\u0411\u0435\u043b\u0435\u0436\u043a\u0438'}
+              value={editForm.notes}
+              onChange={(value) => handleEditFieldChange('notes', value)}
+              placeholder={'\u0414\u043e\u0431\u0430\u0432\u0435\u0442\u0435 \u0432\u0430\u0436\u043d\u0438 \u0434\u0435\u0442\u0430\u0439\u043b\u0438 \u0437\u0430 \u0447\u0430\u0441\u0430, \u043f\u043e\u0432\u0435\u0434\u0435\u043d\u0438\u0435\u0442\u043e \u043d\u0430 \u043a\u0443\u0440\u0441\u0438\u0441\u0442\u0430 \u0438\u043b\u0438 \u043d\u0443\u0436\u043d\u0438\u0442\u0435 \u043f\u043e\u0441\u043b\u0435\u0434\u0432\u0430\u0449\u0438 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f.'}
+              rows={4}
+            />
+
+            <div className="flex gap-3 justify-end">
+              <Button variant="secondary" onClick={handleCloseEditLesson}>
+                {'\u041e\u0442\u043a\u0430\u0437'}
+              </Button>
+              <Button variant="primary" onClick={handleSaveEditedLesson}>
+                {'\u0417\u0430\u043f\u0430\u0437\u0438 \u043f\u0440\u043e\u043c\u0435\u043d\u0438\u0442\u0435'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {/* Quick Evaluation Modal */}

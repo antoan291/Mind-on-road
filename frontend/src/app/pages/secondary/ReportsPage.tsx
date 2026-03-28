@@ -4,6 +4,7 @@ import { PageHeader } from '../../components/ui-system/PageHeader';
 import { StatusBadge } from '../../components/ui-system/StatusBadge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { DataTableLayout, MetricCard, MetricGrid, PageSection, Panel, statusLabel, type StatusTone } from './secondaryShared';
+import { formatDashboardMoney, reportEntries } from './reportingData';
 
 type TransactionType = 'income' | 'expense';
 type PeriodFilter = 'days' | 'months' | 'years';

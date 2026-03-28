@@ -1,15 +1,15 @@
 # Automation
 
-Тази папка събира automation и document-intelligence слоевете на проекта.
+Тази папка съдържа automation и document-intelligence слоя на проекта.
 
-Първият automation модул е offline OCR pipeline за български лични документи:
+Първият модул е offline OCR pipeline за български документи:
 
 - българска лична карта
 - българска шофьорска книжка
 
 ## Защо името е `automation`
 
-Името е избрано по-широко, за да побере и бъдещи автоматизации:
+Името е по-широко, за да побира и бъдещи автоматизации:
 
 - document intelligence
 - OCR и extraction pipelines
@@ -19,11 +19,11 @@
 
 ## Текущ модул
 
-- `src/document_intelligence` - reusable Python package за PDF rendering, PaddleOCR и rule-based extraction
-- `scripts/extract_bg_document.py` - CLI script за локално изпълнение
-- `output/` - JSON резултати
-- `samples/` - sample input placeholders
-- `tmp/` - временни файлове при бъдещи разширения
+- `src/document_intelligence` — reusable Python package за PDF rendering, PaddleOCR и rule-based extraction
+- `scripts/extract_bg_document.py` — CLI script за локално изпълнение
+- `output/` — JSON резултати
+- `samples/` — примерни входни файлове
+- `tmp/` — временни файлове за debug и OCR inspection
 
 ## Архитектурна позиция
 
@@ -47,6 +47,7 @@
 - Номер на документа
 - Място на раждане
 - Постоянен адрес
+- Категории и дати при шофьорска книжка
 
 Резултатът се записва с български ключове в UTF-8 JSON.
 
@@ -61,17 +62,19 @@
 От папка `automation`:
 
 1. Инсталирай `PaddlePaddle 3.2.0`:
+
 ```bash
 python -m pip install --force-reinstall paddlepaddle==3.2.0
 ```
 
-2. Инсталирай `paddleocr 3.3.3`:
+2. Инсталирай `PaddleOCR 3.3.3`:
+
 ```bash
 python -m pip install --force-reinstall paddleocr==3.3.3
 ```
 
-Ако предпочиташ да свериш инсталацията с официалната документация за Windows:  
-Източник: [PaddlePaddle Windows installation](https://www.paddlepaddle.org.cn/documentation/docs/en/2.6/install/pip/windows-pip_en.html)
+Официална документация за Windows:
+[PaddlePaddle Windows installation](https://www.paddlepaddle.org.cn/documentation/docs/en/2.6/install/pip/windows-pip_en.html)
 
 3. Инсталирай локалния пакет:
 
@@ -134,6 +137,12 @@ python scripts\extract_bg_document.py "C:\AD\work\My company\school\test-docs\id
 
 ```bash
 python -m document_intelligence.cli "C:\AD\work\My company\school\test-docs\id-card.pdf" --output "C:\AD\work\My company\school\automation\output\id-card.json"
+```
+
+### Тест с шофьорска книжка
+
+```bash
+python -m document_intelligence.cli "C:\AD\work\My company\school\test-docs\car-card.pdf" --output "C:\AD\work\My company\school\automation\output\car-card.json"
 ```
 
 ## Output

@@ -13,6 +13,7 @@ export function InstructorsPage() {
   const filtered = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
     if (!query) return instructors;
+
     return instructors.filter((item) =>
       [item.name, item.role, item.vehicle, item.theoryGroup].some((field) =>
         field.toLowerCase().includes(query),
@@ -55,54 +56,97 @@ export function InstructorsPage() {
 
         <TwoColumnGrid>
           <Panel
-            title="Оперативен списък"
-            subtitle="Администрацията трябва да вижда всичко за инструкторите, а инструкторът само разрешеното за своите ученици и автомобил."
+            title="Инструкторски карти"
+            subtitle="Всеки инструктор е показан като отделна карта с ключова информация, натоварване и оперативни сигнали за документи и плащания."
           >
-            <div className="space-y-3">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {filtered.map((item) => (
-                <div
+                <article
                   key={item.name}
-                  className="rounded-2xl p-4"
-                  style={{ background: 'var(--bg-card)', border: '1px solid var(--ghost-border)' }}
+                  className="h-full rounded-3xl p-5"
+                  style={{
+                    background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
+                    border: '1px solid var(--ghost-border)',
+                    boxShadow: '0 20px 50px rgba(2, 6, 23, 0.16)',
+                  }}
                 >
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className="h-11 w-11 rounded-xl flex items-center justify-center"
-                          style={{ background: 'var(--bg-card-elevated)', color: 'var(--primary-accent)' }}
-                        >
-                          <UserCircle size={22} />
-                        </div>
-                        <div>
-                          <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
-                            {item.name}
-                          </h3>
-                          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                            {item.role}
-                          </p>
-                        </div>
+                  <div className="flex h-full flex-col gap-5">
+                    <div className="flex items-start gap-3">
+                      <div
+                        className="flex h-12 w-12 items-center justify-center rounded-2xl"
+                        style={{ background: 'var(--bg-card-elevated)', color: 'var(--primary-accent)' }}
+                      >
+                        <UserCircle size={24} />
                       </div>
-                      <div className="grid gap-2 text-sm md:grid-cols-2" style={{ color: 'var(--text-secondary)' }}>
-                        <InfoLine label="Ученици" value={`${item.students} активни`} />
-                        <InfoLine label="Автомобил" value={item.vehicle} />
-                        <InfoLine label="Следващ час" value={item.nextLesson} />
-                        <InfoLine label="Теория" value={item.theoryGroup} />
+                      <div className="min-w-0">
+                        <h3 className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
+                          {item.name}
+                        </h3>
+                        <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                          {item.role}
+                        </p>
                       </div>
                     </div>
-                    <div className="flex flex-col items-start gap-2 lg:items-end">
-                      <StatusBadge status={item.documentStatus}>
-                        {item.documentStatus === 'warning' ? 'Документ изтича скоро' : 'Документи изрядни'}
-                      </StatusBadge>
-                      <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        {item.workload}
-                      </p>
-                      <p className="text-sm" style={{ color: item.paymentAlerts > 0 ? 'var(--status-warning)' : 'var(--text-secondary)' }}>
-                        {item.paymentAlerts > 0 ? `${item.paymentAlerts} ученици с липсващо плащане` : 'Няма платежни сигнали'}
-                      </p>
+
+                    <div className="space-y-2 rounded-2xl p-3" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                      <InfoLine label="Автомобил" value={item.vehicle} />
+                      <InfoLine label="Следващ час" value={item.nextLesson} />
+                      <InfoLine label="Теория" value={item.theoryGroup} />
+                      <InfoLine label="Натоварване" value={item.workload} />
+                    </div>
+
+                    <div className="grid gap-3">
+                      <div
+                        className="rounded-2xl p-3"
+                        style={{
+                          background:
+                            item.documentStatus === 'warning' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(34, 197, 94, 0.12)',
+                          border:
+                            item.documentStatus === 'warning'
+                              ? '1px solid rgba(245, 158, 11, 0.24)'
+                              : '1px solid rgba(34, 197, 94, 0.24)',
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                            Документи
+                          </p>
+                          <StatusBadge status={item.documentStatus}>
+                            {item.documentStatus === 'warning' ? 'Изтичат скоро' : 'Изрядни'}
+                          </StatusBadge>
+                        </div>
+                        <p className="mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                          {item.documentStatus === 'warning'
+                            ? 'Има документ, който трябва да бъде подновен навреме, за да не блокира графика.'
+                            : 'Няма блокиращи проблеми с документите на инструктора.'}
+                        </p>
+                      </div>
+
+                      <div
+                        className="rounded-2xl p-3"
+                        style={{
+                          background: item.paymentAlerts > 0 ? 'rgba(245, 158, 11, 0.12)' : 'rgba(59, 130, 246, 0.12)',
+                          border:
+                            item.paymentAlerts > 0
+                              ? '1px solid rgba(245, 158, 11, 0.24)'
+                              : '1px solid rgba(59, 130, 246, 0.24)',
+                        }}
+                      >
+                        <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                          Платежен статус
+                        </p>
+                        <p
+                          className="mt-2 text-sm"
+                          style={{ color: item.paymentAlerts > 0 ? 'var(--status-warning)' : 'var(--text-secondary)' }}
+                        >
+                          {item.paymentAlerts > 0
+                            ? `${item.paymentAlerts} ученици с липсващо плащане`
+                            : 'Няма платежни сигнали към учениците на този инструктор.'}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </article>
               ))}
             </div>
           </Panel>

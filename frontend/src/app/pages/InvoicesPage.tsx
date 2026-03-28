@@ -1,7 +1,7 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { 
-  PageHeader, Badge, Button
+  PageHeader, Badge, Button, Modal
 } from '../components/shared';
 import { 
   Plus, Download, AlertTriangle, FileText, CheckCircle, 
@@ -120,6 +120,7 @@ export function InvoicesPage() {
   const [searchValue, setSearchValue] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [isEditInvoiceOpen, setIsEditInvoiceOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   const [showCreateInvoice, setShowCreateInvoice] = useState(false);
   
@@ -1081,11 +1082,42 @@ export function InvoicesPage() {
         )}
       </div>
 
+      {selectedInvoice && (
+        <Modal
+          isOpen={isEditInvoiceOpen}
+          onClose={() => setIsEditInvoiceOpen(false)}
+          title="Редакция на фактура"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setIsEditInvoiceOpen(false)}>Отказ</Button>
+              <Button variant="primary" onClick={() => setIsEditInvoiceOpen(false)}>Запази промените</Button>
+            </>
+          }
+        >
+          <div className="space-y-5">
+            <div className="rounded-2xl border p-4" style={{ background: 'rgba(15, 23, 42, 0.72)', borderColor: 'var(--ghost-border)' }}>
+              <p className="mb-2 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Какво трябва да попълните</p>
+              <p className="text-sm leading-6" style={{ color: 'var(--text-secondary)' }}>Актуализирайте основните данни по фактурата. Диалогът е готов за бъдещо свързване към backend update flow.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Номер на фактура</label><input defaultValue={selectedInvoice.invoiceNumber} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Дата на фактура</label><input defaultValue={selectedInvoice.invoiceDate} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Курсист</label><input defaultValue={selectedInvoice.student} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Сума</label><input type="number" defaultValue={selectedInvoice.totalAmount} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Статус</label><select defaultValue={selectedInvoice.invoiceStatus} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}><option value="draft">Чернова</option><option value="issued">Издадена</option><option value="corrected">Коригирана</option><option value="canceled">Анулирана</option><option value="overdue">Просрочена</option></select></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Връзка с плащане</label><select defaultValue={selectedInvoice.paymentLinkStatus} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}><option value="linked">Свързано</option><option value="partial">Частично</option><option value="not_linked">Без връзка</option></select></div>
+              <div className="md:col-span-2"><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Бележки</label><textarea defaultValue={selectedInvoice.notes || ''} rows={4} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* Invoice Detail Drawer */}
       {selectedInvoice && (
         <InvoiceDetailDrawer
           invoice={selectedInvoice}
           onClose={() => setSelectedInvoice(null)}
+          onEdit={() => setIsEditInvoiceOpen(true)}
           formatCurrency={formatCurrency}
           onDownload={handleDownload}
           onPrint={handlePrint}
@@ -1227,12 +1259,14 @@ function FilterChip({
 function InvoiceDetailDrawer({
   invoice,
   onClose,
+  onEdit,
   formatCurrency,
   onDownload,
   onPrint
 }: {
   invoice: Invoice;
   onClose: () => void;
+  onEdit: () => void;
   formatCurrency: (amount: number) => string;
   onDownload: (id: number) => void;
   onPrint: (id: number) => void;
@@ -1240,16 +1274,18 @@ function InvoiceDetailDrawer({
   const navigate = useNavigate();
 
   return (
-    <>
-      {/* Overlay */}
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 z-50"
-        onClick={onClose}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-end"
+      onClick={onClose}
+    >
+      <div
+        className="absolute inset-0"
+        style={{ background: 'rgba(0, 0, 0, 0.6)' }}
       />
 
-      {/* Drawer */}
-      <div 
-        className="fixed top-0 right-0 h-full w-full max-w-2xl z-50 overflow-y-auto shadow-2xl"
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="relative h-full w-full max-w-2xl overflow-y-auto shadow-2xl"
         style={{ background: 'var(--bg-card)' }}
       >
         {/* Header */}
@@ -1713,6 +1749,9 @@ function InvoiceDetailDrawer({
           <Button variant="secondary" onClick={onClose}>
             Затвори
           </Button>
+          <Button variant="secondary" icon={<Edit2 size={18} />} onClick={onEdit}>
+            Редактирай
+          </Button>
           <Button 
             variant="secondary" 
             icon={<Download size={18} />}
@@ -1729,7 +1768,7 @@ function InvoiceDetailDrawer({
           </Button>
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -2192,3 +2231,12 @@ function CreateInvoiceModal({
     </>
   );
 }
+
+
+
+
+
+
+
+
+

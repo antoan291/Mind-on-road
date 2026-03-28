@@ -1,7 +1,7 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { 
-  PageHeader, Badge, Button
+  PageHeader, Badge, Button, Modal, Input, Select, Textarea
 } from '../components/shared';
 import { 
   Plus, Download, AlertTriangle, DollarSign, CheckCircle, 
@@ -87,6 +87,7 @@ export function PaymentsPage() {
   const [searchValue, setSearchValue] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [isEditPaymentOpen, setIsEditPaymentOpen] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<number | null>(null);
   
   // Filter states
@@ -877,11 +878,43 @@ export function PaymentsPage() {
         )}
       </div>
 
+
+      {selectedPayment && (
+        <Modal
+          isOpen={isEditPaymentOpen}
+          onClose={() => setIsEditPaymentOpen(false)}
+          title="Редакция на плащане"
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setIsEditPaymentOpen(false)}>Отказ</Button>
+              <Button variant="primary" onClick={() => setIsEditPaymentOpen(false)}>Запази промените</Button>
+            </>
+          }
+        >
+          <div className="space-y-5">
+            <div className="rounded-2xl border p-4" style={{ background: 'rgba(15, 23, 42, 0.72)', borderColor: 'var(--ghost-border)' }}>
+              <p className="mb-2 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Какво трябва да попълните</p>
+              <p className="text-sm leading-6" style={{ color: 'var(--text-secondary)' }}>Редактирайте основните данни по плащането. Формата е подготвена за бъдещо свързване с backend и може да се използва директно като основа за update заявка.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Курсист</label><input defaultValue={selectedPayment.student} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Дата на плащане</label><input defaultValue={selectedPayment.date} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Дължима сума</label><input type="number" defaultValue={selectedPayment.dueAmount} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Платена сума</label><input type="number" defaultValue={selectedPayment.paidAmount} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Метод на плащане</label><select defaultValue={selectedPayment.paymentMethod} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}><option value={selectedPayment.paymentMethod}>{selectedPayment.paymentMethod}</option><option value="В брой">В брой</option><option value="Банков превод">Банков превод</option><option value="Карта">Карта</option></select></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Статус</label><select defaultValue={selectedPayment.paymentStatus} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}><option value="paid">Платено</option><option value="partial">Частично</option><option value="overdue">Просрочено</option><option value="pending">Очаква</option><option value="canceled">Отказано</option></select></div>
+              <div className="md:col-span-2"><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Бележки</label><textarea defaultValue={selectedPayment.notes || ''} rows={4} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+            </div>
+          </div>
+        </Modal>
+      )}
+
       {/* Payment Detail Drawer */}
       {selectedPayment && (
         <PaymentDetailDrawer
           payment={selectedPayment}
           onClose={() => setSelectedPayment(null)}
+          onEdit={() => setIsEditPaymentOpen(true)}
           formatCurrency={formatCurrency}
         />
       )}
@@ -989,23 +1022,27 @@ function FilterSelect({
 function PaymentDetailDrawer({
   payment,
   onClose,
+  onEdit,
   formatCurrency
 }: {
   payment: Payment;
   onClose: () => void;
+  onEdit: () => void;
   formatCurrency: (amount: number) => string;
 }) {
   return (
-    <>
-      {/* Overlay */}
-      <div 
-        className="fixed inset-0 bg-black bg-opacity-50 z-50"
-        onClick={onClose}
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-end"
+      onClick={onClose}
+    >
+      <div
+        className="absolute inset-0"
+        style={{ background: 'rgba(0, 0, 0, 0.6)' }}
       />
 
-      {/* Drawer */}
-      <div 
-        className="fixed top-0 right-0 h-full w-full max-w-2xl z-50 overflow-y-auto shadow-2xl"
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="relative h-full w-full max-w-2xl overflow-y-auto shadow-2xl"
         style={{ background: 'var(--bg-card)' }}
       >
         {/* Header */}
@@ -1256,11 +1293,21 @@ function PaymentDetailDrawer({
           <Button variant="secondary" onClick={onClose}>
             Затвори
           </Button>
-          <Button variant="primary" icon={<Edit2 size={18} />}>
+          <Button variant="primary" icon={<Edit2 size={18} />} onClick={onEdit}>
             Редактирай
           </Button>
         </div>
       </div>
-    </>
+    </div>
   );
 }
+
+
+
+
+
+
+
+
+
+

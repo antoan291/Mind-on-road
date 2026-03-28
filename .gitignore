@@ -32,5 +32,10 @@ backend/dist/
 automation/output/*.json
 automation/tmp/*
 !automation/tmp/.gitkeep
+automation/**/__pycache__/
+automation/**/*.pyc
+automation/**/*.pyo
+automation/**/*.pyd
+automation/**/*.egg-info/
 
 *.tsbuildinfo

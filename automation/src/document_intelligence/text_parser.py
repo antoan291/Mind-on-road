@@ -15,31 +15,6 @@ DOC_NO_RE = re.compile(r"\b\d{9}\b")
 YEAR_RE = re.compile(r"\b(?:19|20)\d{2}\b")
 DATE_RE = re.compile(r"\b\d{2}\.\d{2}\.(?:\d{2}|\d{4})\b")
 DRIVING_CATEGORY_RE = re.compile(r"\b(?:AM|A1|A2|A|B1|B|BE|C1|C|C1E|CE|D1|D|D1E|DE|TKT)\b")
-CYRILLIC_RE = re.compile(r"[Ð-Ð¯Ð°-Ñ]")
-LATIN_LOOKALIKE_MAP = str.maketrans(
-  {
-    "A": "Ð",
-    "B": "Ð’",
-    "C": "Ð¡",
-    "E": "Ð•",
-    "H": "Ð",
-    "I": "Ð†",
-    "K": "Ðš",
-    "M": "Ðœ",
-    "O": "Ðž",
-    "P": "Ð ",
-    "T": "Ð¢",
-    "X": "Ð¥",
-    "Y": "Ð£",
-    "a": "Ð°",
-    "c": "Ñ",
-    "e": "Ðµ",
-    "o": "Ð¾",
-    "p": "Ñ€",
-    "x": "Ñ…",
-    "y": "Ñƒ",
-  }
-)
 SAFE_LATIN_LOOKALIKE_MAP = {
   "A": "\u0410",
   "B": "\u0412",
@@ -121,37 +96,6 @@ CYRILLIC_TO_LATIN_MAP = {
   "Ю": "YU",
   "Я": "YA",
 }
-KNOWN_BULGARIAN_PLACES = (
-  "Ð‘Ð›ÐÐ“ÐžÐ•Ð’Ð“Ð ÐÐ”",
-  "Ð‘Ð£Ð Ð“ÐÐ¡",
-  "Ð’ÐÐ ÐÐ",
-  "Ð’Ð•Ð›Ð˜ÐšÐž Ð¢ÐªÐ ÐÐžÐ’Ðž",
-  "Ð’Ð˜Ð”Ð˜Ð",
-  "Ð’Ð ÐÐ¦Ð",
-  "Ð“ÐÐ‘Ð ÐžÐ’Ðž",
-  "Ð”ÐžÐ‘Ð Ð˜Ð§",
-  "ÐšÐªÐ Ð”Ð–ÐÐ›Ð˜",
-  "ÐšÐ®Ð¡Ð¢Ð•ÐÐ”Ð˜Ð›",
-  "Ð›ÐžÐ’Ð•Ð§",
-  "ÐœÐžÐÐ¢ÐÐÐ",
-  "ÐŸÐÐ—ÐÐ Ð”Ð–Ð˜Ðš",
-  "ÐŸÐ•Ð ÐÐ˜Ðš",
-  "ÐŸÐ›Ð•Ð’Ð•Ð",
-  "ÐŸÐ›ÐžÐ’Ð”Ð˜Ð’",
-  "Ð ÐÐ—Ð“Ð ÐÐ”",
-  "Ð Ð£Ð¡Ð•",
-  "Ð¡Ð˜Ð›Ð˜Ð¡Ð¢Ð Ð",
-  "Ð¡Ð›Ð˜Ð’Ð•Ð",
-  "Ð¡ÐœÐžÐ›Ð¯Ð",
-  "Ð¡ÐžÐ¤Ð˜Ð¯",
-  "Ð¡ÐžÐ¤Ð˜Ð¯-Ð“Ð ÐÐ”",
-  "Ð¡Ð¢ÐÐ Ð Ð—ÐÐ“ÐžÐ Ð",
-  "Ð¢ÐªÐ Ð“ÐžÐ’Ð˜Ð©Ð•",
-  "Ð¥ÐÐ¡ÐšÐžÐ’Ðž",
-  "Ð¨Ð£ÐœÐ•Ð",
-  "Ð¯ÐœÐ‘ÐžÐ›",
-  "ÐœÐ›ÐÐ”ÐžÐ¡Ð¢",
-)
 SAFE_KNOWN_BULGARIAN_PLACES = (
   "\u0411\u041b\u0410\u0413\u041e\u0415\u0412\u0413\u0420\u0410\u0414",
   "\u0411\u0423\u0420\u0413\u0410\u0421",
@@ -185,26 +129,26 @@ SAFE_KNOWN_BULGARIAN_PLACES = (
 )
 ADDRESS_STOP_TOKENS = (
   "HEIGHT",
-  "Ð ÐªÐ¡Ð¢",
+  "\u0420\u042a\u0421\u0422",
   "COLOR",
-  "ÐžÐ§Ð˜Ð¢Ð•",
+  "\u041e\u0427\u0418\u0422\u0415",
   "EYES",
-  "Ð˜Ð—Ð”ÐÐ”Ð•Ð",
+  "\u0418\u0417\u0414\u0410\u0414\u0415\u041d",
   "AUTHORITY",
   "AUTHENTY",
   "DATE OF ISSUE",
-  "Ð”ÐÐ¢Ð ÐÐ Ð˜Ð—Ð”ÐÐ’ÐÐÐ•",
+  "\u0414\u0410\u0422\u0410 \u041d\u0410 \u0418\u0417\u0414\u0410\u0412\u0410\u041d\u0415",
 )
 ADDRESS_FRAGMENT_TOKENS = (
-  "Ð¾Ð±Ð».",
-  "Ð¾Ð±Ñ‰.",
-  "Ð³Ñ€.",
-  "Ð¶Ðº.",
-  "ÑƒÐ».",
-  "Ð±ÑƒÐ».",
-  "Ð²Ñ….",
-  "ÐµÑ‚.",
-  "Ð°Ð¿.",
+  "\u043e\u0431\u043b.",
+  "\u043e\u0431\u0449.",
+  "\u0433\u0440.",
+  "\u0436\u043a.",
+  "\u0443\u043b.",
+  "\u0431\u0443\u043b.",
+  "\u0432\u0445.",
+  "\u0435\u0442.",
+  "\u0430\u043f.",
 )
 
 
@@ -224,15 +168,15 @@ def _contains_cyrillic(text: str) -> bool:
 def _looks_like_label(text: str) -> bool:
   normalized = _normalized_text(text)
   label_tokens = (
-    "Ñ„Ð°Ð¼Ð¸Ð»Ð¸Ñ",
+    "\u0444\u0430\u043c\u0438\u043b\u0438\u044f",
     "surname",
-    "Ð¸Ð¼Ðµ",
+    "\u0438\u043c\u0435",
     "name",
-    "Ð¿Ñ€ÐµÐ·Ð¸Ð¼Ðµ",
+    "\u043f\u0440\u0435\u0437\u0438\u043c\u0435",
     "father",
-    "Ð¼ÑÑÑ‚Ð¾",
+    "\u043c\u044f\u0441\u0442\u043e",
     "place",
-    "Ð°Ð´Ñ€ÐµÑ",
+    "\u0430\u0434\u0440\u0435\u0441",
     "address",
   )
   return any(token in normalized for token in label_tokens)
@@ -301,17 +245,17 @@ def _best_known_place(value: str) -> str:
 def _normalize_address_text(value: str) -> str:
   normalized = _normalize_bulgarian_value(value)
 
-  normalized = re.sub(r"\bÐ¾Ð±Ð»\.\s*", "Ð¾Ð±Ð». ", normalized, flags=re.IGNORECASE)
-  normalized = re.sub(r"\bÐ¾Ð±Ñ‰\.\s*", "ÐžÐ±Ñ‰. ", normalized, flags=re.IGNORECASE)
-  normalized = re.sub(r"\bÐ³Ñ€\.\s*", "Ð³Ñ€.", normalized, flags=re.IGNORECASE)
-  normalized = re.sub(r"\bÐ¶Ðº\.\s*", "Ð–Ðš.", normalized, flags=re.IGNORECASE)
+  normalized = re.sub(r"\b\u043e\u0431\u043b\.\s*", "\u043e\u0431\u043b. ", normalized, flags=re.IGNORECASE)
+  normalized = re.sub(r"\b\u043e\u0431\u0449\.\s*", "\u041e\u0431\u0449. ", normalized, flags=re.IGNORECASE)
+  normalized = re.sub(r"\b\u0433\u0440\.\s*", "\u0433\u0440.", normalized, flags=re.IGNORECASE)
+  normalized = re.sub(r"\b\u0436\u043a\.\s*", "\u0416\u041a.", normalized, flags=re.IGNORECASE)
 
   def replace_place_token(match: re.Match[str]) -> str:
     token = match.group(0)
     return _best_known_place(token)
 
-  normalized = re.sub(r"\b[Ð-Ð¯]{4,}(?:\s+[Ð-Ð¯]{4,})?\b", replace_place_token, normalized)
-  normalized = normalized.replace("ÐžÐ±Ñ‰. Ð’ÐÐ ÐœÐ", "ÐžÐ±Ñ‰. Ð’ÐÐ ÐÐ")
+  normalized = re.sub(r"\b[\u0410-\u042f]{4,}(?:\s+[\u0410-\u042f]{4,})?\b", replace_place_token, normalized)
+  normalized = normalized.replace("\u041e\u0431\u0449. \u0412\u0410\u0420\u041c\u0410", "\u041e\u0431\u0449. \u0412\u0410\u0420\u041d\u0410")
   return _clean_text(normalized)
 
 
@@ -384,9 +328,9 @@ def _extract_first_match(lines: Sequence[OCRLine], pattern: re.Pattern[str]) -> 
 
 def _detect_document_type(joined_text: str) -> str:
   lowered = joined_text.casefold()
-  if "Ð»Ð¸Ñ‡Ð½Ð° ÐºÐ°Ñ€Ñ‚Ð°" in lowered or "identity card" in lowered:
+  if "\u043b\u0438\u0447\u043d\u0430 \u043a\u0430\u0440\u0442\u0430" in lowered or "identity card" in lowered:
     return "bulgarian_identity_card"
-  if "ÑÐ²Ð¸Ð´ÐµÑ‚ÐµÐ»ÑÑ‚Ð²Ð¾ Ð·Ð° ÑƒÐ¿Ñ€Ð°Ð²Ð»ÐµÐ½Ð¸Ðµ" in lowered or "driving licence" in lowered or "driving license" in lowered:
+  if "\u0441\u0432\u0438\u0434\u0435\u0442\u0435\u043b\u0441\u0442\u0432\u043e \u0437\u0430 \u0443\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435" in lowered or "driving licence" in lowered or "driving license" in lowered:
     return "bulgarian_driving_licence"
   return "unknown"
 
@@ -395,9 +339,9 @@ def _extract_name_fields(lines: Sequence[OCRLine]) -> tuple[str | None, str | No
   warnings: list[str] = []
   confidences: list[float] = []
 
-  last_name, last_conf = _value_after_label(lines, ["Ñ„Ð°Ð¼Ð¸Ð»Ð¸Ñ", "surname"])
-  first_name, first_conf = _value_after_label(lines, ["Ð¸Ð¼Ðµ", "name", "given names", "given name"])
-  middle_name, middle_conf = _value_after_label(lines, ["Ð¿Ñ€ÐµÐ·Ð¸Ð¼Ðµ", "father's name", "middle name"])
+  last_name, last_conf = _value_after_label(lines, ["\u0444\u0430\u043c\u0438\u043b\u0438\u044f", "surname"])
+  first_name, first_conf = _value_after_label(lines, ["\u0438\u043c\u0435", "name", "given names", "given name"])
+  middle_name, middle_conf = _value_after_label(lines, ["\u043f\u0440\u0435\u0437\u0438\u043c\u0435", "father's name", "middle name"])
 
   if first_name is not None:
     first_name = _normalize_name_value(first_name)
@@ -425,10 +369,10 @@ def _extract_document_number(lines: Sequence[OCRLine]) -> tuple[str | None, floa
   labeled_value, confidence = _value_after_label(
     lines,
     [
-      "Ð½Ð¾Ð¼ÐµÑ€ Ð½Ð° Ð´Ð¾ÐºÑƒÐ¼ÐµÐ½Ñ‚Ð°",
+      "\u043d\u043e\u043c\u0435\u0440 \u043d\u0430 \u0434\u043e\u043a\u0443\u043c\u0435\u043d\u0442\u0430",
       "document no",
       "document number",
-      "Ð½Ð¾Ð¼ÐµÑ€ Ð½Ð° Ð´Ð¾ÐºÑƒÐ¼ÐµÐ½Ñ‚",
+      "\u043d\u043e\u043c\u0435\u0440 \u043d\u0430 \u0434\u043e\u043a\u0443\u043c\u0435\u043d\u0442",
     ],
   )
   if labeled_value:
@@ -440,7 +384,7 @@ def _extract_document_number(lines: Sequence[OCRLine]) -> tuple[str | None, floa
 
 
 def _extract_place_of_birth(lines: Sequence[OCRLine]) -> tuple[str | None, float | None]:
-  index = _find_line_index(lines, ["Ð¼ÑÑÑ‚Ð¾ Ð½Ð° Ñ€Ð°Ð¶Ð´Ð°Ð½Ðµ", "place of birth", "Ð¼ÑÑÑ‚Ð¾"])
+  index = _find_line_index(lines, ["\u043c\u044f\u0441\u0442\u043e \u043d\u0430 \u0440\u0430\u0436\u0434\u0430\u043d\u0435", "place of birth", "\u043c\u044f\u0441\u0442\u043e"])
   if index is None:
     return (None, None)
 
@@ -453,7 +397,7 @@ def _extract_place_of_birth(lines: Sequence[OCRLine]) -> tuple[str | None, float
 
 
 def _extract_address(lines: Sequence[OCRLine]) -> tuple[str | None, float | None]:
-  index = _find_line_index(lines, ["Ð¿Ð¾ÑÑ‚Ð¾ÑÐ½ÐµÐ½ Ð°Ð´Ñ€ÐµÑ"])
+  index = _find_line_index(lines, ["\u043f\u043e\u0441\u0442\u043e\u044f\u043d\u0435\u043d \u0430\u0434\u0440\u0435\u0441"])
   if index is None:
     return (None, None)
 
@@ -764,9 +708,6 @@ def parse_bulgarian_document(lines: Sequence[OCRLine]) -> BulgarianDocumentExtra
 
     permanent_address = None
     address_confidence = None
-    warnings.append(
-      "\u041f\u043e\u0441\u0442\u043e\u044f\u043d\u043d\u0438\u044f\u0442 \u0430\u0434\u0440\u0435\u0441 \u043d\u0435 \u0431\u0435\u0448\u0435 \u0438\u0437\u0432\u043b\u0435\u0447\u0435\u043d. \u041f\u0440\u0438 \u0431\u044a\u043b\u0433\u0430\u0440\u0441\u043a\u0430 \u0448\u043e\u0444\u044c\u043e\u0440\u0441\u043a\u0430 \u043a\u043d\u0438\u0436\u043a\u0430 \u0442\u043e\u0432\u0430 \u043f\u043e\u043b\u0435 \u0447\u0435\u0441\u0442\u043e \u043b\u0438\u043f\u0441\u0432\u0430 \u0432 \u0441\u0430\u043c\u0438\u044f \u0434\u043e\u043a\u0443\u043c\u0435\u043d\u0442 \u0438\u043b\u0438 \u043d\u0435 \u0441\u0435 \u0432\u0438\u0436\u0434\u0430 \u0432 \u0441\u043a\u0430\u043d\u0430."
-    )
     driving_categories, category_warnings, category_confidences = _extract_driving_licence_categories(cleaned_lines)
     warnings.extend(category_warnings)
     confidences.extend(category_confidences)

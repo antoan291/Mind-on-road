@@ -115,3 +115,59 @@
   - `фамилия: ДИМИТРОВА`
   - `място_на_раждане: ВАРНА`
   - `постоянен_адрес: ЖК.МЛАДОСТ 123 вх.1 ет.5 ап.15`
+- Updated the dashboard quick actions so they now open dialogs instead of behaving like bare navigation shortcuts.
+## 2026-03-28 - OCR parser constant cleanup
+
+- Verified `automation/src/document_intelligence/text_parser.py` for hidden encoding regressions.
+- Removed broken duplicate constants such as `LATIN_LOOKALIKE_MAP` and `KNOWN_BULGARIAN_PLACES`.
+- Normalized the address token lists to Unicode-safe literals only.
+- Goal: keep the parser maintainable and prevent future OCR regressions caused by mojibake constants.
+
+## 2026-03-28 - Automation hardening pass
+
+- Cleaned `automation/src/document_intelligence/text_parser.py` from remaining parser-critical mojibake strings.
+- Re-verified the OCR pipeline with both sample documents:
+  - `test-docs/id-card.pdf`
+  - `test-docs/car-card.pdf`
+- Confirmed valid structured outputs in:
+  - `automation/output/id-card.json`
+  - `automation/output/car-card.json`
+- Rewrote `automation/README.md` cleanly and added Python artifact ignore rules in the root `.gitignore`.
+
+## 2026-03-28 - Dashboard UTF-8 rewrite
+
+- Replaced `frontend/src/app/pages/DashboardPage.tsx` with a clean UTF-8 implementation.
+- Preserved the dashboard role and the quick-action dialog flow.
+- Removed the corrupted Bulgarian text and verified that the file no longer contains mojibake characters.
+
+## 2026-03-28 - Dashboard quick action dialog wiring
+
+- Replaced the old placeholder quick-action modal in frontend/src/app/pages/DashboardPage.tsx with the dedicated DashboardQuickActionDialog component.
+- Dashboard quick actions now use a single dialog implementation and route-ready confirm handling.
+
+## 2026-03-28 - Financial detail drawers aligned with practice layout
+
+- Updated Payments and Invoices detail drawers to use the same right-side slide-over shell pattern as PracticalLessons.
+- The page now remains visible behind the drawer instead of feeling replaced by a fullscreen panel.
+
+- 2026-03-28: Cleaned new frontend edit-dialog regressions in Payments and Invoices and removed literal `????` placeholders from the affected TSX files.
+- 2026-03-28: Added a real edit dialog to PracticalLessonsPage with editable practice lesson fields, stateful save flow, and Unicode-safe frontend labels.
+- 2026-03-28: Reworked InstructorsPage into a card-style grid with larger rounded instructor cards and preserved visible document/payment alert signals inside each card.
+
+## 2026-03-28 - Instructor and vehicle cards polish
+- Reworked the instructor cards into cleaner rounded tiles with grouped info, document status, and payment status blocks.
+- Reworked the vehicles page to use rounded vehicle cards as the main presentation instead of the older list-style section.
+- Rewrote both pages in clean UTF-8 so the UI no longer shows broken question-mark text or escaped unicode strings.
+
+## 2026-03-28 - AI Center redesign
+- Reworked AIPage into a tabbed AI workspace with Risk, Business Assistant, and Document Review views.
+- Aligned the page more closely with the provided references while keeping it optimized for admin-heavy use and dark-theme consistency.
+- Introduced a top AI workspace tab bar and rebuilt the page around action-first panels instead of generic cards.
+
+## 2026-03-28 - Dashboard finance statistics
+- Added a new finance overview section under the top alerts on Dashboard.
+- The dashboard finance section now reads from the same reporting data source as Reports and supports day, month, and year filtering.
+- Added a Shopify-style overview card with current profit/loss, period comparison, and compact revenue/expense trend bars.
+
+## 2026-03-28 - Root cleanup
+- Removed temporary helper scripts and text files that had been left in the project root during earlier frontend fixes.

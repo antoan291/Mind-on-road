@@ -3,9 +3,9 @@ import { Car, CheckCircle2, Gauge, Plus, TriangleAlert, Wrench } from 'lucide-re
 import { PageHeader } from '../../components/ui-system/PageHeader';
 import { FilterBar } from '../../components/ui-system/FilterBar';
 import { Button } from '../../components/ui-system/Button';
-import { StatusBadge } from '../../components/ui-system/StatusBadge';
 import { vehicles } from './secondaryData';
-import { ChecklistItem, DataTableLayout, MetricCard, MetricGrid, PageSection, Panel, ProgressRow, TwoColumnGrid, statusLabel } from './secondaryShared';
+import { VehicleCards } from './components/VehicleCards';
+import { ChecklistItem, MetricCard, MetricGrid, PageSection, Panel, ProgressRow, TwoColumnGrid } from './secondaryShared';
 
 export function VehiclesPage() {
   const [searchValue, setSearchValue] = useState('');
@@ -13,6 +13,7 @@ export function VehiclesPage() {
   const filtered = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
     if (!query) return vehicles;
+
     return vehicles.filter((item) =>
       [item.vehicle, item.instructor, item.category, item.issue].some((field) =>
         field.toLowerCase().includes(query),
@@ -53,27 +54,17 @@ export function VehiclesPage() {
           <MetricCard icon={<CheckCircle2 size={18} />} label="Оперативна готовност" value="89%" detail="Всички критични автомобили са налични" tone="success" />
         </MetricGrid>
 
-        <Panel title="Автомобилен парк" subtitle="Видимост за администрацията върху всичко по автомобила и връзката му с инструкторите и часовете.">
-          <DataTableLayout
-            columns={['Автомобил', 'Инструктор', 'Категория', 'Статус', 'Следващ преглед', 'Активни часове', 'Бележка']}
-            rows={filtered.map((item) => [
-              item.vehicle,
-              item.instructor,
-              item.category,
-              <StatusBadge key={`${item.vehicle}-status`} status={item.status}>
-                {statusLabel(item.status)}
-              </StatusBadge>,
-              item.nextInspection,
-              item.activeLessons.toString(),
-              item.issue,
-            ])}
-          />
+        <Panel
+          title="Автомобилни карти"
+          subtitle="Всеки автомобил е показан като отделна карта с основния статус, активните часове и важната оперативна бележка."
+        >
+          <VehicleCards vehicles={filtered} />
         </Panel>
 
         <TwoColumnGrid>
           <Panel title="Контрол на документи" subtitle="Критичните ограничения трябва да блокират графика навреме.">
             <ChecklistItem
-              title="Skoda Octavia · GO изтича след 4 дни"
+              title="Skoda Octavia · ГО изтича след 4 дни"
               description="При липса на подновяване автомобилът трябва автоматично да се маркира като ограничен за нови часове."
               tone="warning"
             />

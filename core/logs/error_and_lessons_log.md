@@ -72,3 +72,94 @@
 - Rule going forward:
   - For core fields on Bulgarian ID cards, always keep positional fallbacks in addition to label-based extraction.
   - When changing shared normalization logic, re-test both document types immediately: ID card and driving licence.
+
+## 2026-03-27 - Dashboard quick actions UX rule
+
+- Requirement:
+  - Quick actions on the dashboard must open a dialog first, because their purpose is fast guided action, not abrupt navigation.
+- Rule going forward:
+  - When a feature is named `Бързи действия`, treat it as a guided modal entry point unless the screen explicitly requires direct execution.
+
+## 2026-03-28 - Remove broken duplicate constants from OCR parser
+
+- Problem:
+  - `text_parser.py` still contained mojibake constants like `LATIN_LOOKALIKE_MAP`, `KNOWN_BULGARIAN_PLACES`, and broken address token lists, even though safer Unicode-based versions also existed.
+- Why it matters:
+  - Even unused corrupted constants are dangerous because they confuse maintenance, increase the chance of future regressions, and make the parser look unreliable.
+- Fix:
+  - Removed the broken duplicate constants and kept only the Unicode-safe maps and token lists.
+  - Replaced the address token lists with explicit Unicode-safe literals.
+- Rule going forward:
+  - Do not keep parallel “broken” and “safe” constants in the same parser.
+  - When mojibake appears in a source file, remove the corrupted variant entirely instead of leaving it as dead code.
+
+## 2026-03-28 - Full automation Unicode cleanup
+
+- Problem:
+  - The automation layer still had parser-critical mojibake strings in label matching, document-type detection, address normalization, and README instructions.
+- Why it matters:
+  - In OCR workflows, broken label strings do not just look ugly; they can silently break extraction rules for fields like `име`, `фамилия`, `лична карта`, and `постоянен адрес`.
+- Fix:
+  - Replaced all parser-critical Bulgarian literals with Unicode-safe strings.
+  - Rewrote the automation README cleanly in UTF-8.
+  - Added ignore rules for Python generated artifacts under `automation`.
+- Rule going forward:
+  - Treat OCR parser labels as core logic, not incidental text.
+  - After any parser cleanup, verify both syntax and real sample outputs for ID card and driving licence.
+
+## 2026-03-28 - Driving licence address rule
+
+- Requirement:
+  - When the document is a Bulgarian driving licence, `постоянен_адрес` is not a required field for the extractor output.
+- Fix:
+  - Removed the automatic warning for missing permanent address in the driving-licence branch.
+- Rule going forward:
+  - Document-specific optional fields must stay `null` without being reported as extraction failures when the field is not expected on that document type.
+
+## 2026-03-28 - Dashboard mojibake regression
+
+- Problem:
+  - `frontend/src/app/pages/DashboardPage.tsx` was left with widespread mojibake and the whole dashboard became unreadable.
+- Why it happened:
+  - Incremental edits were applied on top of an already corrupted file instead of replacing the file with a clean UTF-8 source of truth.
+- Fix:
+  - Rewrote the dashboard page completely in clean UTF-8.
+  - Reduced the page to a smaller, clearer structure instead of patching the broken content in place.
+- Rule going forward:
+  - When a UI file shows widespread mojibake, do not patch it line by line.
+  - Replace the entire file with a clean UTF-8 version and then verify that no mojibake characters remain.
+
+## 2026-03-28 - Dashboard dialog implementation rule
+
+- Problem:
+  - The dashboard still contained an old placeholder modal even after a dedicated quick-action dialog component existed.
+- Fix:
+  - Wired the page to a single dedicated dialog component and removed the duplicate placeholder modal flow.
+- Rule going forward:
+  - Do not keep two dialog implementations for the same dashboard action flow. Use one dedicated component and evolve it in place.
+
+## 2026-03-28 - Detail drawer layout consistency
+
+- Requirement:
+  - Financial detail panels should follow the same right-side slide-over pattern as the practice page, with the originating page still visible behind them.
+- Rule going forward:
+  - For detail views opened from list pages, reuse the shared slide-over layout pattern instead of mixing fullscreen replacement and drawer styles across modules.
+- 2026-03-28: After frontend text edits, always search frontend/src for `????` and fix remaining labels before stopping.
+- 2026-03-28: For large TSX files on this Windows workspace, write new Bulgarian UI strings either as JSX unicode escape literals or verify with a grep pass for question-mark regressions before stopping.
+- 2026-03-28: For Windows frontend edits, panel titles and subtitles should also be written through Unicode-safe strings when a direct Bulgarian save regresses to question marks.
+- 2026-03-28: If a JSX prop in frontend uses unicode escapes, it must be written as an expression (for example title={'\u....'}) and never as a plain quoted string, otherwise the UI prints the escapes literally.
+
+## Frontend Unicode and large-page edits
+- If a large TSX page starts showing broken labels, question marks, or literal unicode escapes, stop patching line by line and rewrite the full page in clean UTF-8.
+- After UI text changes, always search the touched area for question-mark placeholders and unicode-escape regressions before considering the task done.
+
+## AI center UI work
+- Large page rewrites must be done in smaller stable chunks in this Windows environment; otherwise the write may timeout and leave the file incomplete.
+- When a page is a strategic workspace, prefer task-oriented tabs and action panels over generic metric-card stacks.
+
+## Dashboard finance module
+- For larger UI additions in this environment, isolate the feature into a separate component and wire it into the page with small edits instead of rewriting the full page.
+- When template literals appear inside style props, verify the exact saved source because PowerShell string replacement may strip braces or backticks.
+
+## Root temp files
+- Temporary helper scripts and scratch text files must never stay in the workspace root after a task. Clean them immediately or place them in a dedicated temp/support location.
