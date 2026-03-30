@@ -1,5 +1,6 @@
 ﻿import type { ReactNode } from 'react';
 import { Search, Bell, Settings2 } from 'lucide-react';
+import { aiCenterContent } from '../../content/staticContent';
 import type { AITabKey } from './aiCenterData';
 import { aiTabs } from './aiCenterData';
 
@@ -40,7 +41,7 @@ export function AICenterTabs({ activeTab, onChange }: Props) {
           >
             <Search size={16} style={{ color: 'var(--text-tertiary)' }} />
             <span className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
-              Търсене...
+              {aiCenterContent.searchPlaceholder}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -63,4 +64,3 @@ function ToolbarIcon({ icon }: { icon: ReactNode }) {
     </button>
   );
 }
-

@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { DashboardPage } from './DashboardPage';
 import { MobileDashboard } from './mobile/MobileDashboard';
 
-export function ResponsiveDashboardPage() {
+export function DashboardResponsivePage() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {

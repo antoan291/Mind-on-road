@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   PageHeader, Badge, Button, Modal
@@ -11,6 +11,7 @@ import {
   XCircle, Link as LinkIcon, FileX, User, CreditCard,
   Check, FilePlus
 } from 'lucide-react';
+import { mockInvoiceFormStudents, mockInvoicePackages, mockInvoices } from '../content/mockDb';
 
 type Invoice = {
   id: number;
@@ -134,258 +135,7 @@ export function InvoicesPage() {
   const [filterNoPaymentLink, setFilterNoPaymentLink] = useState(false);
   const [filterCorrectedOnly, setFilterCorrectedOnly] = useState(false);
 
-  // Mock data with activity timeline
-  const invoices: Invoice[] = [
-    {
-      id: 1,
-      invoiceNumber: 'INV-2024-0156',
-      invoiceDate: '24.03.2024',
-      student: 'Петър Георгиев',
-      studentId: 1,
-      category: 'B',
-      invoiceReason: 'Първоначална такса за обучение',
-      packageType: 'Пакет 20 часа',
-      totalAmount: 1440.00,
-      subtotal: 1200.00,
-      vat: 240.00,
-      invoiceStatus: 'issued',
-      paymentLinkStatus: 'linked',
-      paymentNumber: 'PAY-2024-0156',
-      paymentStatus: 'paid',
-      createdBy: 'Мария Иванова',
-      createdDate: '24.03.2024 10:00',
-      lastUpdatedBy: 'Мария Иванова',
-      lastUpdatedDate: '24.03.2024 14:22',
-      issuedDate: '24.03.2024 14:22',
-      wasCorrected: false,
-      activity: [
-        { type: 'created', description: 'Фактурата е създадена', timestamp: '24.03.2024 10:00', user: 'Мария Иванова' },
-        { type: 'issued', description: 'Фактурата е издадена', timestamp: '24.03.2024 14:20', user: 'Мария Иванова' },
-        { type: 'payment_linked', description: 'Свързана с плащане PAY-2024-0156', timestamp: '24.03.2024 14:22', user: 'Мария Иванова' },
-        { type: 'printed', description: 'Фактурата е принтирана', timestamp: '24.03.2024 14:25', user: 'Мария Иванова' },
-      ]
-    },
-    {
-      id: 2,
-      invoiceNumber: 'INV-2024-0155',
-      invoiceDate: '23.03.2024',
-      student: 'Елена Димитрова',
-      studentId: 2,
-      category: 'B',
-      invoiceReason: 'Първоначална такса за обучение',
-      packageType: 'Пакет 20 часа',
-      totalAmount: 1440.00,
-      subtotal: 1200.00,
-      vat: 240.00,
-      invoiceStatus: 'issued',
-      paymentLinkStatus: 'partial',
-      paymentNumber: 'PAY-2024-0155',
-      paymentStatus: 'partial',
-      createdBy: 'Мария Иванова',
-      createdDate: '23.03.2024 09:00',
-      lastUpdatedBy: 'Мария Иванова',
-      lastUpdatedDate: '23.03.2024 16:45',
-      issuedDate: '23.03.2024 16:45',
-      wasCorrected: false,
-      notes: 'Частично плащане - остават 400 лв',
-      activity: [
-        { type: 'created', description: 'Фактурата е създадена', timestamp: '23.03.2024 09:00', user: 'Мария Иванова' },
-        { type: 'issued', description: 'Фактурата е издадена', timestamp: '23.03.2024 16:40', user: 'Мария Иванова' },
-        { type: 'payment_linked', description: 'Свързана с плащане PAY-2024-0155', timestamp: '23.03.2024 16:45', user: 'Мария Иванова' },
-      ]
-    },
-    {
-      id: 3,
-      invoiceNumber: 'INV-2024-0154',
-      invoiceDate: '20.03.2024',
-      student: 'Мартин Иванов',
-      studentId: 3,
-      category: 'A',
-      invoiceReason: 'Първоначална такса за обучение',
-      packageType: 'Пакет 18 часа',
-      totalAmount: 1620.00,
-      subtotal: 1350.00,
-      vat: 270.00,
-      invoiceStatus: 'corrected',
-      paymentLinkStatus: 'linked',
-      paymentNumber: 'PAY-2024-0154',
-      paymentStatus: 'overdue',
-      createdBy: 'Георги Петров',
-      createdDate: '20.03.2024 08:30',
-      lastUpdatedBy: 'Мария Иванова',
-      lastUpdatedDate: '22.03.2024 11:30',
-      issuedDate: '20.03.2024 09:00',
-      wasCorrected: true,
-      correctedBy: 'Мария Иванова',
-      correctionReason: 'Корекция на платена сума',
-      notes: 'Просрочено плащане - коригирана фактура',
-      activity: [
-        { type: 'created', description: 'Фактурата е създадена', timestamp: '20.03.2024 08:30', user: 'Георги Петров' },
-        { type: 'issued', description: 'Фактурата е издадена', timestamp: '20.03.2024 09:00', user: 'Георги Петров' },
-        { type: 'payment_linked', description: 'Свързана с плащане PAY-2024-0154', timestamp: '20.03.2024 09:05', user: 'Георги Петров' },
-        { type: 'corrected', description: 'Фактурата е коригирана', timestamp: '22.03.2024 11:25', user: 'Мария Иванова' },
-      ]
-    },
-    {
-      id: 4,
-      invoiceNumber: 'INV-2024-0153',
-      invoiceDate: '22.03.2024',
-      student: 'София Николова',
-      studentId: 4,
-      category: 'B',
-      invoiceReason: 'Теоретично обучение',
-      packageType: 'Теория',
-      totalAmount: 216.00,
-      subtotal: 180.00,
-      vat: 36.00,
-      invoiceStatus: 'issued',
-      paymentLinkStatus: 'linked',
-      paymentNumber: 'PAY-2024-0153',
-      paymentStatus: 'paid',
-      createdBy: 'Мария Иванова',
-      createdDate: '22.03.2024 09:00',
-      lastUpdatedBy: 'Мария Иванова',
-      lastUpdatedDate: '22.03.2024 09:15',
-      issuedDate: '22.03.2024 09:15',
-      wasCorrected: false,
-      activity: [
-        { type: 'created', description: 'Фактурата е създадена', timestamp: '22.03.2024 09:00', user: 'Мария Иванова' },
-        { type: 'issued', description: 'Фактурата е издадена', timestamp: '22.03.2024 09:15', user: 'Мария Иванова' },
-        { type: 'payment_linked', description: 'Свързана с плащане PAY-2024-0153', timestamp: '22.03.2024 09:15', user: 'Мария Иванова' },
-      ]
-    },
-    {
-      id: 5,
-      invoiceNumber: 'INV-2024-0152',
-      invoiceDate: '21.03.2024',
-      student: 'Георги Тодоров',
-      studentId: 5,
-      category: 'C',
-      invoiceReason: 'Първоначална такса за обучение',
-      packageType: 'Пакет 25 часа',
-      totalAmount: 1800.00,
-      subtotal: 1500.00,
-      vat: 300.00,
-      invoiceStatus: 'issued',
-      paymentLinkStatus: 'linked',
-      paymentNumber: 'PAY-2024-0152',
-      paymentStatus: 'paid',
-      createdBy: 'Георги Петров',
-      createdDate: '21.03.2024 14:00',
-      lastUpdatedBy: 'Георги Петров',
-      lastUpdatedDate: '21.03.2024 15:40',
-      issuedDate: '21.03.2024 15:40',
-      wasCorrected: false,
-      activity: [
-        { type: 'created', description: 'Фактурата е създадена', timestamp: '21.03.2024 14:00', user: 'Георги Петров' },
-        { type: 'issued', description: 'Фактурата е издадена', timestamp: '21.03.2024 15:40', user: 'Георги Петров' },
-        { type: 'payment_linked', description: 'Свързана с плащане PAY-2024-0152', timestamp: '21.03.2024 15:40', user: 'Георги Петров' },
-      ]
-    },
-    {
-      id: 6,
-      invoiceNumber: 'INV-2024-0151',
-      invoiceDate: '19.03.2024',
-      student: 'Ана Петкова',
-      studentId: 6,
-      category: 'B',
-      invoiceReason: 'Първоначална такса за обучение',
-      packageType: 'Пакет 15 часа',
-      totalAmount: 1020.00,
-      subtotal: 850.00,
-      vat: 170.00,
-      invoiceStatus: 'issued',
-      paymentLinkStatus: 'partial',
-      paymentNumber: 'PAY-2024-0151',
-      paymentStatus: 'partial',
-      createdBy: 'Мария Иванова',
-      createdDate: '19.03.2024 11:00',
-      lastUpdatedBy: 'Мария Иванова',
-      lastUpdatedDate: '19.03.2024 13:20',
-      issuedDate: '19.03.2024 13:20',
-      wasCorrected: false,
-      notes: 'Договорено на вноски',
-      activity: [
-        { type: 'created', description: 'Фактурата е създадена', timestamp: '19.03.2024 11:00', user: 'Мария Иванова' },
-        { type: 'issued', description: 'Фактурата е издадена', timestamp: '19.03.2024 13:20', user: 'Мария Иванова' },
-        { type: 'payment_linked', description: 'Свързана с плащане PAY-2024-0151', timestamp: '19.03.2024 13:20', user: 'Мария Иванова' },
-      ]
-    },
-    {
-      id: 7,
-      invoiceNumber: 'DRAFT-2024-0157',
-      invoiceDate: '24.03.2024',
-      student: 'Даниел Стоянов',
-      studentId: 7,
-      category: 'B',
-      invoiceReason: 'Първоначална такса за обучение',
-      packageType: 'Пакет 20 часа',
-      totalAmount: 1440.00,
-      subtotal: 1200.00,
-      vat: 240.00,
-      invoiceStatus: 'draft',
-      paymentLinkStatus: 'not_linked',
-      createdBy: 'Мария Иванова',
-      createdDate: '24.03.2024 16:00',
-      lastUpdatedBy: 'Мария Иванова',
-      lastUpdatedDate: '24.03.2024 16:00',
-      wasCorrected: false,
-      notes: 'Чакаме потвърждение от курсиста',
-      activity: [
-        { type: 'created', description: 'Фактурата е създадена като чернова', timestamp: '24.03.2024 16:00', user: 'Мария Иванова' },
-      ]
-    },
-    {
-      id: 8,
-      invoiceNumber: 'INV-2024-0148',
-      invoiceDate: '15.03.2024',
-      student: 'Йордан Христов',
-      studentId: 8,
-      category: 'B',
-      invoiceReason: 'Първоначална такса за обучение',
-      packageType: 'Пакет 20 часа',
-      totalAmount: 1440.00,
-      subtotal: 1200.00,
-      vat: 240.00,
-      invoiceStatus: 'canceled',
-      paymentLinkStatus: 'not_linked',
-      createdBy: 'Георги Петров',
-      createdDate: '15.03.2024 10:00',
-      lastUpdatedBy: 'Мария Иванова',
-      lastUpdatedDate: '16.03.2024 14:30',
-      issuedDate: '15.03.2024 11:00',
-      wasCorrected: false,
-      notes: 'Анулирана - курсистът се отказа от обучението',
-      activity: [
-        { type: 'created', description: 'Фактурата е създадена', timestamp: '15.03.2024 10:00', user: 'Георги Петров' },
-        { type: 'issued', description: 'Фактурата е издадена', timestamp: '15.03.2024 11:00', user: 'Георги Петров' },
-        { type: 'canceled', description: 'Фактурата е анулирана', timestamp: '16.03.2024 14:30', user: 'Мария Иванова' },
-      ]
-    },
-    {
-      id: 9,
-      invoiceNumber: 'DRAFT-2024-0158',
-      invoiceDate: '24.03.2024',
-      student: 'Кристина Василева',
-      studentId: 9,
-      category: 'A',
-      invoiceReason: 'Първоначална такса за обучение',
-      packageType: 'Пакет 18 часа',
-      totalAmount: 1620.00,
-      subtotal: 1350.00,
-      vat: 270.00,
-      invoiceStatus: 'draft',
-      paymentLinkStatus: 'not_linked',
-      createdBy: 'Георги Петров',
-      createdDate: '24.03.2024 15:30',
-      lastUpdatedBy: 'Георги Петров',
-      lastUpdatedDate: '24.03.2024 15:30',
-      wasCorrected: false,
-      activity: [
-        { type: 'created', description: 'Фактурата е създадена като чернова', timestamp: '24.03.2024 15:30', user: 'Георги Петров' },
-      ]
-    },
-  ];
+  const invoices: Invoice[] = mockInvoices as Invoice[];
 
   // Calculate summary metrics
   const totalInvoices = invoices.length;
@@ -1788,19 +1538,8 @@ function CreateInvoiceModal({
   const [linkedPayment, setLinkedPayment] = useState('');
   const [notes, setNotes] = useState('');
 
-  const students = [
-    { id: 1, name: 'Петър Георгиев', category: 'B' },
-    { id: 2, name: 'Елена Димитрова', category: 'B' },
-    { id: 3, name: 'Мартин Иванов', category: 'A' },
-    { id: 4, name: 'София Николова', category: 'B' },
-  ];
-
-  const packages = [
-    { id: 1, name: 'Пакет 20 часа', price: 1200.00, category: 'B' },
-    { id: 2, name: 'Пакет 18 часа', price: 1350.00, category: 'A' },
-    { id: 3, name: 'Теория', price: 180.00, category: 'B' },
-    { id: 4, name: 'Пакет 25 часа', price: 1500.00, category: 'C' },
-  ];
+  const students = mockInvoiceFormStudents;
+  const packages = mockInvoicePackages;
 
   const handleStudentSelect = (studentId: string) => {
     setSelectedStudent(studentId);

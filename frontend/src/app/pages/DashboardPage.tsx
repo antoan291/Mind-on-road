@@ -1,4 +1,4 @@
-﻿import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router";
 import {
   Alert,
@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { DashboardQuickActionDialog } from "./dashboard/DashboardQuickActionDialog";
 import { FinanceOverviewCard } from "./dashboard/FinanceOverviewCard";
+import { dashboardAlerts, dashboardHeader, dashboardSections, dashboardQuickActions, dashboardLessons, dashboardExpiringDocuments, dashboardOverduePayments, dashboardStats, getDashboardIcon } from "./dashboard/dashboardContent";
 
 type QuickActionKey = "newStudent" | "newLesson" | "newDocument" | "registerPayment";
 type QuickActionDialogMeta = {
@@ -60,57 +61,6 @@ type DocumentAlertItem = {
   targetPath: string;
 };
 
-const todayLessons: LessonItem[] = [
-  {
-    time: "09:00",
-    student: "Петър Георгиев",
-    instructor: "Георги Петров",
-    location: "Централна зона",
-    status: "active",
-    statusLabel: "В процес",
-    targetPath: "/students/1",
-  },
-  {
-    time: "10:30",
-    student: "Елена Димитрова",
-    instructor: "Иван Димитров",
-    location: "Южна зона",
-    status: "upcoming",
-    statusLabel: "Предстоящ",
-    targetPath: "/students/2",
-  },
-  {
-    time: "12:00",
-    student: "Мартин Иванов",
-    instructor: "Георги Петров",
-    location: "Централна зона",
-    status: "upcoming",
-    statusLabel: "Предстоящ",
-    targetPath: "/students/3",
-  },
-  {
-    time: "14:00",
-    student: "София Николова",
-    instructor: "Иван Димитров",
-    location: "Северна зона",
-    status: "upcoming",
-    statusLabel: "Предстоящ",
-    targetPath: "/students/4",
-  },
-];
-
-const overduePayments: PaymentAlertItem[] = [
-  { student: "Елена Димитрова", amount: "450 лв.", daysOverdue: 18, targetPath: "/students/2" },
-  { student: "Мартин Иванов", amount: "380 лв.", daysOverdue: 15, targetPath: "/students/3" },
-  { student: "София Николова", amount: "410 лв.", daysOverdue: 14, targetPath: "/students/4" },
-];
-
-const expiringDocuments: DocumentAlertItem[] = [
-  { student: "Мартин Иванов", document: "Свидетелство за управление", daysLeft: 0, targetPath: "/students/3" },
-  { student: "Петър Георгиев", document: "Свидетелство за управление", daysLeft: 0, targetPath: "/students/1" },
-  { student: "София Николова", document: "Медицинско свидетелство", daysLeft: 3, targetPath: "/students/4" },
-  { student: "Елена Димитрова", document: "Лична карта", daysLeft: 5, targetPath: "/students/2" },
-];
 
 export function DashboardPage() {
   const navigate = useNavigate();
@@ -119,9 +69,9 @@ export function DashboardPage() {
   const quickActionMeta = useMemo<Record<QuickActionKey, QuickActionDialogMeta>>(
     () => ({
       newStudent: {
-        title: "Нов курсист",
-        description: "Бърз старт за регистрация на нов курсист с най-важните полета преди отваряне на пълната форма.",
-        confirmLabel: "Отвори форма",
+        title: dashboardQuickActions.newStudent.title,
+        description: dashboardQuickActions.newStudent.description,
+        confirmLabel: dashboardQuickActions.newStudent.confirmLabel,
         fields: [
           { label: "Име и фамилия", value: "Например: Иван Петров", kind: "input" },
           { label: "Категория", value: "B", kind: "select" },
@@ -130,9 +80,9 @@ export function DashboardPage() {
         onConfirm: () => navigate("/students/new"),
       },
       newLesson: {
-        title: "Запиши час",
-        description: "Бърза проверка на основните данни преди да се отвори графикът за нов час.",
-        confirmLabel: "Към графика",
+        title: dashboardQuickActions.newLesson.title,
+        description: dashboardQuickActions.newLesson.description,
+        confirmLabel: dashboardQuickActions.newLesson.confirmLabel,
         fields: [
           { label: "Тип час", value: "Практика", kind: "select" },
           { label: "Инструктор", value: "Георги Петров", kind: "input" },
@@ -141,9 +91,9 @@ export function DashboardPage() {
         onConfirm: () => navigate("/schedule"),
       },
       newDocument: {
-        title: "Нов документ",
-        description: "Подготовка за нов документ или OCR качване, без да се губи контекст от таблото.",
-        confirmLabel: "Към документи",
+        title: dashboardQuickActions.newDocument.title,
+        description: dashboardQuickActions.newDocument.description,
+        confirmLabel: dashboardQuickActions.newDocument.confirmLabel,
         fields: [
           { label: "Тип документ", value: "Декларация", kind: "select" },
           { label: "Курсист", value: "Изберете курсист", kind: "input" },
@@ -152,9 +102,9 @@ export function DashboardPage() {
         onConfirm: () => navigate("/documents"),
       },
       registerPayment: {
-        title: "Регистрирай плащане",
-        description: "Бърз достъп до запис на плащане с най-често използваните полета за администрацията.",
-        confirmLabel: "Към плащания",
+        title: dashboardQuickActions.registerPayment.title,
+        description: dashboardQuickActions.registerPayment.description,
+        confirmLabel: dashboardQuickActions.registerPayment.confirmLabel,
         fields: [
           { label: "Курсист", value: "Изберете курсист", kind: "input" },
           { label: "Сума", value: "250 лв.", kind: "input" },
@@ -171,53 +121,53 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Административно табло"
-        subtitle="Преглед на ключова информация и задачи за днес"
+        title={dashboardHeader.title}
+        subtitle={dashboardHeader.subtitle}
         actions={
           <>
             <Button variant="secondary" icon={<Download size={18} />}>
-              Експорт
+              {dashboardHeader.actions.export}
             </Button>
             <Button variant="primary" icon={<Plus size={18} />} onClick={() => setActiveQuickAction("newLesson")}>
-              Нов час
+              {dashboardHeader.actions.newLesson}
             </Button>
           </>
         }
       />
 
       <div className="space-y-3">
-        <Alert
-          variant="warning"
-          title="3 просрочени плащания"
-          message="Има 3 курсисти с неплатени такси над 14 дни."
-          action={{ label: "Преглед", onClick: () => navigate("/payments") }}
-        />
-        <Alert
-          variant="error"
-          title="2 документа изтичат днес"
-          message="Свидетелства за управление на Мартин Иванов и Петър Георгиев."
-          action={{ label: "Провери", onClick: () => navigate("/documents") }}
-        />
+        {dashboardAlerts.map((item) => (
+          <Alert
+            key={item.title}
+            variant={item.variant as "warning" | "error"}
+            title={item.title}
+            message={item.message}
+            action={{ label: item.actionLabel, onClick: () => navigate(item.targetPath) }}
+          />
+        ))}
       </div>
 
       <FinanceOverviewCard />
 
+
+
+
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={<Calendar size={20} />} label="Днешни часове" value="18" trend="15 практика, 3 теория" color="var(--primary-accent)" />
-        <StatCard icon={<Users size={20} />} label="Активни курсисти" value="124" trend="+8 нови този месец" color="var(--ai-accent)" />
-        <StatCard icon={<DollarSign size={20} />} label="Просрочени плащания" value="3" trend="Общо 1,240 лв." color="var(--status-warning)" />
-        <StatCard icon={<FileText size={20} />} label="Изтичащи документи" value="5" trend="В следващите 7 дни" color="var(--status-error)" />
+        {dashboardStats.map((item) => {
+          const Icon = getDashboardIcon(item.icon as "calendar" | "currency" | "file" | "plus" | "users");
+          return <StatCard key={item.label} icon={<Icon size={20} />} label={item.label} value={item.value} trend={item.trend} color={item.color} />;
+        })}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader
-            title="Днешен график"
-            subtitle="Събота, 28 март 2026"
-            action={<Button variant="ghost" size="sm" onClick={() => navigate("/schedule")}>Виж всички</Button>}
+            title={dashboardSections.schedule.title}
+            subtitle={dashboardSections.schedule.subtitle}
+            action={<Button variant="ghost" size="sm" onClick={() => navigate("/schedule")}>{dashboardSections.schedule.actionLabel}</Button>}
           />
           <div className="space-y-3">
-            {todayLessons.map((lesson) => (
+            {dashboardLessons.map((lesson) => (
               <LessonRow key={`${lesson.time}-${lesson.student}`} lesson={lesson} onClick={() => navigate(lesson.targetPath)} />
             ))}
           </div>
@@ -225,12 +175,12 @@ export function DashboardPage() {
 
         <Card>
           <CardHeader
-            title="Изтичащи документи"
-            subtitle="Приоритетни проверки за днес и утре"
-            action={<Button variant="ghost" size="sm" onClick={() => navigate("/documents")}>Виж всички</Button>}
+            title={dashboardSections.documents.title}
+            subtitle={dashboardSections.documents.subtitle}
+            action={<Button variant="ghost" size="sm" onClick={() => navigate("/documents")}>{dashboardSections.documents.actionLabel}</Button>}
           />
           <div className="space-y-3">
-            {expiringDocuments.map((item) => (
+            {dashboardExpiringDocuments.map((item) => (
               <DocumentAlertRow key={`${item.student}-${item.document}`} item={item} onClick={() => navigate(item.targetPath)} />
             ))}
           </div>
@@ -239,21 +189,21 @@ export function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader title="Просрочени плащания" subtitle="Курсисти с най-спешни задължения" />
+          <CardHeader title={dashboardSections.payments.title} subtitle={dashboardSections.payments.subtitle} />
           <div className="space-y-3">
-            {overduePayments.map((item) => (
+            {dashboardOverduePayments.map((item) => (
               <PaymentAlertRow key={`${item.student}-${item.amount}`} item={item} onClick={() => navigate(item.targetPath)} />
             ))}
           </div>
         </Card>
 
         <Card>
-          <CardHeader title="Бързи действия" subtitle="Кратки guided стъпки за най-честите операции" />
+          <CardHeader title={dashboardSections.quickActions.title} subtitle={dashboardSections.quickActions.subtitle} />
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <QuickActionButton icon={<Plus size={20} />} label="Нов курсист" onClick={() => setActiveQuickAction("newStudent")} />
-            <QuickActionButton icon={<Calendar size={20} />} label="Запиши час" onClick={() => setActiveQuickAction("newLesson")} />
-            <QuickActionButton icon={<FileText size={20} />} label="Нов документ" onClick={() => setActiveQuickAction("newDocument")} />
-            <QuickActionButton icon={<DollarSign size={20} />} label="Регистрирай плащане" onClick={() => setActiveQuickAction("registerPayment")} />
+            <QuickActionButton icon={<Plus size={20} />} label={dashboardQuickActions.newStudent.buttonLabel} onClick={() => setActiveQuickAction("newStudent")} />
+            <QuickActionButton icon={<Calendar size={20} />} label={dashboardQuickActions.newLesson.buttonLabel} onClick={() => setActiveQuickAction("newLesson")} />
+            <QuickActionButton icon={<FileText size={20} />} label={dashboardQuickActions.newDocument.buttonLabel} onClick={() => setActiveQuickAction("newDocument")} />
+            <QuickActionButton icon={<DollarSign size={20} />} label={dashboardQuickActions.registerPayment.buttonLabel} onClick={() => setActiveQuickAction("registerPayment")} />
           </div>
         </Card>
       </div>

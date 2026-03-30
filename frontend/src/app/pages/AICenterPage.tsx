@@ -6,20 +6,20 @@ import { ArrowRight, Bot, BrainCircuit, CheckCircle2, MessageSquareText, Search,
 import { PageHeader } from '../components/ui-system/PageHeader';
 import { Button } from '../components/ui-system/Button';
 import { StatusBadge } from '../components/ui-system/StatusBadge';
+import { aiCenterContent } from '../content/staticContent';
 import { AICenterTabs } from './ai-center/AICenterTabs';
-
-export function AIPage() {
+export function AICenterPage() {
   const [activeTab, setActiveTab] = useState<'risk' | 'assistant' | 'documents'>('documents');
 
   return (
     <div>
       <PageHeader
-        title="AI Център"
-        description="AI workspace за риск от отпадане, бизнес асистент и документна проверка в рамките на текущата школа."
-        breadcrumbs={[{ label: 'Начало' }, { label: 'AI Център' }]}
+        title={aiCenterContent.pageHeader.title}
+        description={aiCenterContent.pageHeader.description}
+        breadcrumbs={[{ label: 'Начало' }, { label: aiCenterContent.pageHeader.title }]}
         actions={<>
-          <Button variant="secondary" icon={<ShieldCheck size={18} />}>Guardrails</Button>
-          <Link to="/ai/chat"><Button variant="primary" icon={<Bot size={18} />}>Пълен AI чат</Button></Link>
+          <Button variant="secondary" icon={<ShieldCheck size={18} />}>{aiCenterContent.pageHeader.guardrailsLabel}</Button>
+          <Link to="/ai/chat"><Button variant="primary" icon={<Bot size={18} />}>{aiCenterContent.pageHeader.chatLabel}</Button></Link>
         </>}
       />
       <div className="space-y-6 p-6 lg:p-8">
@@ -57,15 +57,55 @@ function RiskWorkspace() {
         </div>
       </section>
       <section className="rounded-[30px] p-5 lg:p-6" style={{ background: 'rgba(11, 19, 39, 0.96)', border: '1px solid rgba(148, 163, 184, 0.12)' }}>
-        <div className="flex items-end justify-between gap-3">
-          <div><h3 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Тренд на риска</h3><p className="mt-1 text-sm" style={{ color: 'var(--text-tertiary)' }}>Последните 30 дни</p></div>
-          <div className="flex items-center gap-4 text-xs uppercase tracking-[0.14em]" style={{ color: 'var(--text-tertiary)' }}><LegendDot color="#ff6b8b" label="Висок" /><LegendDot color="#f59e0b" label="Среден" /><LegendDot color="#86efac" label="Нисък" /></div>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h3 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Тренд на риска</h3>
+            <p className="mt-1 text-sm" style={{ color: 'var(--text-tertiary)' }}>Последните 30 дни. Зоните вътре в графиката показват кога рискът е нисък, среден или висок.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 text-xs uppercase tracking-[0.14em]" style={{ color: 'var(--text-tertiary)' }}>
+            <LegendDot color="#ff6b8b" label="Висок риск" />
+            <LegendDot color="#f59e0b" label="Среден риск" />
+            <LegendDot color="#86efac" label="Нисък риск" />
+          </div>
         </div>
-        <div className="mt-6 overflow-hidden rounded-[26px] p-4" style={{ background: 'rgba(6, 14, 32, 0.7)' }}><svg viewBox="0 0 760 220" className="w-full"><defs><linearGradient id="riskLine" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#818cf8" /><stop offset="100%" stopColor="#c084fc" /></linearGradient></defs><path d="M20 170 C90 160, 90 190, 150 150 S250 160, 290 120 S360 190, 430 95 S520 200, 590 80 S680 210, 740 70" fill="none" stroke="url(#riskLine)" strokeWidth="4" strokeLinecap="round" /></svg></div>
+        <div className="mt-6 overflow-hidden rounded-[26px] p-4 lg:p-5" style={{ background: 'rgba(6, 14, 32, 0.7)' }}>
+          <div className="mb-4 grid gap-3 md:grid-cols-3">
+            <RiskZoneCard label="Висок риск" description="Точките в горната зона изискват бърза намеса." color="#ff6b8b" />
+            <RiskZoneCard label="Среден риск" description="Тази зона показва курсисти за активно наблюдение." color="#f59e0b" />
+            <RiskZoneCard label="Нисък риск" description="Долната зона е за стабилни курсисти без спешни сигнали." color="#86efac" />
+          </div>
+          <svg viewBox="0 0 760 260" className="w-full" role="img" aria-label="Графика на риска с отделни зони за висок, среден и нисък риск.">
+            <defs>
+              <linearGradient id="riskLine" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#818cf8" />
+                <stop offset="100%" stopColor="#c084fc" />
+              </linearGradient>
+            </defs>
+            <rect x="20" y="20" width="720" height="60" rx="18" fill="rgba(255,107,139,0.08)" />
+            <rect x="20" y="100" width="720" height="60" rx="18" fill="rgba(245,158,11,0.08)" />
+            <rect x="20" y="180" width="720" height="60" rx="18" fill="rgba(134,239,172,0.08)" />
+            <line x1="20" y1="90" x2="740" y2="90" stroke="rgba(148, 163, 184, 0.14)" strokeDasharray="6 8" />
+            <line x1="20" y1="170" x2="740" y2="170" stroke="rgba(148, 163, 184, 0.14)" strokeDasharray="6 8" />
+            <text x="36" y="56" fill="#ff95a8" fontSize="13" fontWeight="700">ВИСОК РИСК</text>
+            <text x="36" y="136" fill="#fbbf24" fontSize="13" fontWeight="700">СРЕДЕН РИСК</text>
+            <text x="36" y="216" fill="#86efac" fontSize="13" fontWeight="700">НИСЪК РИСК</text>
+            <path d="M20 190 C90 178, 90 205, 150 160 S250 170, 290 126 S360 198, 430 92 S520 205, 590 78 S680 214, 740 66" fill="none" stroke="url(#riskLine)" strokeWidth="4" strokeLinecap="round" />
+            <circle cx="150" cy="160" r="5" fill="#a78bfa" />
+            <circle cx="290" cy="126" r="5" fill="#a78bfa" />
+            <circle cx="430" cy="92" r="5" fill="#a78bfa" />
+            <circle cx="590" cy="78" r="5" fill="#a78bfa" />
+            <circle cx="740" cy="66" r="5" fill="#a78bfa" />
+            <text x="36" y="252" fill="rgba(148, 163, 184, 0.72)" fontSize="11">01 март</text>
+            <text x="230" y="252" fill="rgba(148, 163, 184, 0.72)" fontSize="11">08 март</text>
+            <text x="422" y="252" fill="rgba(148, 163, 184, 0.72)" fontSize="11">15 март</text>
+            <text x="612" y="252" fill="rgba(148, 163, 184, 0.72)" fontSize="11">Днес</text>
+          </svg>
+        </div>
       </section>
     </div>
   );
 }
+
 function AssistantWorkspace() {
   return (
     <div className="grid gap-6 xl:grid-cols-[1.35fr_0.65fr]">
@@ -144,6 +184,10 @@ function PromptCard({ text }: { text: string }) {
 function LegendDot({ color, label }: { color: string; label: string }) {
   return <span className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} /><span>{label}</span></span>;
 }
+function RiskZoneCard({ label, description, color }: { label: string; description: string; color: string }) {
+  return <div className="rounded-[22px] px-4 py-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(148, 163, 184, 0.1)' }}><div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} /><p className="text-xs font-semibold uppercase tracking-[0.14em]" style={{ color: 'var(--text-primary)' }}>{label}</p></div><p className="mt-2 text-sm leading-6" style={{ color: 'var(--text-tertiary)' }}>{description}</p></div>;
+}
+
 function DocumentRow({ id, date, owner, status, amount }: { id: string; date: string; owner: string; status: string; amount: string }) {
   return <div className="grid grid-cols-[1fr_0.8fr_1.4fr_0.9fr_0.8fr] gap-3 px-5 py-4 text-sm" style={{ color: 'var(--text-secondary)', borderTop: '1px solid rgba(148, 163, 184, 0.08)' }}><span>{id}</span><span>{date}</span><span style={{ color: 'var(--text-primary)' }}>{owner}</span><span><StatusBadge status={status === 'Блокиран' ? 'warning' : 'success'}>{status}</StatusBadge></span><span className="text-right font-semibold" style={{ color: 'var(--text-primary)' }}>{amount}</span></div>;
 }
@@ -157,3 +201,4 @@ function FindingCard({ tone, title, badge, description, suggestion, action }: { 
 function RiskRow({ initials, name, category, score, width, color, factors, extraHours, action, highlight = false }: { initials: string; name: string; category: string; score: string; width: string; color: string; factors: string; extraHours: string; action: string; highlight?: boolean }) {
   return <div className="px-5 py-4" style={{ background: highlight ? 'rgba(255,255,255,0.015)' : 'transparent', borderTop: '1px solid rgba(148, 163, 184, 0.08)' }}><div className="grid grid-cols-[1.25fr_0.6fr_0.8fr_1.1fr_0.7fr_0.8fr] items-center gap-3"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold" style={{ background: 'rgba(99, 102, 241, 0.18)', color: 'var(--text-primary)' }}>{initials}</div><p className="font-medium" style={{ color: 'var(--text-primary)' }}>{name}</p></div><span className="inline-flex w-fit rounded-xl px-2.5 py-1 text-xs font-semibold" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}>{category}</span><div><p className="text-sm font-semibold" style={{ color }}>{score}</p><div className="mt-2 h-2 rounded-full" style={{ background: 'rgba(148, 163, 184, 0.18)' }}><div className="h-2 rounded-full" style={{ width, background: color }} /></div></div><p className="text-sm" style={{ color: 'var(--text-secondary)' }}>{factors}</p><p className="text-sm font-semibold" style={{ color: 'var(--ai-accent)' }}>{extraHours}</p><div className="flex justify-end"><button className="rounded-xl px-3 py-2 text-sm font-medium" style={{ background: action === 'Обади се' ? 'linear-gradient(135deg, rgba(124, 58, 237, 0.94), rgba(99, 102, 241, 0.94))' : 'rgba(255,255,255,0.04)', color: 'var(--text-primary)', border: '1px solid rgba(148, 163, 184, 0.12)' }}>{action}</button></div></div>{highlight && <div className="mt-4 rounded-[22px] p-4" style={{ background: 'linear-gradient(135deg, rgba(91, 33, 182, 0.28), rgba(30, 41, 59, 0.94))', border: '1px solid rgba(139, 92, 246, 0.2)' }}><p className="text-sm font-semibold tracking-[0.14em] uppercase" style={{ color: '#c4b5fd' }}>AI анализ на риска</p><div className="mt-4 grid gap-5 lg:grid-cols-2"><div><p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Открити фактори</p><ul className="mt-3 space-y-2 text-sm" style={{ color: 'var(--text-secondary)' }}><li>• Спад в мотивацията след теория</li><li>• 3 поредни отказа от учебни часове</li><li>• Географска дистанция от полигона</li></ul></div><div><p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Препоръка</p><p className="mt-3 text-sm leading-6" style={{ color: 'var(--text-secondary)' }}>Предложете преместване в група с по-ясен час или 1 бонус час за наваксване, за да стабилизирате ангажираността през следващите 7 дни.</p></div></div></div>}</div>;
 }
+

@@ -1,6 +1,6 @@
 ﻿import { createBrowserRouter } from "react-router";
 import { ResponsiveLayout } from "./components/layouts/ResponsiveLayout";
-import { ResponsiveDashboardPage } from "./pages/ResponsiveDashboardPage";
+import { DashboardResponsivePage } from "./pages/DashboardResponsivePage";
 import { ResponsiveStudentsPage } from "./pages/ResponsiveStudentsPage";
 import { ResponsiveStudentDetailPage } from "./pages/ResponsiveStudentDetailPage";
 import { ResponsiveStudentFormPage } from "./pages/ResponsiveStudentFormPage";
@@ -11,8 +11,8 @@ import { TheoryGroupPage } from "./pages/TheoryGroupPage";
 import { ResponsiveDocumentsPage } from "./pages/ResponsiveDocumentsPage";
 import { PaymentsPage } from "./pages/PaymentsPage";
 import { InvoicesPage } from "./pages/InvoicesPage";
-import { AIPage } from "./pages/AIPage";
-import { AIChatPage } from "./pages/AIChatPage";
+import { AICenterPage } from "./pages/AICenterPage";
+import { AICenterChatPage } from "./pages/AICenterChatPage";
 import { InstructorsPage } from "./pages/secondary/InstructorsPage";
 import { VehiclesPage } from "./pages/secondary/VehiclesPage";
 import { RoadSheetsPage } from "./pages/secondary/RoadSheetsPage";
@@ -25,7 +25,7 @@ export const router = createBrowserRouter([
     path: "/",
     Component: ResponsiveLayout,
     children: [
-      { index: true, Component: ResponsiveDashboardPage },
+      { index: true, Component: DashboardResponsivePage },
       { path: "students", Component: ResponsiveStudentsPage },
       { path: "students/new", Component: ResponsiveStudentFormPage },
       { path: "students/:id", Component: ResponsiveStudentDetailPage },
@@ -43,8 +43,9 @@ export const router = createBrowserRouter([
       { path: "notifications", Component: NotificationsPage },
       { path: "reports", Component: ReportsPage },
       { path: "settings", Component: SettingsPage },
-      { path: "ai", Component: AIPage },
-      { path: "ai/chat", Component: AIChatPage },
+      { path: "ai", Component: AICenterPage },
+      { path: "ai/chat", Component: AICenterChatPage },
     ],
   },
 ]);
+

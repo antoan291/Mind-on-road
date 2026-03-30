@@ -1,6 +1,7 @@
 ﻿import { useMemo, useState } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { Card, CardHeader } from '../../components/shared';
+import { dashboardFinanceContent } from './dashboardContent';
 import { formatDashboardMoney, reportEntries } from '../secondary/reportingData';
 
 type FinanceRange = 'day' | 'month' | 'year';
@@ -85,39 +86,39 @@ export function FinanceOverviewCard() {
 
   return (
     <Card>
-      <CardHeader title='Финансова статистика' subtitle='Показва резултатите от същите записи, които се виждат и в Отчети, групирани по ден, месец или година.' />
+      <CardHeader title={dashboardFinanceContent.title} subtitle={dashboardFinanceContent.subtitle} />
       <div className='space-y-5'>
         <div className='flex flex-wrap items-center gap-3'>
-          <FinanceFilterButton label='Ден' active={financeRange === 'day'} onClick={() => setFinanceRange('day')} />
-          <FinanceFilterButton label='Месец' active={financeRange === 'month'} onClick={() => setFinanceRange('month')} />
-          <FinanceFilterButton label='Година' active={financeRange === 'year'} onClick={() => setFinanceRange('year')} />
+          <FinanceFilterButton label={dashboardFinanceContent.filters.day} active={financeRange === 'day'} onClick={() => setFinanceRange('day')} />
+          <FinanceFilterButton label={dashboardFinanceContent.filters.month} active={financeRange === 'month'} onClick={() => setFinanceRange('month')} />
+          <FinanceFilterButton label={dashboardFinanceContent.filters.year} active={financeRange === 'year'} onClick={() => setFinanceRange('year')} />
         </div>
 
         <div className='grid gap-5 xl:grid-cols-[1.15fr_0.85fr]'>
           <div className='rounded-3xl p-5' style={{ background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(31, 41, 55, 0.92))', border: '1px solid var(--ghost-border)' }}>
             <div className='flex flex-wrap items-start justify-between gap-4'>
               <div>
-                <p className='text-xs uppercase tracking-[0.18em]' style={{ color: 'var(--text-tertiary)' }}>Финансов резултат</p>
+                <p className='text-xs uppercase tracking-[0.18em]' style={{ color: 'var(--text-tertiary)' }}>{dashboardFinanceContent.summaryLabel}</p>
                 <h3 className='mt-3 text-3xl font-semibold' style={{ color: financeToneColor }}>{financeToneLabel} {formatDashboardMoney(Math.abs(financeNet))}</h3>
                 <p className='mt-2 text-sm' style={{ color: 'var(--text-secondary)' }}>{financeWindow.label}</p>
               </div>
               <div className='rounded-2xl px-4 py-3' style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--ghost-border)' }}>
-                <p className='text-xs uppercase tracking-[0.14em]' style={{ color: 'var(--text-tertiary)' }}>Спрямо предходния период</p>
+                <p className='text-xs uppercase tracking-[0.14em]' style={{ color: 'var(--text-tertiary)' }}>{dashboardFinanceContent.comparisonLabel}</p>
                 <p className='mt-2 text-lg font-semibold' style={{ color: financeDelta >= 0 ? 'var(--status-success)' : 'var(--status-error)' }}>{(financeDelta > 0 ? '+' : '') + formatDashboardMoney(financeDelta)}</p>
               </div>
             </div>
             <div className='mt-5 grid gap-3 sm:grid-cols-3'>
-              <FinanceMiniStat label='Приходи' value={formatDashboardMoney(financeTotals.income)} tone='success' />
-              <FinanceMiniStat label='Разходи' value={formatDashboardMoney(financeTotals.expense)} tone='warning' />
-              <FinanceMiniStat label='Записи' value={String(financeTotals.count)} tone='info' />
+              <FinanceMiniStat label={dashboardFinanceContent.incomeLabel} value={formatDashboardMoney(financeTotals.income)} tone='success' />
+              <FinanceMiniStat label={dashboardFinanceContent.expenseLabel} value={formatDashboardMoney(financeTotals.expense)} tone='warning' />
+              <FinanceMiniStat label={dashboardFinanceContent.recordsLabel} value={String(financeTotals.count)} tone='info' />
             </div>
           </div>
 
           <div className='rounded-3xl p-5' style={{ background: 'var(--bg-panel)', border: '1px solid var(--ghost-border)' }}>
             <div className='flex items-center justify-between gap-3'>
               <div>
-                <p className='text-sm font-semibold' style={{ color: 'var(--text-primary)' }}>Кратък тренд</p>
-                <p className='mt-1 text-xs' style={{ color: 'var(--text-tertiary)' }}>Подобен на Shopify-style overview</p>
+                <p className='text-sm font-semibold' style={{ color: 'var(--text-primary)' }}>{dashboardFinanceContent.trendTitle}</p>
+                <p className='mt-1 text-xs' style={{ color: 'var(--text-tertiary)' }}>{dashboardFinanceContent.trendSubtitle}</p>
               </div>
               <div className='flex h-10 w-10 items-center justify-center rounded-2xl' style={{ background: 'rgba(255,255,255,0.04)', color: 'var(--ai-accent)' }}>
                 <BarChart3 size={18} />

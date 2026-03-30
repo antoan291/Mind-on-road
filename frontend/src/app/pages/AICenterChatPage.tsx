@@ -51,7 +51,7 @@ const rightRail = [
   { label: 'Изискват review', value: '3 документа', tone: 'warning' as const },
 ];
 
-export function AIChatPage() {
+export function AICenterChatPage() {
   return (
     <div>
       <PageHeader
@@ -203,3 +203,4 @@ function ChatBubble({ role, title, text, meta }: { role: 'user' | 'assistant'; t
     </div>
   );
 }
+

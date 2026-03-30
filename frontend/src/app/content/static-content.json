@@ -1,0 +1,574 @@
+﻿{
+  "dashboard": {
+    "header": {
+      "title": "Административно табло",
+      "subtitle": "Преглед на ключова информация и задачи за днес",
+      "actions": {
+        "export": "Експорт",
+        "newLesson": "Нов час"
+      }
+    },
+    "alerts": [
+      {
+        "variant": "warning",
+        "title": "3 просрочени плащания",
+        "message": "Има 3 курсисти с неплатени такси над 14 дни.",
+        "actionLabel": "Преглед",
+        "targetPath": "/payments"
+      },
+      {
+        "variant": "error",
+        "title": "2 документа изтичат днес",
+        "message": "Свидетелства за управление на Мартин Иванов и Петър Георгиев.",
+        "actionLabel": "Провери",
+        "targetPath": "/documents"
+      }
+    ],
+    "stats": [
+      {
+        "icon": "calendar",
+        "label": "Днешни часове",
+        "value": "18",
+        "trend": "15 практика, 3 теория",
+        "color": "var(--primary-accent)"
+      },
+      {
+        "icon": "users",
+        "label": "Активни курсисти",
+        "value": "124",
+        "trend": "+8 нови този месец",
+        "color": "var(--ai-accent)"
+      },
+      {
+        "icon": "currency",
+        "label": "Просрочени плащания",
+        "value": "3",
+        "trend": "Общо 1,240 лв.",
+        "color": "var(--status-warning)"
+      },
+      {
+        "icon": "file",
+        "label": "Изтичащи документи",
+        "value": "5",
+        "trend": "В следващите 7 дни",
+        "color": "var(--status-error)"
+      }
+    ],
+    "sections": {
+      "schedule": {
+        "title": "Днешен график",
+        "subtitle": "Събота, 28 март 2026",
+        "actionLabel": "Виж всички"
+      },
+      "documents": {
+        "title": "Изтичащи документи",
+        "subtitle": "Приоритетни проверки за днес и утре",
+        "actionLabel": "Виж всички"
+      },
+      "payments": {
+        "title": "Просрочени плащания",
+        "subtitle": "Курсисти с най-спешни задължения"
+      },
+      "quickActions": {
+        "title": "Бързи действия",
+        "subtitle": "Кратки guided стъпки за най-честите операции"
+      }
+    },
+    "quickActions": {
+      "newStudent": {
+        "buttonLabel": "Нов курсист",
+        "title": "Нов курсист",
+        "description": "Бързо създаване на нов курсист с основните данни, нужни на администрацията.",
+        "instructionsTitle": "Какво трябва да попълните",
+        "confirmLabel": "Създай курсист",
+        "cancelLabel": "Отказ",
+        "targetPath": "/students/new",
+        "fields": [
+          {
+            "id": "fullName",
+            "component": "input",
+            "label": "Име и фамилия",
+            "placeholder": "Например: Иван Петров",
+            "required": true,
+            "layout": "half"
+          },
+          {
+            "id": "phone",
+            "component": "input",
+            "label": "Телефон",
+            "placeholder": "+359 888 123 456",
+            "inputType": "tel",
+            "required": true,
+            "layout": "half"
+          },
+          {
+            "id": "email",
+            "component": "input",
+            "label": "Имейл",
+            "placeholder": "kursist@example.com",
+            "inputType": "email",
+            "layout": "half"
+          },
+          {
+            "id": "category",
+            "component": "select",
+            "label": "Категория",
+            "placeholder": "Изберете категория",
+            "required": true,
+            "layout": "half",
+            "options": [
+              { "value": "B", "label": "Категория B" },
+              { "value": "A", "label": "Категория A" },
+              { "value": "C", "label": "Категория C" }
+            ]
+          },
+          {
+            "id": "theoryGroup",
+            "component": "select",
+            "label": "Група по теория",
+            "placeholder": "Изберете група",
+            "layout": "half",
+            "options": [
+              { "value": "group-monday", "label": "Група понеделник 18:00" },
+              { "value": "group-wednesday", "label": "Група сряда 18:30" },
+              { "value": "group-saturday", "label": "Група събота 10:00" }
+            ]
+          },
+          {
+            "id": "notes",
+            "component": "textarea",
+            "label": "Бележка",
+            "placeholder": "Допълнителна информация за администрацията",
+            "layout": "full",
+            "rows": 4
+          }
+        ]
+      },
+      "newLesson": {
+        "buttonLabel": "Запиши час",
+        "title": "Запиши час",
+        "description": "Планирай нов час директно от таблото с най-важните полета за графика.",
+        "instructionsTitle": "Какво трябва да попълните",
+        "confirmLabel": "Запиши часа",
+        "cancelLabel": "Отказ",
+        "targetPath": "/schedule",
+        "fields": [
+          {
+            "id": "lessonType",
+            "component": "select",
+            "label": "Тип час",
+            "placeholder": "Изберете тип час",
+            "required": true,
+            "layout": "half",
+            "options": [
+              { "value": "practice", "label": "Практика" },
+              { "value": "theory", "label": "Теория" },
+              { "value": "exam-prep", "label": "Подготовка за изпит" }
+            ]
+          },
+          {
+            "id": "student",
+            "component": "input",
+            "label": "Курсист",
+            "placeholder": "Име на курсиста",
+            "required": true,
+            "layout": "half"
+          },
+          {
+            "id": "instructor",
+            "component": "select",
+            "label": "Инструктор",
+            "placeholder": "Изберете инструктор",
+            "required": true,
+            "layout": "half",
+            "options": [
+              { "value": "georgi-petrov", "label": "Георги Петров" },
+              { "value": "ivan-dimitrov", "label": "Иван Димитров" },
+              { "value": "maria-nikolova", "label": "Мария Николова" }
+            ]
+          },
+          {
+            "id": "vehicle",
+            "component": "select",
+            "label": "Автомобил",
+            "placeholder": "Изберете автомобил",
+            "required": true,
+            "layout": "half",
+            "options": [
+              { "value": "toyota-yaris", "label": "Toyota Yaris CA1234AB" },
+              { "value": "skoda-fabia", "label": "Skoda Fabia B9876CD" },
+              { "value": "vw-golf", "label": "VW Golf CB4567EF" }
+            ]
+          },
+          {
+            "id": "lessonDate",
+            "component": "input",
+            "label": "Дата",
+            "inputType": "date",
+            "required": true,
+            "layout": "half"
+          },
+          {
+            "id": "lessonTime",
+            "component": "input",
+            "label": "Час",
+            "inputType": "time",
+            "required": true,
+            "layout": "half"
+          },
+          {
+            "id": "duration",
+            "component": "select",
+            "label": "Продължителност",
+            "placeholder": "Изберете продължителност",
+            "layout": "half",
+            "options": [
+              { "value": "60", "label": "60 минути" },
+              { "value": "90", "label": "90 минути" },
+              { "value": "120", "label": "120 минути" }
+            ]
+          },
+          {
+            "id": "notes",
+            "component": "textarea",
+            "label": "Бележка към часа",
+            "placeholder": "Например: начало от централна зона",
+            "layout": "full",
+            "rows": 4
+          }
+        ]
+      },
+      "newDocument": {
+        "buttonLabel": "Нов документ",
+        "title": "Нов документ",
+        "description": "Добави документ, номер и файл за качване, без да излизаш от таблото.",
+        "instructionsTitle": "Какво трябва да попълните",
+        "confirmLabel": "Добави документ",
+        "cancelLabel": "Отказ",
+        "targetPath": "/documents",
+        "uploadLabel": "Качи файл",
+        "uploadPlaceholder": "Избери PDF или изображение",
+        "fields": [
+          {
+            "id": "documentType",
+            "component": "select",
+            "label": "Тип документ",
+            "placeholder": "Изберете тип документ",
+            "required": true,
+            "layout": "half",
+            "options": [
+              { "value": "medical", "label": "Медицинско свидетелство" },
+              { "value": "declaration", "label": "Декларация" },
+              { "value": "contract", "label": "Договор" },
+              { "value": "receipt", "label": "Квитанция" }
+            ]
+          },
+          {
+            "id": "student",
+            "component": "input",
+            "label": "Курсист",
+            "placeholder": "Име на курсиста",
+            "required": true,
+            "layout": "half"
+          },
+          {
+            "id": "documentNumber",
+            "component": "input",
+            "label": "Номер на документа",
+            "placeholder": "Ако има номер",
+            "layout": "half"
+          },
+          {
+            "id": "issueDate",
+            "component": "input",
+            "label": "Дата на издаване",
+            "inputType": "date",
+            "layout": "half"
+          },
+          {
+            "id": "expiryDate",
+            "component": "input",
+            "label": "Валиден до",
+            "inputType": "date",
+            "layout": "half"
+          },
+          {
+            "id": "uploadedFileName",
+            "component": "file",
+            "label": "Качи файл",
+            "layout": "full"
+          },
+          {
+            "id": "notes",
+            "component": "textarea",
+            "label": "Бележка",
+            "placeholder": "Например: OCR проверка преди запис",
+            "layout": "full",
+            "rows": 4
+          }
+        ]
+      },
+      "registerPayment": {
+        "buttonLabel": "Регистрирай плащане",
+        "title": "Регистрирай плащане",
+        "description": "Запиши ново плащане с метод, дата и референция за по-лесен контрол.",
+        "instructionsTitle": "Какво трябва да попълните",
+        "confirmLabel": "Регистрирай плащане",
+        "cancelLabel": "Отказ",
+        "targetPath": "/payments",
+        "fields": [
+          {
+            "id": "student",
+            "component": "input",
+            "label": "Курсист",
+            "placeholder": "Име на курсиста",
+            "required": true,
+            "layout": "half"
+          },
+          {
+            "id": "amount",
+            "component": "input",
+            "label": "Сума",
+            "placeholder": "Например: 250",
+            "inputType": "number",
+            "required": true,
+            "layout": "half"
+          },
+          {
+            "id": "paymentMethod",
+            "component": "select",
+            "label": "Метод на плащане",
+            "placeholder": "Изберете метод",
+            "required": true,
+            "layout": "half",
+            "options": [
+              { "value": "cash", "label": "В брой" },
+              { "value": "bank", "label": "Банков превод" },
+              { "value": "pos", "label": "POS терминал" }
+            ]
+          },
+          {
+            "id": "paymentDate",
+            "component": "input",
+            "label": "Дата на плащане",
+            "inputType": "date",
+            "required": true,
+            "layout": "half"
+          },
+          {
+            "id": "reference",
+            "component": "input",
+            "label": "Референция",
+            "placeholder": "Квитанция, превод или фактура",
+            "layout": "half"
+          },
+          {
+            "id": "paymentNote",
+            "component": "textarea",
+            "label": "Бележка",
+            "placeholder": "Допълнителна информация за плащането",
+            "layout": "full",
+            "rows": 4
+          }
+        ]
+      }
+    },
+    "todayLessons": [
+      {
+        "time": "09:00",
+        "student": "Петър Георгиев",
+        "instructor": "Георги Петров",
+        "location": "Централна зона",
+        "status": "active",
+        "statusLabel": "В процес",
+        "targetPath": "/students/1"
+      },
+      {
+        "time": "10:30",
+        "student": "Елена Димитрова",
+        "instructor": "Иван Димитров",
+        "location": "Южна зона",
+        "status": "upcoming",
+        "statusLabel": "Предстоящ",
+        "targetPath": "/students/2"
+      },
+      {
+        "time": "12:00",
+        "student": "Мартин Иванов",
+        "instructor": "Георги Петров",
+        "location": "Централна зона",
+        "status": "upcoming",
+        "statusLabel": "Предстоящ",
+        "targetPath": "/students/3"
+      },
+      {
+        "time": "14:00",
+        "student": "София Николова",
+        "instructor": "Иван Димитров",
+        "location": "Северна зона",
+        "status": "upcoming",
+        "statusLabel": "Предстоящ",
+        "targetPath": "/students/4"
+      }
+    ],
+    "overduePayments": [
+      { "student": "Елена Димитрова", "amount": "450 лв.", "daysOverdue": 18, "targetPath": "/students/2" },
+      { "student": "Мартин Иванов", "amount": "380 лв.", "daysOverdue": 15, "targetPath": "/students/3" },
+      { "student": "София Николова", "amount": "410 лв.", "daysOverdue": 14, "targetPath": "/students/4" }
+    ],
+    "expiringDocuments": [
+      { "student": "Мартин Иванов", "document": "Свидетелство за управление", "daysLeft": 0, "targetPath": "/students/3" },
+      { "student": "Петър Георгиев", "document": "Свидетелство за управление", "daysLeft": 0, "targetPath": "/students/1" },
+      { "student": "София Николова", "document": "Медицинско свидетелство", "daysLeft": 3, "targetPath": "/students/4" },
+      { "student": "Елена Димитрова", "document": "Лична карта", "daysLeft": 5, "targetPath": "/students/2" }
+    ],
+    "finance": {
+      "title": "Финансова статистика",
+      "subtitle": "Показва резултатите от същите записи, които се виждат и в Отчети, групирани по ден, месец или година.",
+      "filters": {
+        "day": "Ден",
+        "month": "Месец",
+        "year": "Година"
+      },
+      "summaryLabel": "Финансов резултат",
+      "comparisonLabel": "Спрямо предходния период",
+      "incomeLabel": "Приходи",
+      "expenseLabel": "Разходи",
+      "recordsLabel": "Записи",
+      "trendTitle": "Кратък тренд",
+      "trendSubtitle": "Обзор на движенията по период"
+    }
+  },
+  "aiCenter": {
+    "tabs": [
+      { "key": "risk", "label": "Риск от отпадане" },
+      { "key": "assistant", "label": "Бизнес асистент" },
+      { "key": "documents", "label": "Проверка документи" }
+    ],
+    "searchPlaceholder": "Търсене...",
+    "pageHeader": {
+      "title": "AI Център",
+      "description": "AI workspace за риск от отпадане, бизнес асистент и документна проверка в рамките на текущата школа.",
+      "guardrailsLabel": "Guardrails",
+      "chatLabel": "Пълен AI чат"
+    },
+    "risk": {
+      "summary": [
+        { "label": "Висок риск", "value": "3", "tone": "high", "icon": "trend" },
+        { "label": "Среден", "value": "7", "tone": "medium", "icon": "bars" },
+        { "label": "Нисък", "value": "37", "tone": "low", "icon": "check" }
+      ],
+      "studentsTitle": "Анализ на курсисти в риск",
+      "studentsSubtitle": "Сортирани по приоритет за действие.",
+      "filterLabel": "Филтър: всички категории",
+      "tableHeaders": ["Курсист", "Категория", "Риск", "Фактори", "+часове", "Действие"],
+      "students": [
+        {
+          "initials": "МГ",
+          "name": "М. Георгиева",
+          "category": "B",
+          "score": "7.2",
+          "width": "72%",
+          "color": "#ff6b8b",
+          "factors": "Пропуснати 3 урока",
+          "extraHours": "+5ч",
+          "action": "Обади се",
+          "highlight": true,
+          "signals": [
+            "Спад в мотивацията след теория",
+            "3 поредни отказа от учебни часове",
+            "Географска дистанция от полигона"
+          ],
+          "recommendation": "Предложете преместване в група с по-ясен час или 1 бонус час за наваксване, за да стабилизирате ангажираността през следващите 7 дни."
+        },
+        {
+          "initials": "СВ",
+          "name": "С. Василев",
+          "category": "B",
+          "score": "6.8",
+          "width": "68%",
+          "color": "#ff8aa0",
+          "factors": "Без урок 28 дни",
+          "extraHours": "+3ч",
+          "action": "Обади се"
+        },
+        {
+          "initials": "КГ",
+          "name": "К. Георгиев",
+          "category": "C",
+          "score": "5.1",
+          "width": "51%",
+          "color": "#f59e0b",
+          "factors": "Намалена честота",
+          "extraHours": "+2ч",
+          "action": "Наблюдавай"
+        }
+      ],
+      "trendTitle": "Тренд на риска",
+      "trendSubtitle": "Последните 30 дни. Зоните вътре в графиката показват кога рискът е нисък, среден или висок.",
+      "zoneCards": [
+        { "label": "Висок риск", "description": "Точките в горната зона изискват бърза намеса.", "color": "#ff6b8b" },
+        { "label": "Среден риск", "description": "Тази зона показва курсисти за активно наблюдение.", "color": "#f59e0b" },
+        { "label": "Нисък риск", "description": "Долната зона е за стабилни курсисти без спешни сигнали.", "color": "#86efac" }
+      ]
+    },
+    "assistant": {
+      "userTag": "Вие",
+      "question": "Защо имам толкова много отменени часове от инструктор П. Стоянов?",
+      "assistantTag": "Бизнес асистент",
+      "summary": "Анализирах данните за последните 30 дни. П. Стоянов е отменил 12 часа, като основната причина е техническа неизправност на VW Golf #1. Това засяга директно графика и преразпределението на курсистите.",
+      "tableHeaders": ["Дата", "Причина", "Статус"],
+      "rows": [
+        { "date": "12.05.2024", "reason": "Техн. неизправност", "status": "Отменен" },
+        { "date": "14.05.2024", "reason": "Техн. неизправност", "status": "Отменен" },
+        { "date": "15.05.2024", "reason": "Техн. неизправност", "status": "Отменен" }
+      ],
+      "recommendation": "Препоръчвам преглед на автомобила и временно пренасочване на курсистите към С. Димитров през следващите 3 дни.",
+      "chatPlaceholder": "Попитайте нещо...",
+      "promptsTitle": "Предложени въпроси",
+      "prompts": [
+        "Какъв е очакваният приход за април?",
+        "Кои документи изтичат тази седмица?",
+        "Анализирай натовареността на автопарка"
+      ],
+      "weeklyTitle": "Седмичен отчет",
+      "weeklyLabel": "Нови записвания",
+      "weeklyValue": "+24%",
+      "weeklyStatus": "Оптимално представяне"
+    },
+    "documents": {
+      "blockedLabel": "Блокирана",
+      "criticalBadge": "Критична грешка",
+      "analysisDoneLabel": "AI анализ завършен",
+      "primaryAction": "Поправи грешките",
+      "secondaryAction": "Изпрати",
+      "recentChecksTitle": "Последни проверки",
+      "recentChecksSubtitle": "Последните автоматични проверки от AI модула за документи.",
+      "viewAllLabel": "Виж всички",
+      "tableHeaders": ["Документ ID", "Дата", "Курсист / фирма", "Статус", "Сума"],
+      "findings": [
+        {
+          "tone": "critical",
+          "title": "Липсва ДДС №",
+          "badge": "Задължително",
+          "description": "В документа не е намерен валиден идентификационен номер по ДДС за доставчика.",
+          "suggestion": "BG204857193",
+          "action": "Поправи"
+        },
+        {
+          "tone": "warning",
+          "title": "Необичайна сума",
+          "badge": "Предупреждение",
+          "description": "Общата сума се отклонява с над 45% от средната за този тип фактури през последните 3 месеца.",
+          "suggestion": "Проверете за правописна грешка в десетичната запетая или грешна валута.",
+          "action": "Прегледай"
+        }
+      ],
+      "recentChecks": [
+        { "id": "#DOC-8472", "date": "12.10.2023", "owner": "Петър Иванов", "status": "Потвърден", "amount": "450,00 лв" },
+        { "id": "#DOC-8469", "date": "12.10.2023", "owner": "Авто-Мобил ООД", "status": "Блокиран", "amount": "1 240,00 лв" },
+        { "id": "#DOC-8461", "date": "11.10.2023", "owner": "Мария Стойчева", "status": "Потвърден", "amount": "85,00 лв" }
+      ]
+    }
+  }
+}
