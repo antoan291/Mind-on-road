@@ -1,4 +1,4 @@
-// Unified Design System Components for MindOnRoad/DriveAdmin
+// Unified Design System Components for MindOnRoad
 // Based on "The Obsidian Navigator" creative direction
 
 export { PageHeader } from "./PageHeader";

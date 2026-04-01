@@ -1,4 +1,4 @@
-# MindOnRoad / DriveAdmin
+# MindOnRoad
 
 ## Матрица на ролите и правата
 

@@ -1,10 +1,10 @@
-# MindOnRoad / DriveAdmin
+# MindOnRoad
 
 ## Архитектура на базата данни
 
 ## 1. Цел на документа
 
-Този документ описва препоръчителната database architecture за продукта MindOnRoad / DriveAdmin.
+Този документ описва препоръчителната database architecture за продукта MindOnRoad.
 
 Фокусът е върху:
 

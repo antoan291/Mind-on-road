@@ -3,9 +3,9 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "driveadmin-automation"
+name = "mindonroad-automation"
 version = "0.2.0"
-description = "Automation and document intelligence scripts for DriveAdmin."
+description = "Automation and document intelligence scripts for MindOnRoad."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

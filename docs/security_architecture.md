@@ -1,10 +1,10 @@
-# MindOnRoad / DriveAdmin
+# MindOnRoad
 
 ## Архитектура на сигурността
 
 ## 1. Цел на документа
 
-Този документ описва security architecture за продукта MindOnRoad / DriveAdmin.
+Този документ описва security architecture за продукта MindOnRoad.
 
 Сигурността е критична, защото системата съхранява:
 
