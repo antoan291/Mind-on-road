@@ -11,7 +11,7 @@ type PeriodFilter = 'days' | 'months' | 'years';
 type TypeFilter = 'all' | TransactionType;
 type PaymentMethod = 'cash' | 'bank' | 'card' | 'pos';
 type EntryStatus = Extract<StatusTone, 'success' | 'warning' | 'error'>;
-type ReportEntry = { id: string; title: string; type: TransactionType; category: string; amount: number; date: string; source: string; paymentMethod: PaymentMethod; status: EntryStatus };
+type ReportEntry = { id: string; title: string; type: TransactionType; category: string; amount: number; date: string; source: string; paymentMethod: PaymentMethod; status: EntryStatus; documentReference: string; counterparty: string; note: string; currency: 'BGN' | 'EUR' };
 type RecordFormState = { type: TransactionType; title: string; category: string; amount: string; date: string; source: string; paymentMethod: PaymentMethod; status: EntryStatus };
 type ButtonProps = { label: string; onClick: () => void; icon?: ReactNode; active?: boolean; primary?: boolean; disabled?: boolean };
 const PAGE_SIZE = 20;
@@ -24,24 +24,13 @@ const paymentLabels: Record<PaymentMethod, string> = { cash: 'В брой', bank
 const periodOptions: { value: PeriodFilter; label: string }[] = [{ value: 'days', label: 'Конкретен ден' }, { value: 'months', label: 'Цял месец' }, { value: 'years', label: 'Цяла година' }];
 const statusOptions: { value: EntryStatus; label: string }[] = [{ value: 'success', label: 'Потвърден' }, { value: 'warning', label: 'Очаква' }, { value: 'error', label: 'Просрочен' }];
 const defaultFormState: RecordFormState = { type: 'income', title: '', category: '', amount: '', date: todayIso, source: '', paymentMethod: 'cash', status: 'success' };
-const baseEntries: ReportEntry[] = Array.from({ length: 42 }, (_, index) => ({
-  id: 'entry-' + (index + 1),
-  title: index % 3 === 0 ? 'Фактура за гориво' : 'Курс категория B',
-  type: index % 3 === 0 ? 'expense' : 'income',
-  category: index % 3 === 0 ? 'Поддръжка' : 'Такси',
-  amount: index % 3 === 0 ? 180 + index * 14 : 1280 + index * 18,
-  date: (index < 28 ? '2026-03' : index < 36 ? '2026-02' : '2026-01') + '-' + String(((index * 2) % 27) + 1).padStart(2, '0'),
-  source: index % 3 === 0 ? 'Auto Profi' : index % 2 === 0 ? 'Мария Иванова' : 'Николай Петров',
-  paymentMethod: index % 3 === 0 ? 'bank' : index % 2 === 0 ? 'cash' : 'card',
-  status: index % 5 === 0 ? 'warning' : 'success',
-}));
 function formatMoney(amount: number) { return amount.toLocaleString('bg-BG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' лв'; }
 function matchesPeriod(date: string, filter: PeriodFilter, selectedDate: string, selectedMonth: string, selectedYear: string) { if (filter === 'days') return date === selectedDate; if (filter === 'months') return date.startsWith(selectedMonth); return date.startsWith(selectedYear); }
 function periodLabel(filter: PeriodFilter, selectedDate: string, selectedMonth: string, selectedYear: string) { if (filter === 'days') return new Date(selectedDate).toLocaleDateString('bg-BG'); if (filter === 'months') { const parts = selectedMonth.split('-'); return parts[1] + '.' + parts[0]; } return selectedYear; }
 function ActionButton({ label, onClick, icon, active = false, primary = false, disabled = false }: ButtonProps) { return <button type='button' onClick={onClick} disabled={disabled} className='inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-40' style={{ background: primary ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.95), rgba(96, 99, 238, 0.9))' : active ? 'rgba(99, 102, 241, 0.16)' : 'rgba(255,255,255,0.04)', color: 'var(--text-primary)', border: active || primary ? '1px solid rgba(99, 102, 241, 0.28)' : '1px solid var(--ghost-border)', boxShadow: primary ? '0 12px 24px rgba(99, 102, 241, 0.22)' : 'none' }}>{icon}{label}</button>; }
 function Field({ label, children }: { label: string; children: ReactNode }) { return <div className='space-y-2'><label className='text-xs uppercase tracking-[0.18em]' style={{ color: 'var(--text-tertiary)' }}>{label}</label>{children}</div>; }
 export function ReportsPage() {
-  const [entries, setEntries] = useState<ReportEntry[]>(baseEntries);
+  const [entries, setEntries] = useState<ReportEntry[]>(reportEntries as ReportEntry[]);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('months');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [selectedDate, setSelectedDate] = useState(todayIso);
@@ -68,7 +57,7 @@ export function ReportsPage() {
   const addRecord = () => {
     const amount = Number(formState.amount.replace(',', '.'));
     if (!formState.title.trim() || !formState.category.trim() || !formState.source.trim() || !formState.date || Number.isNaN(amount) || amount <= 0) return;
-    setEntries((current) => [{ id: 'entry-' + Date.now(), title: formState.title.trim(), type: formState.type, category: formState.category.trim(), amount, date: formState.date, source: formState.source.trim(), paymentMethod: formState.paymentMethod, status: formState.status }, ...current]);
+    setEntries((current) => [{ id: 'entry-' + Date.now(), title: formState.title.trim(), type: formState.type, category: formState.category.trim(), amount, date: formState.date, source: formState.source.trim(), paymentMethod: formState.paymentMethod, status: formState.status, documentReference: '', counterparty: formState.source.trim(), note: '', currency: 'BGN' }, ...current]);
     setPage(1);
     closeDialog();
   };
@@ -92,7 +81,7 @@ export function ReportsPage() {
         </div>
       </Panel>
       <Panel title='Финансови записи' subtitle='20 записа на страница, ясен филтър по вид и лесно добавяне на нови приходи и разходи.'>
-        <DataTableLayout columns={['Запис', 'Тип', 'Категория', 'Сума', 'Дата', 'Начин на плащане', 'Източник', 'Статус']} rows={pagedEntries.map((entry) => [entry.title, entry.type === 'income' ? 'Приход' : 'Разход', entry.category, formatMoney(entry.amount), new Date(entry.date).toLocaleDateString('bg-BG'), paymentLabels[entry.paymentMethod], entry.source, <StatusBadge key={entry.id} status={entry.status}>{statusLabel(entry.status)}</StatusBadge>])} />
+        <DataTableLayout columns={['Запис', 'Тип', 'Документ', 'Контрагент', 'Бележка', 'Сума', 'Валута', 'Статус']} rows={pagedEntries.map((entry) => [entry.title, entry.type === 'income' ? 'Приход' : 'Разход', entry.documentReference || 'Няма', entry.counterparty, entry.note || entry.source, formatMoney(entry.amount), entry.currency, <StatusBadge key={entry.id} status={entry.status}>{statusLabel(entry.status)}</StatusBadge>])} />
         <div className='mt-5 flex flex-wrap items-center justify-between gap-3'><p className='text-sm' style={{ color: 'var(--text-secondary)' }}>Показани {pagedEntries.length} от {filteredEntries.length} записа</p><div className='flex flex-wrap items-center gap-2'><ActionButton label='‹' disabled={currentPageValue === 1} onClick={() => setPage((value) => Math.max(1, value - 1))} />{pages.map((value) => <ActionButton key={value} label={String(value)} active={value === currentPageValue} onClick={() => setPage(value)} />)}<ActionButton label='›' disabled={currentPageValue === totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))} /></div></div>
       </Panel>
     </PageSection>

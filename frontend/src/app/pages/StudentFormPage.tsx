@@ -20,12 +20,18 @@ export function StudentFormPage() {
     address: '',
     birthDate: '',
     idNumber: '',
+    educationLevel: '',
     
     // Training Information
     category: '',
     instructor: '',
     theoryGroup: '',
     startDate: '',
+    groupNumber: '',
+    recordMode: '',
+    insuranceStatus: '',
+    extraHours: '',
+    courseOutcome: '',
     
     // Parent/Guardian
     parentName: '',
@@ -139,6 +145,20 @@ export function StudentFormPage() {
               required
             />
 
+            <SelectField
+              label="Образование"
+              value={formData.educationLevel}
+              onChange={(value) => setFormData({ ...formData, educationLevel: value })}
+              options={[
+                { value: '', label: 'Изберете образование...' },
+                { value: 'basic', label: 'Основно' },
+                { value: 'secondary', label: 'Средно' },
+                { value: 'college', label: 'Полувисше / колеж' },
+                { value: 'higher', label: 'Висше' },
+              ]}
+              icon={<BookOpen size={18} />}
+            />
+
             <div className="md:col-span-2">
               <InputField
                 label="Адрес"
@@ -214,6 +234,63 @@ export function StudentFormPage() {
               onChange={(value) => setFormData({ ...formData, startDate: value })}
               icon={<Calendar size={18} />}
               required
+            />
+
+            <InputField
+              label="Номер на група"
+              placeholder="B-2024-03"
+              value={formData.groupNumber}
+              onChange={(value) => setFormData({ ...formData, groupNumber: value })}
+              icon={<FileText size={18} />}
+            />
+
+            <SelectField
+              label="Режим на регистъра"
+              value={formData.recordMode}
+              onChange={(value) => setFormData({ ...formData, recordMode: value })}
+              options={[
+                { value: '', label: 'Изберете режим...' },
+                { value: 'paper', label: 'Хартиен' },
+                { value: 'electronic', label: 'Електронен' },
+                { value: 'hybrid', label: 'Хартиен и електронен' },
+              ]}
+              icon={<FileText size={18} />}
+            />
+
+            <SelectField
+              label="Застраховка"
+              value={formData.insuranceStatus}
+              onChange={(value) => setFormData({ ...formData, insuranceStatus: value })}
+              options={[
+                { value: '', label: 'Изберете статус...' },
+                { value: 'active', label: 'Активна' },
+                { value: 'pending', label: 'Очаква се' },
+                { value: 'expired', label: 'Изтекла' },
+              ]}
+              icon={<FileText size={18} />}
+            />
+
+            <InputField
+              label="Допълнителни часове"
+              type="number"
+              placeholder="0"
+              value={formData.extraHours}
+              onChange={(value) => setFormData({ ...formData, extraHours: value })}
+              helpText="Извън стандартния пакет по регистър"
+            />
+
+            <SelectField
+              label="Изход на курса"
+              value={formData.courseOutcome}
+              onChange={(value) => setFormData({ ...formData, courseOutcome: value })}
+              options={[
+                { value: '', label: 'Изберете изход...' },
+                { value: 'active', label: 'Активен' },
+                { value: 'completed', label: 'Завършен' },
+                { value: 'withdrawn', label: 'Прекратен' },
+                { value: 'transferred', label: 'Преместен' },
+              ]}
+              icon={<Car size={18} />}
             />
           </div>
         </div>
