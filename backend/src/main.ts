@@ -1,12 +1,16 @@
 import { createAppDefinition } from './app';
+import { createHttpApp } from './bootstrap/http/create-http-app';
+import { appConfig } from './config/app.config';
 
 async function bootstrap() {
-  const application = createAppDefinition();
-  const port = Number(process.env.PORT ?? 3001);
+  const appDefinition = createAppDefinition();
+  const httpApp = createHttpApp(appDefinition);
 
-  console.info(
-    `[backend] ${application.appName} bootstrap placeholder on port ${port} with ${application.modules.length} modules`
-  );
+  httpApp.listen(appConfig.port, () => {
+    console.info(
+      `[backend] ${appDefinition.appName} listening on port ${appConfig.port} with ${appDefinition.modules.length} modules`
+    );
+  });
 }
 
 void bootstrap();

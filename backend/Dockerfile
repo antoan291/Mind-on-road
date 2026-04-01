@@ -13,4 +13,4 @@ RUN npm run build
 ENV NODE_ENV=development
 EXPOSE 3001
 
-CMD ["npm", "start"]
+CMD ["npm", "run", "start:prod"]
