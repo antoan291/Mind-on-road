@@ -6,7 +6,7 @@ import { appConfig } from './config/app.config';
 
 async function bootstrap() {
   const appDefinition = createAppDefinition();
-  const httpApp = createHttpApp(appDefinition);
+  const httpApp = createHttpApp();
   let httpServer: Server | undefined;
   let isShuttingDown = false;
 

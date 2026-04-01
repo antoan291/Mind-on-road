@@ -193,6 +193,27 @@ To combine your product ideas with the legacy school data correctly:
 - separate tuition / installments from business expenses;
 - never treat spreadsheet visual sections as database entities.
 
+## Student portal registration rule
+
+The school workflow should assume that student portal access is created as part of the administrative student-registration process.
+
+Operational interpretation:
+
+- administration registers the student and fills the official business data;
+- the student's phone number becomes the initial portal username;
+- the system generates a random temporary password;
+- the student receives these credentials through a controlled handoff process;
+- the student must change the temporary password at first login.
+
+This rule fits the real school process better than asking administration to separately create every student account by hand.
+
+It also means the product must support:
+
+- normalized phone-based usernames;
+- temporary credential issuance tracking;
+- forced password change on first login;
+- student self-scope portal access separate from staff roles.
+
 ## Columns likely to be unnecessary or non-canonical
 
 The following patterns should not become first-class database columns without stronger justification:

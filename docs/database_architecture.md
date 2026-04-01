@@ -142,6 +142,7 @@ Shared schema + `tenant_id` остава правилният модел и пр
 - `students`
 - `student_enrollments`
 - `student_categories`
+- `student_user_links`
 - `parents`
 - `student_parent_links`
 - `instructors`
@@ -150,6 +151,37 @@ Shared schema + `tenant_id` остава правилният модел и пр
 - `student_training_milestones`
 - `student_compliance_profiles`
 - `student_certification_records`
+
+### 5.2.1 Student portal access model
+
+The product must support student portal login, but student business records and login identities must remain separate concepts.
+
+Required direction:
+
+- `users` remain the authentication identities;
+- `students` remain the training and business records;
+- `student_user_links` connects a student record to a login identity;
+- student portal access is created automatically during student registration unless explicitly disabled by administration.
+
+Recommended fields in `student_user_links`:
+
+- `tenant_id`
+- `student_id`
+- `user_id`
+- `username`
+- `portal_access_status`
+- `temporary_password_issued_at`
+- `must_change_password`
+- `created_by_user_id`
+- `activated_at`
+
+Student portal bootstrap rule:
+
+- when administration creates a new student, the student's phone number becomes the initial username;
+- the system generates a random temporary password;
+- the temporary password must be changed on first successful login;
+- the temporary password must never be stored in plain text in the database;
+- the username must be stored in normalized phone format.
 
 ### 5.3 Scheduling domain
 

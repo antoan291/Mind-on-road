@@ -55,8 +55,10 @@ model User {
   displayName      String             @db.VarChar(200)
   phone            String?            @db.VarChar(50)
   status           UserStatus         @default(INVITED)
+  mustChangePassword Boolean          @default(false)
   emailVerifiedAt  DateTime?          @db.Timestamptz(6)
   lastLoginAt      DateTime?          @db.Timestamptz(6)
+  passwordChangedAt DateTime?         @db.Timestamptz(6)
   createdAt        DateTime           @default(now()) @db.Timestamptz(6)
   updatedAt        DateTime           @updatedAt @db.Timestamptz(6)
   memberships      TenantMembership[]
