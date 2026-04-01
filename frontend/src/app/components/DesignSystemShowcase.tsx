@@ -36,7 +36,7 @@ export function DesignSystemShowcase() {
       <div className="space-y-2">
         <h1 style={{ color: "var(--text-primary)" }}>The Obsidian Navigator</h1>
         <p className="text-lg" style={{ color: "var(--text-secondary)" }}>
-          Премиум дизайн система за MindOnRoad / DriveAdmin
+          Премиум дизайн система за MindOnRoad
         </p>
       </div>
 

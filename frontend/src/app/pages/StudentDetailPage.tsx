@@ -39,17 +39,30 @@ export function StudentDetailPage() {
     address: "гр. София, ул. Витоша 15, ап. 7",
     birthDate: "15.05.1995",
     idNumber: "9505151234",
+    educationLevel: "Средно",
     category: "B",
     instructor: "Георги Петров",
     instructorPhone: "+359 888 111 222",
+    groupNumber: "B-2024-03",
     theoryGroup: "Група 3 - Понеделник и Сряда 18:00",
     startDate: "15.01.2024",
+    theoryCompletedAt: "15.03.2024",
+    theoryExamAt: "22.03.2024",
+    practicalCompletedAt: "18.04.2024",
+    practicalExamAt: "25.04.2024",
+    extraHours: 4,
     paidLessons: 20,
     usedLessons: 12,
     remainingLessons: 8,
     progress: 60,
     status: "success",
     statusLabel: "Напреднал",
+    courseOutcome: "Активен",
+    recordMode: "Хартиен и електронен",
+    insuranceStatus: "Активна",
+    protocolNumber: "PR-2024-118",
+    protocolDate: "26.04.2024",
+    certificateIssueDate: "30.04.2024",
     theoryCompleted: true,
     theoryAttendance: 10,
     theoryTotal: 12,
@@ -344,6 +357,15 @@ export function StudentDetailPage() {
                       Начало: {student.startDate}
                     </span>
                   </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <FileText
+                      size={14}
+                      style={{ color: "var(--text-tertiary)" }}
+                    />
+                    <span style={{ color: "var(--text-secondary)" }}>
+                      Група: {student.groupNumber}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -359,6 +381,14 @@ export function StudentDetailPage() {
                   {student.statusLabel}
                 </StatusBadge>
                 <div className="mt-3">
+                  <div
+                    className="text-sm space-y-1 mb-3"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    <p>Изход: {student.courseOutcome}</p>
+                    <p>Регистър: {student.recordMode}</p>
+                    <p>Застраховка: {student.insuranceStatus}</p>
+                  </div>
                   <div className="flex items-center justify-between mb-2 text-sm">
                     <span style={{ color: "var(--text-secondary)" }}>
                       Напредък
@@ -601,6 +631,48 @@ export function StudentDetailPage() {
                     </span>
                   </div>
                 )}
+
+                <div
+                  className="mt-4 p-4 rounded-lg space-y-2"
+                  style={{ background: "var(--bg-panel)" }}
+                >
+                  <p
+                    className="text-sm font-medium"
+                    style={{ color: "var(--text-primary)" }}
+                  >
+                    Регистрови етапи
+                  </p>
+                  <p
+                    className="text-sm"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    Теория завършена: {student.theoryCompletedAt}
+                  </p>
+                  <p
+                    className="text-sm"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    Теория изпит: {student.theoryExamAt}
+                  </p>
+                  <p
+                    className="text-sm"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    Практика завършена: {student.practicalCompletedAt}
+                  </p>
+                  <p
+                    className="text-sm"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    Практика изпит: {student.practicalExamAt}
+                  </p>
+                  <p
+                    className="text-sm"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    Допълнителни часове: {student.extraHours}
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -633,6 +705,26 @@ export function StudentDetailPage() {
                   label="Email"
                   value={student.parentEmail}
                 />
+              </div>
+            </div>
+
+            <div
+              className="rounded-xl"
+              style={{ background: "var(--bg-card)" }}
+            >
+              <div
+                className="p-6 border-b"
+                style={{ borderColor: "var(--ghost-border)" }}
+              >
+                <h3 style={{ color: "var(--text-primary)" }}>
+                  Регистър и сертификати
+                </h3>
+              </div>
+              <div className="p-6 space-y-3">
+                <InfoRow label="ЕГН" value={student.idNumber} icon={<FileText size={16} />} />
+                <InfoRow label="Образование" value={student.educationLevel} icon={<BookOpen size={16} />} />
+                <InfoRow label="Протокол" value={`${student.protocolNumber} / ${student.protocolDate}`} icon={<FileText size={16} />} />
+                <InfoRow label="Удостоверение" value={student.certificateIssueDate} icon={<CheckCircle size={16} />} />
               </div>
             </div>
 

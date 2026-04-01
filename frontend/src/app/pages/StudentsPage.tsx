@@ -17,6 +17,16 @@ export function StudentsPage() {
 
   const students = mockStudents;
 
+  const formatLegacyDate = (value?: string) => {
+    if (!value) return 'Няма';
+    return value;
+  };
+
+  const maskNationalId = (value?: string) => {
+    if (!value) return 'Няма';
+    return `${value.slice(0, 2)}******${value.slice(-2)}`;
+  };
+
   const columns = [
     {
       key: 'name',
@@ -37,8 +47,22 @@ export function StudentsPage() {
               {value}
             </div>
             <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-              {row.phone}
+              {row.phone} • ЕГН {maskNationalId(row.nationalId)}
             </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'groupNumber',
+      label: 'Група',
+      render: (value: string, row: any) => (
+        <div>
+          <div className="font-medium" style={{ color: 'var(--text-primary)' }}>
+            {value || 'Индивидуална'}
+          </div>
+          <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+            Старт: {row.trainingStartDate || row.startDate}
           </div>
         </div>
       ),
@@ -61,6 +85,23 @@ export function StudentsPage() {
     {
       key: 'instructor',
       label: 'Инструктор',
+    },
+    {
+      key: 'theoryCompletedAt',
+      label: 'Етап',
+      render: (_: string, row: any) => (
+        <div className="space-y-1">
+          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+            Теория: {formatLegacyDate(row.theoryCompletedAt)}
+          </div>
+          <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+            Практика: {formatLegacyDate(row.practicalCompletedAt)}
+          </div>
+          <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+            Доп. часове: {row.extraHours ?? 0}
+          </div>
+        </div>
+      ),
     },
     {
       key: 'remaining',
@@ -100,9 +141,14 @@ export function StudentsPage() {
       key: 'status',
       label: 'Статус',
       render: (value: string, row: any) => (
-        <StatusBadge status={value as any}>
-          {row.statusLabel}
-        </StatusBadge>
+        <div className="space-y-2">
+          <StatusBadge status={value as any}>
+            {row.statusLabel}
+          </StatusBadge>
+          <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+            {row.courseOutcome === 'withdrawn' ? 'Отписан курс' : row.recordMode === 'paper' ? 'Хартиен регистър' : 'Електронен регистър'}
+          </div>
+        </div>
       ),
     },
     {

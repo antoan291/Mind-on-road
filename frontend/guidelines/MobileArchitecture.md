@@ -1,4 +1,4 @@
-# MindOnRoad / DriveAdmin - Mobile Architecture
+# MindOnRoad - Mobile Architecture
 
 ## Mobile Obsidian Navigator Design System
 

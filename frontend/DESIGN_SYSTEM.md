@@ -1,4 +1,4 @@
-# MindOnRoad / DriveAdmin - Unified Design System
+# MindOnRoad - Unified Design System
 
 ## "The Obsidian Navigator" Creative Direction
 

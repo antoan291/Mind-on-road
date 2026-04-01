@@ -12,19 +12,104 @@ export type DashboardReportEntry = {
   source: string;
   paymentMethod: DashboardPaymentMethod;
   status: DashboardEntryStatus;
+  documentReference: string;
+  counterparty: string;
+  note: string;
+  currency: 'BGN' | 'EUR';
 };
 
-export const reportEntries: DashboardReportEntry[] = Array.from({ length: 42 }, (_, index) => ({
-  id: 'entry-' + (index + 1),
-  title: index % 3 === 0 ? 'Фактура за гориво' : 'Курс категория B',
-  type: index % 3 === 0 ? 'expense' : 'income',
-  category: index % 3 === 0 ? 'Поддръжка' : 'Такси',
-  amount: index % 3 === 0 ? 180 + index * 14 : 1280 + index * 18,
-  date: (index < 28 ? '2026-03' : index < 36 ? '2026-02' : '2026-01') + '-' + String(((index * 2) % 27) + 1).padStart(2, '0'),
-  source: index % 3 === 0 ? 'Auto Profi' : index % 2 === 0 ? 'Мария Иванова' : 'Николай Петров',
-  paymentMethod: index % 3 === 0 ? 'bank' : index % 2 === 0 ? 'cash' : 'card',
-  status: index % 5 === 0 ? 'warning' : 'success',
-}));
+export const reportEntries: DashboardReportEntry[] = [
+  {
+    id: 'entry-1',
+    title: 'Шофьорски курс - B',
+    type: 'income',
+    category: 'Курсисти',
+    amount: 250,
+    date: '2026-02-05',
+    source: 'Седмичен отчет',
+    paymentMethod: 'cash',
+    status: 'success',
+    documentReference: 'ф7981',
+    counterparty: 'Михаил Катеринов Минчев',
+    note: 'Доплащане по курс',
+    currency: 'BGN'
+  },
+  {
+    id: 'entry-2',
+    title: 'Такса теория',
+    type: 'income',
+    category: 'Такси',
+    amount: 16.36,
+    date: '2026-01-30',
+    source: 'Седмичен отчет',
+    paymentMethod: 'card',
+    status: 'success',
+    documentReference: '',
+    counterparty: 'Даниел Веселинов Иванов',
+    note: 'Такси',
+    currency: 'EUR'
+  },
+  {
+    id: 'entry-3',
+    title: 'Гориво',
+    type: 'expense',
+    category: 'Поддръжка',
+    amount: 17,
+    date: '2026-01-30',
+    source: 'Седмичен отчет',
+    paymentMethod: 'bank',
+    status: 'warning',
+    documentReference: '',
+    counterparty: 'Панчо',
+    note: 'Гориво',
+    currency: 'EUR'
+  },
+  {
+    id: 'entry-4',
+    title: 'Пратка Еконт',
+    type: 'expense',
+    category: 'Оперативни разходи',
+    amount: 40,
+    date: '2026-01-30',
+    source: 'Седмичен отчет',
+    paymentMethod: 'bank',
+    status: 'warning',
+    documentReference: '',
+    counterparty: 'Ники',
+    note: 'Пратка Еконт',
+    currency: 'EUR'
+  },
+  {
+    id: 'entry-5',
+    title: 'II-ра практика ДАИ',
+    type: 'income',
+    category: 'Изпитни такси',
+    amount: 171.28,
+    date: '2026-02-12',
+    source: 'Седмичен отчет',
+    paymentMethod: 'pos',
+    status: 'success',
+    documentReference: '',
+    counterparty: 'Даниел Асенов Кирилов',
+    note: 'II-ра практика ДАИ',
+    currency: 'EUR'
+  },
+  {
+    id: 'entry-6',
+    title: 'Банков превод към университет',
+    type: 'expense',
+    category: 'Такси и трансфери',
+    amount: 64,
+    date: '2026-02-25',
+    source: 'Седмичен отчет',
+    paymentMethod: 'bank',
+    status: 'warning',
+    documentReference: '',
+    counterparty: 'Технически университет',
+    note: 'Банково плащане към университет',
+    currency: 'BGN'
+  }
+];
 
 export function formatDashboardMoney(amount: number) {
   return amount.toLocaleString('bg-BG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' лв';

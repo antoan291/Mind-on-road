@@ -20,13 +20,14 @@ For a new person joining the project, the recommended reading order is:
 3. [system_architecture.md](/C:/AD/work/My%20company/school/docs/system_architecture.md)
 4. [tech_stack_architecture.md](/C:/AD/work/My%20company/school/docs/tech_stack_architecture.md)
 5. [database_architecture.md](/C:/AD/work/My%20company/school/docs/database_architecture.md)
-6. [security_architecture.md](/C:/AD/work/My%20company/school/docs/security_architecture.md)
-7. [backup_and_disaster_recovery.md](/C:/AD/work/My%20company/school/docs/backup_and_disaster_recovery.md)
-8. [platform_admin_feature_management.md](/C:/AD/work/My%20company/school/docs/platform_admin_feature_management.md)
-9. [automation_strategy.md](/C:/AD/work/My%20company/school/docs/automation_strategy.md)
-10. [automation_research_and_regulatory_notes.md](/C:/AD/work/My%20company/school/docs/automation_research_and_regulatory_notes.md)
-11. [development_execution_playbook.md](/C:/AD/work/My%20company/school/docs/development_execution_playbook.md)
-12. [design_prompts.md](/C:/AD/work/My%20company/school/docs/design_prompts.md)
+6. [legacy_school_data_reconciliation.md](/home/ad/Documents/work/Mind-on-road/docs/legacy_school_data_reconciliation.md)
+7. [security_architecture.md](/C:/AD/work/My%20company/school/docs/security_architecture.md)
+8. [backup_and_disaster_recovery.md](/C:/AD/work/My%20company/school/docs/backup_and_disaster_recovery.md)
+9. [platform_admin_feature_management.md](/C:/AD/work/My%20company/school/docs/platform_admin_feature_management.md)
+10. [automation_strategy.md](/C:/AD/work/My%20company/school/docs/automation_strategy.md)
+11. [automation_research_and_regulatory_notes.md](/C:/AD/work/My%20company/school/docs/automation_research_and_regulatory_notes.md)
+12. [development_execution_playbook.md](/C:/AD/work/My%20company/school/docs/development_execution_playbook.md)
+13. [design_prompts.md](/C:/AD/work/My%20company/school/docs/design_prompts.md)
 
 ## 3. Official Source-of-Truth Documents
 
@@ -48,6 +49,9 @@ For a new person joining the project, the recommended reading order is:
 
 - [database_architecture.md](/C:/AD/work/My%20company/school/docs/database_architecture.md)
   Defines the database strategy, tenant modeling, and data integrity direction.
+
+- [legacy_school_data_reconciliation.md](/home/ad/Documents/work/Mind-on-road/docs/legacy_school_data_reconciliation.md)
+  Reconciles the real legacy school workbooks with the target product model and identifies missing data structures.
 
 - [security_architecture.md](/C:/AD/work/My%20company/school/docs/security_architecture.md)
   Defines access control, sensitive-data handling, and security defaults.
