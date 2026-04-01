@@ -4,6 +4,8 @@ import cors = require('cors');
 
 import { appConfig } from '../../config/app.config';
 import { prismaClient } from '../../infrastructure/database/prisma/prisma-client';
+import { AuthAuditService } from '../../modules/audit/application/services/auth-audit.service';
+import { PrismaAuditLogRepository } from '../../modules/audit/infrastructure/persistence/prisma/prisma-audit-log.repository';
 import {
   AuthenticationError,
   LoginService,
@@ -11,6 +13,10 @@ import {
   SessionAuthenticationError,
   SessionService
 } from '../../modules/identity/application/services/login.service';
+import {
+  deriveCsrfToken,
+  isMatchingCsrfToken
+} from '../../modules/identity/domain/services/password-security';
 import { PrismaIdentityAuthRepository } from '../../modules/identity/infrastructure/persistence/prisma/prisma-identity-auth.repository';
 import { changePasswordRequestSchema } from '../../modules/identity/presentation/rest/requests/change-password.request';
 import { loginRequestSchema } from '../../modules/identity/presentation/rest/requests/login.request';
@@ -19,8 +25,14 @@ import type { LoginResponse } from '../../modules/identity/presentation/rest/res
 const rateLimitModule = require('express-rate-limit') as typeof import('express-rate-limit');
 const helmetModule = require('helmet') as typeof import('helmet');
 const identityAuthRepository = new PrismaIdentityAuthRepository(prismaClient);
-const loginService = new LoginService(identityAuthRepository);
-const sessionService = new SessionService(identityAuthRepository);
+const authAuditService = new AuthAuditService(
+  new PrismaAuditLogRepository(prismaClient)
+);
+const loginService = new LoginService(identityAuthRepository, authAuditService);
+const sessionService = new SessionService(
+  identityAuthRepository,
+  authAuditService
+);
 const rateLimit = rateLimitModule.rateLimit ?? rateLimitModule.default;
 const helmet = helmetModule.default;
 const loginRateLimiter = rateLimit({
@@ -91,6 +103,7 @@ export function createHttpApp() {
       });
 
       const loginResponse: LoginResponse = {
+        csrfToken: result.csrfToken,
         sessionId: result.sessionId,
         expiresAt: result.expiresAt,
         tenantSlug: result.tenantSlug,
@@ -117,7 +130,27 @@ export function createHttpApp() {
     response.status(200).json(request.auth);
   });
 
-  app.post('/auth/logout', requireAuthenticatedSession, async (request, response) => {
+  app.get(
+    '/audit/logs',
+    requireAuthenticatedSession,
+    requirePermission('audit.read'),
+    async (request: AuthenticatedRequest, response) => {
+      const auditLogs = await authAuditService.listRecentTenantEvents({
+        tenantId: request.auth!.tenantId,
+        limit: 20
+      });
+
+      response.status(200).json({
+        items: auditLogs
+      });
+    }
+  );
+
+  app.post(
+    '/auth/logout',
+    requireAuthenticatedSession,
+    requireCsrfProtection,
+    async (request, response) => {
     const accessToken = readAccessTokenFromCookie(request);
 
     if (accessToken) {
@@ -132,9 +165,14 @@ export function createHttpApp() {
     });
 
     response.status(204).send();
-  });
+    }
+  );
 
-  app.post('/auth/change-password', requireAuthenticatedSession, async (request, response) => {
+  app.post(
+    '/auth/change-password',
+    requireAuthenticatedSession,
+    requireCsrfProtection,
+    async (request, response) => {
     const parsedRequest = changePasswordRequestSchema.safeParse(request.body);
 
     if (!parsedRequest.success) {
@@ -194,7 +232,8 @@ export function createHttpApp() {
         error: 'Password change failed.'
       });
     }
-  });
+    }
+  );
 
   return app;
 }
@@ -246,4 +285,53 @@ async function requireAuthenticatedSession(
       error: 'Authentication failed.'
     });
   }
+}
+
+function requirePermission(permissionKey: string) {
+  return (
+    request: AuthenticatedRequest,
+    response: express.Response,
+    next: express.NextFunction
+  ) => {
+    const permissionKeys = request.auth?.user.permissionKeys ?? [];
+
+    if (!permissionKeys.includes(permissionKey)) {
+      response.status(403).json({
+        error: 'Forbidden.'
+      });
+      return;
+    }
+
+    next();
+  };
+}
+
+function requireCsrfProtection(
+  request: express.Request,
+  response: express.Response,
+  next: express.NextFunction
+) {
+  const accessToken = readAccessTokenFromCookie(request);
+  const csrfHeader = request.get('x-csrf-token');
+
+  if (!accessToken || !csrfHeader) {
+    response.status(403).json({
+      error: 'CSRF validation failed.'
+    });
+    return;
+  }
+
+  const expectedCsrfToken = deriveCsrfToken(
+    accessToken,
+    appConfig.sessionSecret
+  );
+
+  if (!isMatchingCsrfToken(csrfHeader, expectedCsrfToken)) {
+    response.status(403).json({
+      error: 'CSRF validation failed.'
+    });
+    return;
+  }
+
+  next();
 }

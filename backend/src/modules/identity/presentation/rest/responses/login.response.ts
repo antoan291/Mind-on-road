@@ -1,4 +1,5 @@
 export interface LoginResponse {
+  csrfToken: string;
   sessionId: string;
   expiresAt: string;
   tenantSlug: string;
@@ -7,5 +8,6 @@ export interface LoginResponse {
     email: string;
     displayName: string;
     roleKeys: string[];
+    permissionKeys: string[];
   };
 }

@@ -7,6 +7,7 @@ export interface LoginIdentityRecord {
   tenantId: string;
   tenantSlug: string;
   roleKeys: string[];
+  permissionKeys: string[];
   mustChangePassword: boolean;
 }
 
@@ -33,6 +34,7 @@ export interface AuthenticatedSessionRecord {
   tenantId: string;
   tenantSlug: string;
   roleKeys: string[];
+  permissionKeys: string[];
   expiresAt: Date;
   mustChangePassword: boolean;
 }

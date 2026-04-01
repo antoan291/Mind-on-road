@@ -49,7 +49,16 @@ export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
           select: {
             role: {
               select: {
-                key: true
+                key: true,
+                permissions: {
+                  select: {
+                    permission: {
+                      select: {
+                        key: true
+                      }
+                    }
+                  }
+                }
               }
             }
           }
@@ -70,6 +79,11 @@ export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
       tenantId: membership.tenantId,
       tenantSlug: membership.tenant.slug,
       roleKeys: membership.roles.map((membershipRole) => membershipRole.role.key),
+      permissionKeys: membership.roles.flatMap((membershipRole) =>
+        membershipRole.role.permissions.map(
+          (rolePermission) => rolePermission.permission.key
+        )
+      ),
       mustChangePassword: membership.user.mustChangePassword
     };
   }
@@ -107,7 +121,16 @@ export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
               select: {
                 role: {
                   select: {
-                    key: true
+                    key: true,
+                    permissions: {
+                      select: {
+                        permission: {
+                          select: {
+                            key: true
+                          }
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -139,6 +162,11 @@ export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
       tenantSlug: session.tenantMembership.tenant.slug,
       roleKeys: session.tenantMembership.roles.map(
         (membershipRole) => membershipRole.role.key
+      ),
+      permissionKeys: session.tenantMembership.roles.flatMap((membershipRole) =>
+        membershipRole.role.permissions.map(
+          (rolePermission) => rolePermission.permission.key
+        )
       ),
       expiresAt: session.expiresAt,
       mustChangePassword: session.tenantMembership.user.mustChangePassword

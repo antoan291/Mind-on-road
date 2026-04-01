@@ -1,6 +1,8 @@
 import { appConfig } from '../../../../config/app.config';
+import type { AuthAuditService } from '../../../audit/application/services/auth-audit.service';
 import type { IdentityAuthRepository } from '../../domain/repositories/identity-auth.repository';
 import {
+  deriveCsrfToken,
   generateSessionToken,
   hashPassword,
   hashSessionToken,
@@ -17,6 +19,7 @@ export interface LoginCommand {
 
 export interface LoginResult {
   accessToken: string;
+  csrfToken: string;
   sessionId: string;
   expiresAt: string;
   tenantSlug: string;
@@ -25,6 +28,7 @@ export interface LoginResult {
     email: string;
     displayName: string;
     roleKeys: string[];
+    permissionKeys: string[];
   };
 }
 
@@ -42,7 +46,8 @@ export class PasswordPolicyError extends Error {
 
 export class LoginService {
   public constructor(
-    private readonly identityAuthRepository: IdentityAuthRepository
+    private readonly identityAuthRepository: IdentityAuthRepository,
+    private readonly authAuditService: AuthAuditService
   ) {}
 
   public async execute(command: LoginCommand): Promise<LoginResult> {
@@ -52,6 +57,18 @@ export class LoginService {
     });
 
     if (!identity) {
+      await this.authAuditService.record({
+        actorType: 'ANONYMOUS',
+        actionKey: 'auth.login',
+        outcome: 'FAILURE',
+        ipAddress: command.ipAddress,
+        userAgent: command.userAgent,
+        metadata: {
+          tenantSlug: command.tenantSlug,
+          email: command.email,
+          reason: 'identity_not_found'
+        }
+      });
       throw new AuthenticationError();
     }
 
@@ -61,6 +78,20 @@ export class LoginService {
     );
 
     if (!isPasswordValid) {
+      await this.authAuditService.record({
+        tenantId: identity.tenantId,
+        userId: identity.userId,
+        actorType: 'ANONYMOUS',
+        actionKey: 'auth.login',
+        outcome: 'FAILURE',
+        ipAddress: command.ipAddress,
+        userAgent: command.userAgent,
+        metadata: {
+          tenantSlug: identity.tenantSlug,
+          email: identity.userEmail,
+          reason: 'invalid_password'
+        }
+      });
       throw new AuthenticationError();
     }
 
@@ -76,8 +107,25 @@ export class LoginService {
       userAgent: command.userAgent
     });
 
+    await this.authAuditService.record({
+      tenantId: identity.tenantId,
+      userId: identity.userId,
+      sessionId: session.sessionId,
+      actorType: 'USER',
+      actionKey: 'auth.login',
+      outcome: 'SUCCESS',
+      ipAddress: command.ipAddress,
+      userAgent: command.userAgent,
+      metadata: {
+        tenantSlug: identity.tenantSlug,
+        email: identity.userEmail,
+        mustChangePassword: identity.mustChangePassword
+      }
+    });
+
     return {
       accessToken,
+      csrfToken: deriveCsrfToken(accessToken, appConfig.sessionSecret),
       sessionId: session.sessionId,
       expiresAt: session.expiresAt.toISOString(),
       tenantSlug: identity.tenantSlug,
@@ -85,15 +133,18 @@ export class LoginService {
       user: {
         email: identity.userEmail,
         displayName: identity.displayName,
-        roleKeys: identity.roleKeys
+        roleKeys: identity.roleKeys,
+        permissionKeys: [...new Set(identity.permissionKeys)]
       }
     };
   }
 }
 
 export interface AuthenticatedSession {
+  csrfToken: string;
   sessionId: string;
   expiresAt: string;
+  tenantId: string;
   tenantSlug: string;
   mustChangePassword: boolean;
   user: {
@@ -101,6 +152,7 @@ export interface AuthenticatedSession {
     email: string;
     displayName: string;
     roleKeys: string[];
+    permissionKeys: string[];
   };
 }
 
@@ -112,7 +164,8 @@ export class SessionAuthenticationError extends Error {
 
 export class SessionService {
   public constructor(
-    private readonly identityAuthRepository: IdentityAuthRepository
+    private readonly identityAuthRepository: IdentityAuthRepository,
+    private readonly authAuditService: AuthAuditService
   ) {}
 
   public async authenticate(accessToken: string): Promise<AuthenticatedSession> {
@@ -127,15 +180,18 @@ export class SessionService {
     await this.identityAuthRepository.updateSessionActivity(session.sessionId);
 
     return {
+      csrfToken: deriveCsrfToken(accessToken, appConfig.sessionSecret),
       sessionId: session.sessionId,
       expiresAt: session.expiresAt.toISOString(),
+      tenantId: session.tenantId,
       tenantSlug: session.tenantSlug,
       mustChangePassword: session.mustChangePassword,
       user: {
         id: session.userId,
         email: session.userEmail,
         displayName: session.displayName,
-        roleKeys: session.roleKeys
+        roleKeys: session.roleKeys,
+        permissionKeys: [...new Set(session.permissionKeys)]
       }
     };
   }
@@ -150,6 +206,14 @@ export class SessionService {
     }
 
     await this.identityAuthRepository.revokeSession(session.sessionId);
+    await this.authAuditService.record({
+      tenantId: session.tenantId,
+      userId: session.userId,
+      sessionId: session.sessionId,
+      actorType: 'USER',
+      actionKey: 'auth.logout',
+      outcome: 'SUCCESS'
+    });
   }
 
   public async changePassword(params: {
@@ -182,6 +246,17 @@ export class SessionService {
     );
 
     if (!isPasswordValid) {
+      await this.authAuditService.record({
+        tenantId: session.tenantId,
+        userId: session.userId,
+        sessionId: session.sessionId,
+        actorType: 'USER',
+        actionKey: 'auth.change_password',
+        outcome: 'FAILURE',
+        metadata: {
+          reason: 'invalid_current_password'
+        }
+      });
       throw new AuthenticationError();
     }
 
@@ -191,6 +266,14 @@ export class SessionService {
     });
 
     await this.identityAuthRepository.revokeUserSessions(session.userId);
+    await this.authAuditService.record({
+      tenantId: session.tenantId,
+      userId: session.userId,
+      sessionId: session.sessionId,
+      actorType: 'USER',
+      actionKey: 'auth.change_password',
+      outcome: 'SUCCESS'
+    });
   }
 }
 

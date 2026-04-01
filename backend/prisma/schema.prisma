@@ -33,6 +33,17 @@ enum SessionStatus {
   EXPIRED
 }
 
+enum AuditActorType {
+  ANONYMOUS
+  USER
+  SYSTEM
+}
+
+enum AuditOutcome {
+  SUCCESS
+  FAILURE
+}
+
 model Tenant {
   id          String             @id @default(uuid()) @db.Uuid
   name        String             @db.VarChar(200)
@@ -42,6 +53,7 @@ model Tenant {
   updatedAt   DateTime           @updatedAt @db.Timestamptz(6)
   memberships TenantMembership[]
   roles       Role[]
+  auditLogs   AuditLog[]
 
   @@map("tenants")
 }
@@ -63,6 +75,7 @@ model User {
   updatedAt        DateTime           @updatedAt @db.Timestamptz(6)
   memberships      TenantMembership[]
   sessions         UserSession[]
+  auditLogs        AuditLog[]
 
   @@map("users")
 }
@@ -159,9 +172,32 @@ model UserSession {
   updatedAt          DateTime         @updatedAt @db.Timestamptz(6)
   user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   tenantMembership   TenantMembership @relation(fields: [tenantMembershipId], references: [id], onDelete: Cascade)
+  auditLogs          AuditLog[]
 
   @@index([userId, status])
   @@index([tenantMembershipId, status])
   @@index([expiresAt])
   @@map("user_sessions")
+}
+
+model AuditLog {
+  id        String         @id @default(uuid()) @db.Uuid
+  tenantId  String?        @db.Uuid
+  userId    String?        @db.Uuid
+  sessionId String?        @db.Uuid
+  actorType AuditActorType
+  actionKey String         @db.VarChar(150)
+  outcome   AuditOutcome
+  ipAddress String?        @db.VarChar(64)
+  userAgent String?        @db.VarChar(500)
+  metadata  Json?
+  createdAt DateTime       @default(now()) @db.Timestamptz(6)
+  tenant    Tenant?        @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  session   UserSession?   @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, createdAt])
+  @@index([userId, createdAt])
+  @@index([actionKey, createdAt])
+  @@map("audit_logs")
 }

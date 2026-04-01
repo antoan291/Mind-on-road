@@ -1,4 +1,10 @@
-import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  scryptSync,
+  timingSafeEqual
+} from 'node:crypto';
 
 const PASSWORD_HASH_KEY_LENGTH = 64;
 
@@ -30,4 +36,24 @@ export function hashSessionToken(token: string) {
 
 export function generateSessionToken() {
   return randomBytes(32).toString('base64url');
+}
+
+export function deriveCsrfToken(accessToken: string, sessionSecret: string) {
+  return createHmac('sha256', sessionSecret)
+    .update(`csrf:${accessToken}`)
+    .digest('base64url');
+}
+
+export function isMatchingCsrfToken(
+  providedToken: string,
+  expectedToken: string
+) {
+  if (providedToken.length !== expectedToken.length) {
+    return false;
+  }
+
+  return timingSafeEqual(
+    Buffer.from(providedToken),
+    Buffer.from(expectedToken)
+  );
 }
