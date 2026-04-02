@@ -8,7 +8,7 @@ export interface BackendAppDefinition {
 
 export function createAppDefinition(): BackendAppDefinition {
   return {
-    appName: 'driveadmin-backend',
+    appName: 'mindonroad-backend',
     modules: registeredModules
   };
 }

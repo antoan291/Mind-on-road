@@ -88,7 +88,7 @@ def extract_ocr_lines(page_images: list[bytes], config: ExtractionConfig) -> lis
   ocr = _load_paddle_ocr(config)
   ocr_lines: list[OCRLine] = []
 
-  with TemporaryDirectory(prefix="driveadmin-ocr-") as temp_dir:
+  with TemporaryDirectory(prefix="mindonroad-ocr-") as temp_dir:
     temp_root = Path(temp_dir)
 
     for page_number, image_bytes in enumerate(page_images, start=1):

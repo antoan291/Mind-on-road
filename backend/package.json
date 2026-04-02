@@ -1,15 +1,39 @@
 {
-  "name": "driveadmin-backend",
+  "name": "mindonroad-backend",
   "version": "0.1.0",
   "private": true,
   "type": "commonjs",
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "cookie": "^1.1.1",
+    "cors": "^2.8.6",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.3.2",
+    "helmet": "^8.1.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.5.2",
+    "nodemon": "^3.1.10",
+    "prisma": "6.19.3",
+    "tsx": "^4.20.5",
+    "typescript": "5.6.3"
+  },
   "scripts": {
-    "start": "node dist/main.js",
-    "start:dev": "node --watch dist/main.js",
+    "start": "nodemon --watch src --ext ts,json --signal SIGTERM --exec \"node --env-file-if-exists=.env --import tsx ./src/main.ts\"",
+    "start:dev": "nodemon --watch src --ext ts,json --signal SIGTERM --exec \"node --env-file-if-exists=.env --import tsx ./src/main.ts\"",
+    "start:prod": "node --env-file-if-exists=.env dist/main.js",
     "build": "tsc -p tsconfig.build.json",
+    "db:bootstrap-owner": "tsx prisma/bootstrap-owner.ts",
+    "db:seed": "tsx prisma/seed.ts",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

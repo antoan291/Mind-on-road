@@ -106,7 +106,7 @@ export function AppLayout() {
                     className="text-xs"
                     style={{ color: "var(--text-tertiary)" }}
                   >
-                    DriveAdmin
+                    MindOnRoad
                   </div>
                 </div>
               </div>

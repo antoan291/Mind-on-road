@@ -1,10 +1,10 @@
-# MindOnRoad / DriveAdmin
+# MindOnRoad
 
 ## Архитектура на базата данни
 
 ## 1. Цел на документа
 
-Този документ описва препоръчителната database architecture за продукта MindOnRoad / DriveAdmin.
+Този документ описва препоръчителната database architecture за продукта MindOnRoad.
 
 Фокусът е върху:
 
@@ -140,12 +140,48 @@ Shared schema + `tenant_id` остава правилният модел и пр
 ### 5.2 Core domain
 
 - `students`
+- `student_enrollments`
 - `student_categories`
+- `student_user_links`
 - `parents`
 - `student_parent_links`
 - `instructors`
 - `vehicles`
 - `theory_groups`
+- `student_training_milestones`
+- `student_compliance_profiles`
+- `student_certification_records`
+
+### 5.2.1 Student portal access model
+
+The product must support student portal login, but student business records and login identities must remain separate concepts.
+
+Required direction:
+
+- `users` remain the authentication identities;
+- `students` remain the training and business records;
+- `student_user_links` connects a student record to a login identity;
+- student portal access is created automatically during student registration unless explicitly disabled by administration.
+
+Recommended fields in `student_user_links`:
+
+- `tenant_id`
+- `student_id`
+- `user_id`
+- `username`
+- `portal_access_status`
+- `temporary_password_issued_at`
+- `must_change_password`
+- `created_by_user_id`
+- `activated_at`
+
+Student portal bootstrap rule:
+
+- when administration creates a new student, the student's phone number becomes the initial username;
+- the system generates a random temporary password;
+- the temporary password must be changed on first successful login;
+- the temporary password must never be stored in plain text in the database;
+- the username must be stored in normalized phone format.
 
 ### 5.3 Scheduling domain
 
@@ -167,10 +203,30 @@ Shared schema + `tenant_id` остава правилният модел и пр
 
 - `payment_plans`
 - `payments`
+- `receivable_installments`
 - `payment_allocations`
 - `invoices`
 - `invoice_items`
 - `payment_invoice_links`
+
+### 5.4.1 Reporting and ledger distinction
+
+Legacy school finance exports show a critical distinction that must exist in the product model:
+
+- `payments` are not enough;
+- the school also needs mixed financial reporting rows that include expenses, fees, transfers, and corrections.
+
+Because of that, billing and reporting must separately support:
+
+- `payments`
+- `receivable_installments`
+- `ledger_entries`
+- `ledger_entry_allocations`
+- `ledger_reporting_periods`
+
+`payments` should represent real payment events.
+
+`ledger_entries` should represent the broader accounting and reporting movements that appear in legacy weekly operational reports.
 
 ### 5.5 Documents domain
 
@@ -258,6 +314,77 @@ Shared schema + `tenant_id` остава правилният модел и пр
 `theory_attendance` трябва да пази:
 
 - student;
+
+## 15. Legacy register and finance fields discovered later
+
+The legacy workbooks [register-silvi-ins.xlsx](/home/ad/Documents/work/Mind-on-road/docs/register-silvi-ins.xlsx) and [otchet-vili.xlsx](/home/ad/Documents/work/Mind-on-road/docs/otchet-vili.xlsx) revealed additional required structures.
+
+They are reconciled in [legacy_school_data_reconciliation.md](/home/ad/Documents/work/Mind-on-road/docs/legacy_school_data_reconciliation.md), but the database consequence is explicit here.
+
+### 15.1 Student enrollment and milestone fields
+
+The product should explicitly support:
+
+- `training_start_date`
+- `training_group_code`
+- `assigned_instructor_id`
+- `course_outcome`
+- `withdrawal_reason`
+- `theory_completed_at`
+- `theory_exam_at`
+- `practical_completed_at`
+- `practical_exam_at`
+- `extra_hours_count`
+- `extra_hours_unit_price`
+
+These should not be squeezed into generic notes.
+
+### 15.2 Student compliance and certification fields
+
+The product should explicitly support:
+
+- `national_id`
+- `education_level`
+- `birth_place_city`
+- `birth_place_municipality`
+- `birth_place_region`
+- `address_text`
+- `insurance_status`
+- `record_mode`
+- `training_diary_number`
+- `protocol_number`
+- `protocol_date`
+- `certificate_issued_at`
+- `cpo_completion_status`
+- `theory_only_flag`
+- `without_cpo_flag`
+
+These fields matter for regulation, school administration, and evidence trails.
+
+### 15.3 Reporting-ledger fields
+
+The product should explicitly support financial rows with:
+
+- `entry_type`
+- `entry_classification`
+- `counterparty_name`
+- `document_reference`
+- `original_currency`
+- `original_amount`
+- `base_currency_amount`
+- `entry_note`
+- `reporting_period_start`
+- `reporting_period_end`
+
+This structure is required because the legacy weekly reports mix:
+
+- student payments;
+- theory and practice fees;
+- fuel and operational expenses;
+- transfers and corrections;
+- cash-box summaries.
+
+This is broader than a simple payments table.
 - lecture;
 - attendance_status;
 - marked_by;

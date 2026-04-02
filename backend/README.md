@@ -67,3 +67,45 @@
 2. Решава се дали е command flow, query flow, background job или integration.
 3. Кодът се поставя в правилния layer, а не в най-близкия удобен файл.
 4. Ако структурата се променя, промяната се записва в `core/logs/version_journal.md`.
+
+## Local Docker stack
+
+За локално backend тестване проектът поддържа Docker Compose stack в [docker-compose.yml](/home/ad/Documents/work/Mind-on-road/backend/docker-compose.yml), който вече стартира и самия backend контейнер.
+
+Услуги:
+
+- `backend` на `localhost:3001`
+- `postgres` на `localhost:5433`
+- `redis` на `localhost:6379`
+- `minio` на `localhost:9000`
+- `minio console` на `localhost:9001`
+
+Старт:
+
+```bash
+cd backend
+cp .env.example .env
+docker compose up -d
+```
+
+Compose автоматично свързва backend контейнера към вътрешните Docker hostnames:
+
+- `postgres`
+- `redis`
+- `minio`
+
+Спиране:
+
+```bash
+cd backend
+docker compose down
+```
+
+Ребилд след промени по backend кода:
+
+```bash
+cd backend
+docker compose up -d --build backend
+```
+
+В `.env.example` са зададени локалните credentials за хост машина. PostgreSQL е публикуван на `localhost:5433`, за да не конфликтира с вече зает `5432` порт. При Docker Compose `DATABASE_URL`, `DIRECT_DATABASE_URL`, `REDIS_URL` и `OBJECT_STORAGE_ENDPOINT` се override-ват автоматично с вътрешните service hostnames. За реална работа създай `.env` от `.env.example` и коригирай секретите при нужда.

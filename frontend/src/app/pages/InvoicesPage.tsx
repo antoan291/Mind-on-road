@@ -1267,7 +1267,7 @@ function InvoiceDetailDrawer({
                 {/* Company Header */}
                 <div className="mb-6 pb-4 border-b border-gray-200">
                   <h3 className="text-lg font-bold mb-1" style={{ color: '#6366F1' }}>
-                    КурсантAI / DriveAdmin
+                    КурсантAI / MindOnRoad
                   </h3>
                   <p className="text-xs text-gray-600">
                     Автошкола за обучение на водачи
@@ -1970,7 +1970,6 @@ function CreateInvoiceModal({
     </>
   );
 }
-
 
 
 

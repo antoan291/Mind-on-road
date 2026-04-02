@@ -1,4 +1,4 @@
-# MindOnRoad / DriveAdmin - Архитектурна Документация
+# MindOnRoad - Архитектурна Документация
 
 ## Obsidian Navigator Design System
 
