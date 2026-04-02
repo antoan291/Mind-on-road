@@ -8,6 +8,7 @@ import {
   Menu,
   Search,
   X,
+  Wallet,
   Bot,
 } from "lucide-react";
 import { useState } from "react";
@@ -196,6 +197,12 @@ export function MobileLayout() {
               to="/payments"
               label="Плащания"
               icon={<CreditCard size={20} />}
+              onClick={() => setMenuOpen(false)}
+            />
+            <MenuLink
+              to="/expenses"
+              label="Разходи"
+              icon={<Wallet size={20} />}
               onClick={() => setMenuOpen(false)}
             />
             <MenuLink

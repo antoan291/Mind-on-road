@@ -22,6 +22,7 @@ import {
   MessageSquare,
   BarChart3,
   ChevronLeft,
+  Wallet,
   Bot,
 } from "lucide-react";
 
@@ -47,6 +48,7 @@ export function AppLayout() {
   const navigationItems = [
     { path: "/", icon: LayoutDashboard, label: "Табло" },
     { path: "/payments", icon: CreditCard, label: "Плащания" },
+    { path: "/expenses", icon: Wallet, label: "Разходи" },
     { path: "/students", icon: Users, label: "Курсисти" },
     { path: "/invoices", icon: FileText, label: "Фактури" },
     { path: "/practical-lessons", icon: Car, label: "Практика" },

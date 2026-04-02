@@ -10,10 +10,12 @@ import { ResponsiveTheoryPage } from "./pages/ResponsiveTheoryPage";
 import { TheoryGroupPage } from "./pages/TheoryGroupPage";
 import { ResponsiveDocumentsPage } from "./pages/ResponsiveDocumentsPage";
 import { PaymentsPage } from "./pages/PaymentsPage";
+import { ExpensesPage } from "./pages/ExpensesPage";
 import { InvoicesPage } from "./pages/InvoicesPage";
 import { AICenterPage } from "./pages/AICenterPage";
 import { AICenterChatPage } from "./pages/AICenterChatPage";
 import { InstructorsPage } from "./pages/secondary/InstructorsPage";
+import { InstructorDetailPage } from "./pages/secondary/InstructorDetailPage";
 import { VehiclesPage } from "./pages/secondary/VehiclesPage";
 import { RoadSheetsPage } from "./pages/secondary/RoadSheetsPage";
 import { NotificationsPage } from "./pages/secondary/NotificationsPage";
@@ -31,12 +33,14 @@ export const router = createBrowserRouter([
       { path: "students/:id", Component: ResponsiveStudentDetailPage },
       { path: "students/:id/edit", Component: ResponsiveStudentFormPage },
       { path: "payments", Component: PaymentsPage },
+      { path: "expenses", Component: ExpensesPage },
       { path: "invoices", Component: InvoicesPage },
       { path: "practical-lessons", Component: ResponsivePracticalLessonsPage },
       { path: "theory", Component: ResponsiveTheoryPage },
       { path: "theory/:id", Component: TheoryGroupPage },
       { path: "schedule", Component: ResponsiveSchedulePage },
       { path: "instructors", Component: InstructorsPage },
+      { path: "instructors/:id", Component: InstructorDetailPage },
       { path: "vehicles", Component: VehiclesPage },
       { path: "documents", Component: ResponsiveDocumentsPage },
       { path: "road-sheets", Component: RoadSheetsPage },
@@ -48,4 +52,5 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
+
 
