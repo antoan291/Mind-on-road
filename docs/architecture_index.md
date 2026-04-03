@@ -17,17 +17,18 @@ For a new person joining the project, the recommended reading order is:
 
 1. [strict_project_documentation.md](/C:/AD/work/My%20company/school/docs/strict_project_documentation.md)
 2. [user_roles_matrix.md](/C:/AD/work/My%20company/school/docs/user_roles_matrix.md)
-3. [system_architecture.md](/C:/AD/work/My%20company/school/docs/system_architecture.md)
-4. [tech_stack_architecture.md](/C:/AD/work/My%20company/school/docs/tech_stack_architecture.md)
-5. [database_architecture.md](/C:/AD/work/My%20company/school/docs/database_architecture.md)
-6. [legacy_school_data_reconciliation.md](/home/ad/Documents/work/Mind-on-road/docs/legacy_school_data_reconciliation.md)
-7. [security_architecture.md](/C:/AD/work/My%20company/school/docs/security_architecture.md)
-8. [backup_and_disaster_recovery.md](/C:/AD/work/My%20company/school/docs/backup_and_disaster_recovery.md)
-9. [platform_admin_feature_management.md](/C:/AD/work/My%20company/school/docs/platform_admin_feature_management.md)
-10. [automation_strategy.md](/C:/AD/work/My%20company/school/docs/automation_strategy.md)
-11. [automation_research_and_regulatory_notes.md](/C:/AD/work/My%20company/school/docs/automation_research_and_regulatory_notes.md)
-12. [development_execution_playbook.md](/C:/AD/work/My%20company/school/docs/development_execution_playbook.md)
-13. [design_prompts.md](/C:/AD/work/My%20company/school/docs/design_prompts.md)
+3. [business_plan.md](/C:/AD/work/My%20company/school/docs/business_plan.md)
+4. [system_architecture.md](/C:/AD/work/My%20company/school/docs/system_architecture.md)
+5. [tech_stack_architecture.md](/C:/AD/work/My%20company/school/docs/tech_stack_architecture.md)
+6. [database_architecture.md](/C:/AD/work/My%20company/school/docs/database_architecture.md)
+7. [legacy_school_data_reconciliation.md](/home/ad/Documents/work/Mind-on-road/docs/legacy_school_data_reconciliation.md)
+8. [security_architecture.md](/C:/AD/work/My%20company/school/docs/security_architecture.md)
+9. [backup_and_disaster_recovery.md](/C:/AD/work/My%20company/school/docs/backup_and_disaster_recovery.md)
+10. [platform_admin_feature_management.md](/C:/AD/work/My%20company/school/docs/platform_admin_feature_management.md)
+11. [automation_strategy.md](/C:/AD/work/My%20company/school/docs/automation_strategy.md)
+12. [automation_research_and_regulatory_notes.md](/C:/AD/work/My%20company/school/docs/automation_research_and_regulatory_notes.md)
+13. [development_execution_playbook.md](/C:/AD/work/My%20company/school/docs/development_execution_playbook.md)
+14. [design_prompts.md](/C:/AD/work/My%20company/school/docs/design_prompts.md)
 
 ## 3. Official Source-of-Truth Documents
 
@@ -38,6 +39,9 @@ For a new person joining the project, the recommended reading order is:
 
 - [user_roles_matrix.md](/C:/AD/work/My%20company/school/docs/user_roles_matrix.md)
   Defines the roles, permissions, and tenant-scoped access model.
+
+- [business_plan.md](/C:/AD/work/My%20company/school/docs/business_plan.md)
+  Defines the business vision, customer value, product scope, monetization logic, rollout model, and long-term product direction.
 
 ### 3.2 Architecture
 
