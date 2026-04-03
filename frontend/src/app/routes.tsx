@@ -1,6 +1,7 @@
 ﻿import { createBrowserRouter } from "react-router";
 import { ResponsiveLayout } from "./components/layouts/ResponsiveLayout";
 import { DashboardResponsivePage } from "./pages/DashboardResponsivePage";
+import { LoginPage } from "./pages/LoginPage";
 import { ResponsiveStudentsPage } from "./pages/ResponsiveStudentsPage";
 import { ResponsiveStudentDetailPage } from "./pages/ResponsiveStudentDetailPage";
 import { ResponsiveStudentFormPage } from "./pages/ResponsiveStudentFormPage";
@@ -21,6 +22,10 @@ import { ReportsPage } from "./pages/secondary/ReportsPage";
 import { SettingsPage } from "./pages/secondary/SettingsPage";
 
 export const router = createBrowserRouter([
+  {
+    path: "/login",
+    Component: LoginPage,
+  },
   {
     path: "/",
     Component: ResponsiveLayout,
@@ -48,4 +53,3 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
-
