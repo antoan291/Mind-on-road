@@ -24,19 +24,24 @@ export function StudentFormPage() {
     
     // Training Information
     category: '',
+    studentType: '',
+    previousLicenseCategory: '',
     instructor: '',
     theoryGroup: '',
     startDate: '',
+    expectedArrivalDate: '',
     groupNumber: '',
     recordMode: '',
     insuranceStatus: '',
     extraHours: '',
+    failedExamAttempts: '',
     courseOutcome: '',
     
     // Parent/Guardian
     parentName: '',
     parentPhone: '',
     parentEmail: '',
+    parentFeedbackEnabled: '',
     
     // Lessons & Payments
     paidLessons: '',
@@ -197,6 +202,19 @@ export function StudentFormPage() {
             />
 
             <SelectField
+              label="Тип курсист"
+              value={formData.studentType}
+              onChange={(value) => setFormData({ ...formData, studentType: value })}
+              options={[
+                { value: '', label: 'Изберете тип курсист...' },
+                { value: 'standard', label: 'Стандартен курсист' },
+                { value: 'licensed-manual-hours', label: 'Курсист с книжка · ръчно добавяне на часове' },
+              ]}
+              icon={<User size={18} />}
+              required
+            />
+
+            <SelectField
               label="Инструктор"
               value={formData.instructor}
               onChange={(value) => setFormData({ ...formData, instructor: value })}
@@ -237,6 +255,16 @@ export function StudentFormPage() {
             />
 
             <InputField
+              label="Дата на идване при ранно записване"
+              type="text"
+              placeholder="ДД.ММ.ГГГГ"
+              value={formData.expectedArrivalDate}
+              onChange={(value) => setFormData({ ...formData, expectedArrivalDate: value })}
+              icon={<Calendar size={18} />}
+              helpText="10 дни преди тази дата системата трябва да напомни на админ."
+            />
+
+            <InputField
               label="Номер на група"
               placeholder="B-2024-03"
               value={formData.groupNumber}
@@ -255,6 +283,15 @@ export function StudentFormPage() {
                 { value: 'hybrid', label: 'Хартиен и електронен' },
               ]}
               icon={<FileText size={18} />}
+            />
+
+            <InputField
+              label="Предходна категория книжка"
+              placeholder="Например B, A1..."
+              value={formData.previousLicenseCategory}
+              onChange={(value) => setFormData({ ...formData, previousLicenseCategory: value })}
+              icon={<Car size={18} />}
+              helpText="Ползва се при курсисти, които вече имат книжка."
             />
 
             <SelectField
@@ -277,6 +314,15 @@ export function StudentFormPage() {
               value={formData.extraHours}
               onChange={(value) => setFormData({ ...formData, extraHours: value })}
               helpText="Извън стандартния пакет по регистър"
+            />
+
+            <InputField
+              label="Брой скъсвания на изпит"
+              type="number"
+              placeholder="0"
+              value={formData.failedExamAttempts}
+              onChange={(value) => setFormData({ ...formData, failedExamAttempts: value })}
+              helpText="Ако курсистът е скъсан, отбележете броя опити и задайте допълнителни часове."
             />
 
             <SelectField
@@ -360,6 +406,20 @@ export function StudentFormPage() {
                 placeholder="email@example.com"
                 value={formData.parentEmail}
                 onChange={(value) => setFormData({ ...formData, parentEmail: value })}
+                icon={<Mail size={18} />}
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <SelectField
+                label="Изпращане на отчет към родител"
+                value={formData.parentFeedbackEnabled}
+                onChange={(value) => setFormData({ ...formData, parentFeedbackEnabled: value })}
+                options={[
+                  { value: '', label: 'Изберете настройка...' },
+                  { value: 'enabled', label: 'Разрешено след урок по избор на инструктор/админ' },
+                  { value: 'disabled', label: 'Забранено' },
+                ]}
                 icon={<Mail size={18} />}
               />
             </div>

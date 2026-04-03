@@ -1,130 +1,186 @@
-﻿import { CircleDollarSign, ReceiptText, TrendingDown, TrendingUp } from 'lucide-react';
+﻿import { BarChart3, CalendarDays, CheckCircle2, Plus, TrendingDown, TrendingUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { Button } from '../../components/ui-system/Button';
 import { PageHeader } from '../../components/ui-system/PageHeader';
-import { DataTableLayout, MetricCard, MetricGrid, PageSection, Panel } from './secondaryShared';
-import { formatDashboardMoney, reportEntries } from './reportingData';
+import { StatusBadge } from '../../components/ui-system/StatusBadge';
+import { DataTableLayout, MetricCard, MetricGrid, PageSection, Panel, type StatusTone } from './secondaryShared';
+import { formatDashboardMoney, reportEntries, type DashboardReportEntry } from './reportingData';
 
-type TransactionType = 'income' | 'expense';
 type PeriodFilter = 'days' | 'months' | 'years';
-type TypeFilter = 'all' | TransactionType;
-type PaymentMethod = 'cash' | 'bank' | 'card' | 'pos';
-type EntryStatus = Extract<StatusTone, 'success' | 'warning' | 'error'>;
-type ReportEntry = { id: string; title: string; type: TransactionType; category: string; amount: number; date: string; source: string; paymentMethod: PaymentMethod; status: EntryStatus; documentReference: string; counterparty: string; note: string; currency: 'BGN' | 'EUR' };
-type RecordFormState = { type: TransactionType; title: string; category: string; amount: string; date: string; source: string; paymentMethod: PaymentMethod; status: EntryStatus };
-type ButtonProps = { label: string; onClick: () => void; icon?: ReactNode; active?: boolean; primary?: boolean; disabled?: boolean };
-const PAGE_SIZE = 20;
+type TypeFilter = 'all' | DashboardReportEntry['type'];
+
 const todayIso = new Date().toISOString().slice(0, 10);
 const currentMonth = todayIso.slice(0, 7);
 const currentYear = todayIso.slice(0, 4);
-const fieldStyle = { background: 'var(--bg-card-elevated)', color: 'var(--text-primary)', border: '1px solid var(--ghost-border)' } as const;
-const typeLabels: Record<TypeFilter, string> = { all: 'Всички', income: 'Приходи', expense: 'Разходи' };
-const paymentLabels: Record<PaymentMethod, string> = { cash: 'В брой', bank: 'Банков превод', card: 'Карта', pos: 'POS терминал' };
-const periodOptions: { value: PeriodFilter; label: string }[] = [{ value: 'days', label: 'Конкретен ден' }, { value: 'months', label: 'Цял месец' }, { value: 'years', label: 'Цяла година' }];
-const statusOptions: { value: EntryStatus; label: string }[] = [{ value: 'success', label: 'Потвърден' }, { value: 'warning', label: 'Очаква' }, { value: 'error', label: 'Просрочен' }];
-const defaultFormState: RecordFormState = { type: 'income', title: '', category: '', amount: '', date: todayIso, source: '', paymentMethod: 'cash', status: 'success' };
-function formatMoney(amount: number) { return amount.toLocaleString('bg-BG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' лв'; }
-function matchesPeriod(date: string, filter: PeriodFilter, selectedDate: string, selectedMonth: string, selectedYear: string) { if (filter === 'days') return date === selectedDate; if (filter === 'months') return date.startsWith(selectedMonth); return date.startsWith(selectedYear); }
-function periodLabel(filter: PeriodFilter, selectedDate: string, selectedMonth: string, selectedYear: string) { if (filter === 'days') return new Date(selectedDate).toLocaleDateString('bg-BG'); if (filter === 'months') { const parts = selectedMonth.split('-'); return parts[1] + '.' + parts[0]; } return selectedYear; }
-function ActionButton({ label, onClick, icon, active = false, primary = false, disabled = false }: ButtonProps) { return <button type='button' onClick={onClick} disabled={disabled} className='inline-flex h-11 items-center justify-center gap-2 rounded-2xl px-4 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-40' style={{ background: primary ? 'linear-gradient(135deg, rgba(99, 102, 241, 0.95), rgba(96, 99, 238, 0.9))' : active ? 'rgba(99, 102, 241, 0.16)' : 'rgba(255,255,255,0.04)', color: 'var(--text-primary)', border: active || primary ? '1px solid rgba(99, 102, 241, 0.28)' : '1px solid var(--ghost-border)', boxShadow: primary ? '0 12px 24px rgba(99, 102, 241, 0.22)' : 'none' }}>{icon}{label}</button>; }
-function Field({ label, children }: { label: string; children: ReactNode }) { return <div className='space-y-2'><label className='text-xs uppercase tracking-[0.18em]' style={{ color: 'var(--text-tertiary)' }}>{label}</label>{children}</div>; }
+
+const typeOptions: { value: TypeFilter; label: string }[] = [
+  { value: 'all', label: 'Всички' },
+  { value: 'income', label: 'Приходи' },
+  { value: 'expense', label: 'Разходи' },
+  { value: 'friend-vat-expense', label: 'ДДС от приятели' },
+];
+
+const periodOptions: { value: PeriodFilter; label: string }[] = [
+  { value: 'days', label: 'Конкретен ден' },
+  { value: 'months', label: 'Цял месец' },
+  { value: 'years', label: 'Цяла година' },
+];
+
+const paymentLabels: Record<DashboardReportEntry['paymentMethod'], string> = {
+  cash: 'В брой',
+  bank: 'Банков превод',
+  card: 'Карта',
+  pos: 'POS терминал',
+};
+
+function matchesPeriod(date: string, filter: PeriodFilter, selectedDate: string, selectedMonth: string, selectedYear: string) {
+  if (filter === 'days') return date === selectedDate;
+  if (filter === 'months') return date.startsWith(selectedMonth);
+  return date.startsWith(selectedYear);
+}
+
+function getPeriodLabel(filter: PeriodFilter, selectedDate: string, selectedMonth: string, selectedYear: string) {
+  if (filter === 'days') return new Date(selectedDate).toLocaleDateString('bg-BG');
+  if (filter === 'months') {
+    const [year, month] = selectedMonth.split('-');
+    return `${month}.${year}`;
+  }
+  return selectedYear;
+}
+
 export function ReportsPage() {
-  const [entries, setEntries] = useState<ReportEntry[]>(baseEntries);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('months');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [selectedDate, setSelectedDate] = useState(todayIso);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [page, setPage] = useState(1);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [formState, setFormState] = useState<RecordFormState>(defaultFormState);
-  const scopedEntries = useMemo(() => entries.filter((entry) => matchesPeriod(entry.date, periodFilter, selectedDate, selectedMonth, selectedYear)), [entries, periodFilter, selectedDate, selectedMonth, selectedYear]);
-  const filteredEntries = useMemo(() => scopedEntries.filter((entry) => typeFilter === 'all' ? true : entry.type === typeFilter), [scopedEntries, typeFilter]);
-  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / PAGE_SIZE));
-  const currentPageValue = Math.min(page, totalPages);
-  const pagedEntries = useMemo(() => filteredEntries.slice((currentPageValue - 1) * PAGE_SIZE, currentPageValue * PAGE_SIZE), [currentPageValue, filteredEntries]);
-  const income = scopedEntries.filter((entry) => entry.type === 'income').reduce((sum, entry) => sum + entry.amount, 0);
-  const expenses = scopedEntries.filter((entry) => entry.type === 'expense').reduce((sum, entry) => sum + entry.amount, 0);
-  const result = income - expenses;
 
-  const categoryBreakdown = Array.from(
-    scopedEntries.reduce((map, entry) => {
-      const current = map.get(entry.category) ?? 0;
-      map.set(entry.category, current + entry.amount);
-      return map;
-    }, new Map<string, number>()),
-  ).sort((a, b) => b[1] - a[1]);
+  const filteredEntries = useMemo(
+    () =>
+      reportEntries.filter((entry) => {
+        const periodMatch = matchesPeriod(entry.date, periodFilter, selectedDate, selectedMonth, selectedYear);
+        const typeMatch = typeFilter === 'all' || entry.type === typeFilter;
+        return periodMatch && typeMatch;
+      }),
+    [periodFilter, selectedDate, selectedMonth, selectedYear, typeFilter],
+  );
 
-  const monthlySummary = [
-    { label: 'Януари 2026', income: reportEntries.filter((entry) => entry.type === 'income' && entry.date.startsWith('2026-01')).reduce((sum, entry) => sum + entry.amount, 0), expenses: reportEntries.filter((entry) => entry.type === 'expense' && entry.date.startsWith('2026-01')).reduce((sum, entry) => sum + entry.amount, 0) },
-    { label: 'Февруари 2026', income: reportEntries.filter((entry) => entry.type === 'income' && entry.date.startsWith('2026-02')).reduce((sum, entry) => sum + entry.amount, 0), expenses: reportEntries.filter((entry) => entry.type === 'expense' && entry.date.startsWith('2026-02')).reduce((sum, entry) => sum + entry.amount, 0) },
-    { label: 'Март 2026', income: reportEntries.filter((entry) => entry.type === 'income' && entry.date.startsWith('2026-03')).reduce((sum, entry) => sum + entry.amount, 0), expenses: reportEntries.filter((entry) => entry.type === 'expense' && entry.date.startsWith('2026-03')).reduce((sum, entry) => sum + entry.amount, 0) },
-  ];
+  const income = filteredEntries
+    .filter((entry) => entry.type === 'income')
+    .reduce((sum, entry) => sum + entry.amount, 0);
+  const realExpenses = filteredEntries
+    .filter((entry) => entry.type === 'expense' && entry.affectsOperationalExpense !== false)
+    .reduce((sum, entry) => sum + entry.amount, 0);
+  const friendVat = filteredEntries
+    .filter((entry) => entry.type === 'friend-vat-expense')
+    .reduce((sum, entry) => sum + (entry.vatAmount ?? 0), 0);
+  const result = income - realExpenses;
 
-  const periodLabel = periodFilter === 'month' ? 'текущия месец' : periodFilter === 'quarter' ? 'текущото тримесечие' : 'текущата година';
-  const resultLabel = result >= 0 ? 'Печалба' : 'Загуба';
-  const resultColor = result >= 0 ? 'var(--status-success)' : 'var(--status-error)';
-  const openDialog = () => { setFormState(defaultFormState); setDialogOpen(true); };
-  const closeDialog = () => { setDialogOpen(false); setFormState(defaultFormState); };
-  const goToToday = () => { setPeriodFilter('days'); setSelectedDate(todayIso); setSelectedMonth(currentMonth); setSelectedYear(currentYear); setPage(1); };
-  const updateForm = <K extends keyof RecordFormState>(key: K, value: RecordFormState[K]) => setFormState((current) => ({ ...current, [key]: value }));
-  const addRecord = () => {
-    const amount = Number(formState.amount.replace(',', '.'));
-    if (!formState.title.trim() || !formState.category.trim() || !formState.source.trim() || !formState.date || Number.isNaN(amount) || amount <= 0) return;
-    setEntries((current) => [{ id: 'entry-' + Date.now(), title: formState.title.trim(), type: formState.type, category: formState.category.trim(), amount, date: formState.date, source: formState.source.trim(), paymentMethod: formState.paymentMethod, status: formState.status }, ...current]);
-    setPage(1);
-    closeDialog();
-  };
-  return <div>
-    <PageHeader title='Отчети' description='Финансов преглед с по-лесни действия, бърз бутон за днешна дата и диалог за добавяне на нов запис.' breadcrumbs={[{ label: 'Начало' }, { label: 'Отчети' }]} />
-    <PageSection>
-      <div className='rounded-3xl px-6 py-5' style={{ background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(25, 37, 64, 0.92))', border: '1px solid var(--ghost-border)' }}><p className='text-xs uppercase tracking-[0.18em]' style={{ color: 'var(--text-tertiary)' }}>Финансов резултат</p><p className='mt-3 text-3xl font-semibold' style={{ color: resultColor }}>{resultLabel} {formatMoney(Math.abs(result))}</p><p className='mt-2 text-sm' style={{ color: 'var(--text-secondary)' }}>За {periodLabel(periodFilter, selectedDate, selectedMonth, selectedYear)}</p></div>
-      <MetricGrid>
-        <MetricCard icon={<TrendingUp size={18} />} label='Приходи' value={formatMoney(income)} detail='Постъпления за избрания период' tone='success' />
-        <MetricCard icon={<TrendingDown size={18} />} label='Разходи' value={formatMoney(expenses)} detail='Разходи за избрания период' tone='warning' />
-        <MetricCard icon={<CheckCircle2 size={18} />} label='Записи' value={String(filteredEntries.length)} detail={'Страница ' + currentPageValue + ' от ' + totalPages} tone='info' />
-      </MetricGrid>
-      <Panel title='Управление на периода' subtitle='Изберете какво да видите, върнете се към днес или добавете нов запис с един ясен бутон.'>
-        <div className='space-y-5'>
-          <div className='flex flex-wrap items-center gap-3'><ActionButton label='Днес' icon={<CalendarDays size={16} />} onClick={goToToday} /><ActionButton label='Добави запис' icon={<Plus size={16} />} primary onClick={openDialog} /></div>
-          <div className='grid gap-4 lg:grid-cols-[minmax(220px,260px)_minmax(240px,1fr)]'>
-            <Field label='Какво искате да видите'><select value={periodFilter} onChange={(event) => { setPeriodFilter(event.target.value as PeriodFilter); setPage(1); }} className='h-12 w-full px-4 text-sm outline-none transition-all'>{periodOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></Field>
-            <Field label='Избран период'>{periodFilter === 'days' ? <input type='date' value={selectedDate} onChange={(event) => { setSelectedDate(event.target.value); setPage(1); }} className='h-12 w-full px-4 text-sm outline-none transition-all' style={fieldStyle} /> : periodFilter === 'months' ? <input type='month' value={selectedMonth} onChange={(event) => { setSelectedMonth(event.target.value); setPage(1); }} className='h-12 w-full px-4 text-sm outline-none transition-all' style={fieldStyle} /> : <input type='number' min='2020' max='2035' value={selectedYear} onChange={(event) => { setSelectedYear(event.target.value); setPage(1); }} className='h-12 w-full px-4 text-sm outline-none transition-all' style={fieldStyle} />}</Field>
+  return (
+    <div>
+      <PageHeader
+        title="Отчети"
+        description="Финансов преглед с период, тип запис и отделна видимост за ДДС от приятелски документи."
+        breadcrumbs={[{ label: 'Начало' }, { label: 'Отчети' }]}
+        actions={
+          <Button variant="primary" icon={<Plus size={18} />}>
+            Добави запис
+          </Button>
+        }
+      />
+
+      <PageSection>
+        <MetricGrid>
+          <MetricCard icon={<TrendingUp size={18} />} label="Приходи" value={formatDashboardMoney(income)} detail="Постъпления за избрания период" tone="success" />
+          <MetricCard icon={<TrendingDown size={18} />} label="Реални разходи" value={formatDashboardMoney(realExpenses)} detail="Без приятелски ДДС редове" tone="warning" />
+          <MetricCard icon={<BarChart3 size={18} />} label={result >= 0 ? 'Печалба' : 'Загуба'} value={formatDashboardMoney(Math.abs(result))} detail={`За ${getPeriodLabel(periodFilter, selectedDate, selectedMonth, selectedYear)}`} tone={result >= 0 ? 'success' : 'error'} />
+          <MetricCard icon={<CheckCircle2 size={18} />} label="ДДС от приятели" value={formatDashboardMoney(friendVat)} detail="Само данъчна калкулация" tone="info" />
+        </MetricGrid>
+
+        <Panel title="Филтри" subtitle="Изберете период и тип записи. Резултатите отдолу се обновяват веднага.">
+          <div className="grid gap-4 lg:grid-cols-3">
+            <select
+              value={periodFilter}
+              onChange={(event) => setPeriodFilter(event.target.value as PeriodFilter)}
+              className="h-12 rounded-2xl px-4 text-sm outline-none"
+              style={{ background: 'var(--bg-card-elevated)', color: 'var(--text-primary)', border: '1px solid var(--ghost-border)' }}
+            >
+              {periodOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+
+            {periodFilter === 'days' && (
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(event) => setSelectedDate(event.target.value)}
+                className="h-12 rounded-2xl px-4 text-sm outline-none"
+                style={{ background: 'var(--bg-card-elevated)', color: 'var(--text-primary)', border: '1px solid var(--ghost-border)' }}
+              />
+            )}
+
+            {periodFilter === 'months' && (
+              <input
+                type="month"
+                value={selectedMonth}
+                onChange={(event) => setSelectedMonth(event.target.value)}
+                className="h-12 rounded-2xl px-4 text-sm outline-none"
+                style={{ background: 'var(--bg-card-elevated)', color: 'var(--text-primary)', border: '1px solid var(--ghost-border)' }}
+              />
+            )}
+
+            {periodFilter === 'years' && (
+              <input
+                type="number"
+                min="2020"
+                max="2035"
+                value={selectedYear}
+                onChange={(event) => setSelectedYear(event.target.value)}
+                className="h-12 rounded-2xl px-4 text-sm outline-none"
+                style={{ background: 'var(--bg-card-elevated)', color: 'var(--text-primary)', border: '1px solid var(--ghost-border)' }}
+              />
+            )}
+
+            <select
+              value={typeFilter}
+              onChange={(event) => setTypeFilter(event.target.value as TypeFilter)}
+              className="h-12 rounded-2xl px-4 text-sm outline-none"
+              style={{ background: 'var(--bg-card-elevated)', color: 'var(--text-primary)', border: '1px solid var(--ghost-border)' }}
+            >
+              {typeOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
         </Panel>
 
-        <div className="rounded-3xl px-6 py-5" style={{ background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.94), rgba(25, 37, 64, 0.92))', border: '1px solid var(--ghost-border)' }}>
-          <p className="text-xs uppercase tracking-[0.18em]" style={{ color: 'var(--text-tertiary)' }}>Финансов резултат</p>
-          <p className="mt-3 text-3xl font-semibold" style={{ color: resultColor }}>{resultLabel} {formatDashboardMoney(Math.abs(result))}</p>
-          <p className="mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>За {periodLabel}</p>
-        </div>
-      </Panel>
-      <Panel title='Финансови записи' subtitle='20 записа на страница, ясен филтър по вид и лесно добавяне на нови приходи и разходи.'>
-        <DataTableLayout columns={['Запис', 'Тип', 'Категория', 'Сума', 'Дата', 'Начин на плащане', 'Източник', 'Статус']} rows={pagedEntries.map((entry) => [entry.title, entry.type === 'income' ? 'Приход' : 'Разход', entry.category, formatMoney(entry.amount), new Date(entry.date).toLocaleDateString('bg-BG'), paymentLabels[entry.paymentMethod], entry.source, <StatusBadge key={entry.id} status={entry.status}>{statusLabel(entry.status)}</StatusBadge>])} />
-        <div className='mt-5 flex flex-wrap items-center justify-between gap-3'><p className='text-sm' style={{ color: 'var(--text-secondary)' }}>Показани {pagedEntries.length} от {filteredEntries.length} записа</p><div className='flex flex-wrap items-center gap-2'><ActionButton label='‹' disabled={currentPageValue === 1} onClick={() => setPage((value) => Math.max(1, value - 1))} />{pages.map((value) => <ActionButton key={value} label={String(value)} active={value === currentPageValue} onClick={() => setPage(value)} />)}<ActionButton label='›' disabled={currentPageValue === totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))} /></div></div>
-      </Panel>
-    </PageSection>
-    <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) setFormState(defaultFormState); }}>
-
-      <DialogContent className='max-w-2xl border-none p-0' style={{ background: 'linear-gradient(180deg, rgba(25, 37, 64, 0.98), rgba(15, 23, 42, 0.98))', boxShadow: '0 24px 60px rgba(0, 0, 0, 0.45)' }}>
-        <div className='p-6'><DialogHeader><DialogTitle style={{ color: 'var(--text-primary)' }}>Добави запис</DialogTitle><DialogDescription style={{ color: 'var(--text-secondary)' }}>Добавете нов приход или разход, който веднага ще се покаже в таблицата.</DialogDescription></DialogHeader>
-        <div className='mt-6 grid gap-4 md:grid-cols-2'>
-          <Field label='Тип запис'><select value={formState.type} onChange={(event) => updateForm('type', event.target.value as TransactionType)} className='h-12 w-full px-4 text-sm outline-none transition-all'><option value='income'>Приход</option><option value='expense'>Разход</option></select></Field>
-          <Field label='Стойност'><input type='number' min='0' step='0.01' value={formState.amount} onChange={(event) => updateForm('amount', event.target.value)} className='h-12 w-full px-4 text-sm outline-none transition-all' style={fieldStyle} placeholder='Например 1250.00' /></Field>
-          <Field label='Запис'><input type='text' value={formState.title} onChange={(event) => updateForm('title', event.target.value)} className='h-12 w-full px-4 text-sm outline-none transition-all' style={fieldStyle} placeholder='Например Курс категория B' /></Field>
-          <Field label='Категория'><input type='text' value={formState.category} onChange={(event) => updateForm('category', event.target.value)} className='h-12 w-full px-4 text-sm outline-none transition-all' style={fieldStyle} placeholder='Например Такси или Поддръжка' /></Field>
-          <Field label='Дата'><input type='date' value={formState.date} onChange={(event) => updateForm('date', event.target.value)} className='h-12 w-full px-4 text-sm outline-none transition-all' style={fieldStyle} /></Field>
-          <Field label='Начин на плащане'><select value={formState.paymentMethod} onChange={(event) => updateForm('paymentMethod', event.target.value as PaymentMethod)} className='h-12 w-full px-4 text-sm outline-none transition-all'>{Object.entries(paymentLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></Field>
-          <Field label='Източник / платец'><input type='text' value={formState.source} onChange={(event) => updateForm('source', event.target.value)} className='h-12 w-full px-4 text-sm outline-none transition-all' style={fieldStyle} placeholder='Например Мария Иванова или Fuel Express' /></Field>
-          <Field label='Статус'><select value={formState.status} onChange={(event) => updateForm('status', event.target.value as EntryStatus)} className='h-12 w-full px-4 text-sm outline-none transition-all'>{statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></Field>
-        </div>
-        <Panel title="Последни финансови движения" subtitle="Read-only поглед върху последните записи, които участват в отчетите. Ако трябва корекция, тя се прави в Плащания или Разходи.">
+        <Panel title="Финансови записи" subtitle="Таблицата показва приходи, реални разходи и ДДС редове от приятели с ясно маркиран финансов ефект.">
           <DataTableLayout
-            columns={['Дата', 'Запис', 'Тип', 'Източник', 'Сума']}
-            rows={scopedEntries.slice(0, 10).map((entry) => [new Date(entry.date).toLocaleDateString('bg-BG'), entry.title, entry.type === 'income' ? 'Приход' : 'Разход', entry.source, formatDashboardMoney(entry.amount)])}
+            columns={['Запис', 'Тип', 'Категория', 'Сума', 'Дата', 'Източник', 'Метод', 'Статус']}
+            rows={filteredEntries.map((entry) => [
+              entry.title,
+              entry.type === 'income'
+                ? 'Приход'
+                : entry.type === 'friend-vat-expense'
+                  ? 'ДДС от приятели'
+                  : 'Разход',
+              entry.category,
+              formatDashboardMoney(entry.amount),
+              new Date(entry.date).toLocaleDateString('bg-BG'),
+              entry.source,
+              paymentLabels[entry.paymentMethod],
+              <StatusBadge key={entry.id} status={entry.status as StatusTone}>
+                {entry.type === 'friend-vat-expense' ? 'Само ДДС' : entry.status === 'success' ? 'Изрядно' : entry.status === 'warning' ? 'Внимание' : 'Критично'}
+              </StatusBadge>,
+            ])}
           />
         </Panel>
       </PageSection>
     </div>
   );
 }
-

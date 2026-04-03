@@ -21,6 +21,8 @@ import { RoadSheetsPage } from "./pages/secondary/RoadSheetsPage";
 import { NotificationsPage } from "./pages/secondary/NotificationsPage";
 import { ReportsPage } from "./pages/secondary/ReportsPage";
 import { SettingsPage } from "./pages/secondary/SettingsPage";
+import { CandidatePacketsPage } from "./pages/secondary/CandidatePacketsPage";
+import { DeterminatorPage } from "./pages/secondary/DeterminatorPage";
 
 export const router = createBrowserRouter([
   {
@@ -43,6 +45,8 @@ export const router = createBrowserRouter([
       { path: "instructors/:id", Component: InstructorDetailPage },
       { path: "vehicles", Component: VehiclesPage },
       { path: "documents", Component: ResponsiveDocumentsPage },
+      { path: "candidates", Component: CandidatePacketsPage },
+      { path: "determinator", Component: DeterminatorPage },
       { path: "road-sheets", Component: RoadSheetsPage },
       { path: "notifications", Component: NotificationsPage },
       { path: "reports", Component: ReportsPage },
@@ -52,5 +56,4 @@ export const router = createBrowserRouter([
     ],
   },
 ]);
-
 

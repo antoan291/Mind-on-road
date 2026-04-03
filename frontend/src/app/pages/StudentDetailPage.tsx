@@ -23,52 +23,83 @@ import {
   MessageSquare,
   Image as ImageIcon,
   Plus,
+  Send,
+  BrainCircuit,
+  ShieldCheck,
+  TriangleAlert,
 } from "lucide-react";
+import {
+  determinatorSessions,
+  getStudentOperationalRecord,
+} from "../content/studentOperations";
 
 export function StudentDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const studentId = Number(id) || 1;
+  const studentRecord = getStudentOperationalRecord(studentId);
   const [activeTab, setActiveTab] = useState("overview");
+  const [parentReportStatus, setParentReportStatus] = useState(
+    studentRecord.latestParentFeedbackStatus,
+  );
 
   // Mock data - in real app, fetch based on id
   const student = {
-    id: 1,
-    name: "Петър Георгиев",
-    email: "petar.georgiev@example.com",
-    phone: "+359 888 123 456",
+    id: studentRecord.id,
+    name: studentRecord.name,
+    email: studentRecord.email,
+    phone: studentRecord.phone,
     address: "гр. София, ул. Витоша 15, ап. 7",
     birthDate: "15.05.1995",
-    idNumber: "9505151234",
-    educationLevel: "Средно",
-    category: "B",
-    instructor: "Георги Петров",
+    idNumber: studentRecord.nationalId,
+    educationLevel: studentRecord.educationLevel,
+    category: studentRecord.category,
+    instructor: studentRecord.instructor,
     instructorPhone: "+359 888 111 222",
-    groupNumber: "B-2024-03",
+    groupNumber: studentRecord.groupNumber || "Индивидуална",
     theoryGroup: "Група 3 - Понеделник и Сряда 18:00",
-    startDate: "15.01.2024",
-    theoryCompletedAt: "15.03.2024",
-    theoryExamAt: "22.03.2024",
-    practicalCompletedAt: "18.04.2024",
-    practicalExamAt: "25.04.2024",
-    extraHours: 4,
-    paidLessons: 20,
-    usedLessons: 12,
-    remainingLessons: 8,
-    progress: 60,
-    status: "success",
-    statusLabel: "Напреднал",
-    courseOutcome: "Активен",
-    recordMode: "Хартиен и електронен",
-    insuranceStatus: "Активна",
+    startDate: studentRecord.trainingStartDate || studentRecord.startDate,
+    theoryCompletedAt: studentRecord.theoryCompletedAt || "Няма",
+    theoryExamAt: studentRecord.theoryExamAt || "Няма",
+    practicalCompletedAt: studentRecord.practicalCompletedAt || "Няма",
+    practicalExamAt: studentRecord.practicalExamAt || "Няма",
+    extraHours: studentRecord.extraHours,
+    paidLessons: studentRecord.maxTrainingHours,
+    usedLessons: studentRecord.used,
+    remainingLessons: studentRecord.remaining,
+    progress: studentRecord.progress,
+    status: studentRecord.status,
+    statusLabel: studentRecord.statusLabel,
+    courseOutcome:
+      studentRecord.courseOutcome === "withdrawn" ? "Прекратен" : studentRecord.examOutcomeLabel,
+    recordMode:
+      studentRecord.trainingMode === "licensed-manual-hours"
+        ? "Курсист с книжка · ръчно добавяне на часове"
+        : studentRecord.recordMode === "paper"
+          ? "Хартиен регистър"
+          : "Електронен регистър",
+    insuranceStatus: studentRecord.insuranceStatus === "active" ? "Активна" : "Очаква се",
     protocolNumber: "PR-2024-118",
     protocolDate: "26.04.2024",
     certificateIssueDate: "30.04.2024",
-    theoryCompleted: true,
+    theoryCompleted: studentRecord.theoryCompleted,
     theoryAttendance: 10,
     theoryTotal: 12,
     parentName: "Иван Георгиев",
     parentPhone: "+359 887 654 321",
     parentEmail: "ivan.georgiev@example.com",
+    studentTypeLabel: studentRecord.studentTypeLabel,
+    hoursEntryPolicy: studentRecord.hoursEntryPolicy,
+    hasPreviousLicense: studentRecord.hasPreviousLicense,
+    previousLicenseCategory: studentRecord.previousLicenseCategory,
+    failedExamAttempts: studentRecord.failedExamAttempts,
+    lastPracticeDate: studentRecord.lastPracticeDate,
+    daysWithoutPractice: studentRecord.daysWithoutPractice,
+    inactivityAlert: studentRecord.inactivityAlert,
+    earlyEnrollment: studentRecord.earlyEnrollment,
+    expectedArrivalDate: studentRecord.expectedArrivalDate,
+    adminReminderDue: studentRecord.adminReminderDue,
+    parentFeedbackEnabled: studentRecord.parentFeedbackEnabled,
   };
 
   const payments = [
@@ -203,6 +234,30 @@ export function StudentDetailPage() {
   ];
 
   const notifications = [
+    ...(student.inactivityAlert
+      ? [
+          {
+            id: 100,
+            type: "practice",
+            title: "Над 30 дни без практика",
+            message: `Последен час: ${student.lastPracticeDate}. Нужно е админът или инструкторът да се свърже с курсиста.`,
+            date: "03.04.2026",
+            status: "warning",
+          },
+        ]
+      : []),
+    ...(student.adminReminderDue
+      ? [
+          {
+            id: 101,
+            type: "admin",
+            title: "Напомняне за ранно записване",
+            message: `Курсистът трябва да бъде потърсен 10 дни преди датата на идване: ${student.expectedArrivalDate}.`,
+            date: "03.04.2026",
+            status: "info",
+          },
+        ]
+      : []),
     {
       id: 1,
       type: "milestone",
@@ -232,11 +287,29 @@ export function StudentDetailPage() {
   const tabs = [
     { id: "overview", label: "Преглед" },
     { id: "lessons", label: "Практика" },
+    { id: "determinator", label: "Детерминатор" },
     { id: "payments", label: "Плащания" },
     { id: "documents", label: "Документи" },
     { id: "notes", label: "Бележки" },
     { id: "notifications", label: "Известия" },
   ];
+
+  const studentDeterminatorSessions = determinatorSessions.filter(
+    (session) => session.studentId === student.id,
+  );
+
+  const handleSendParentFeedback = () => {
+    if (!student.parentFeedbackEnabled) {
+      setParentReportStatus(
+        "Не може да се изпрати: липсва разрешен родителски контакт.",
+      );
+      return;
+    }
+
+    setParentReportStatus(
+      `Изпратен отчет към родител: ${new Date().toLocaleString("bg-BG")} · Последен урок и детерминатор бележки.`,
+    );
+  };
 
   return (
     <div>
@@ -388,6 +461,16 @@ export function StudentDetailPage() {
                     <p>Изход: {student.courseOutcome}</p>
                     <p>Регистър: {student.recordMode}</p>
                     <p>Застраховка: {student.insuranceStatus}</p>
+                    <p>Тип курсист: {student.studentTypeLabel}</p>
+                    {student.hasPreviousLicense && (
+                      <p>Предходна книжка: {student.previousLicenseCategory}</p>
+                    )}
+                    {student.failedExamAttempts > 0 && (
+                      <p style={{ color: "var(--status-error)" }}>
+                        Скъсан: {student.failedExamAttempts} път(и) · назначени{" "}
+                        {student.extraHours} доп. часа
+                      </p>
+                    )}
                   </div>
                   <div className="flex items-center justify-between mb-2 text-sm">
                     <span style={{ color: "var(--text-secondary)" }}>
@@ -418,6 +501,49 @@ export function StudentDetailPage() {
             </div>
           </div>
         </div>
+
+        {(student.inactivityAlert || student.adminReminderDue) && (
+          <div
+            className="mb-6 rounded-xl p-4 flex items-start gap-3"
+            style={{
+              background: student.inactivityAlert
+                ? "var(--status-warning-bg)"
+                : "rgba(99, 102, 241, 0.08)",
+              border: student.inactivityAlert
+                ? "1px solid var(--status-warning-border)"
+                : "1px solid rgba(99, 102, 241, 0.2)",
+            }}
+          >
+            <TriangleAlert
+              size={20}
+              style={{
+                color: student.inactivityAlert
+                  ? "var(--status-warning)"
+                  : "var(--primary-accent)",
+              }}
+            />
+            <div className="space-y-1">
+              {student.inactivityAlert && (
+                <p
+                  className="text-sm font-medium"
+                  style={{ color: "var(--status-warning)" }}
+                >
+                  Курсистът не е карал {student.daysWithoutPractice} дни.
+                  Последен практически час: {student.lastPracticeDate}.
+                </p>
+              )}
+              {student.adminReminderDue && (
+                <p
+                  className="text-sm"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Ранно записване: изпрати напомняне към админ 10 дни преди{" "}
+                  {student.expectedArrivalDate}.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="mb-6">
@@ -672,6 +798,12 @@ export function StudentDetailPage() {
                   >
                     Допълнителни часове: {student.extraHours}
                   </p>
+                  <p
+                    className="text-sm"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    Правило за часове: {student.hoursEntryPolicy}
+                  </p>
                 </div>
               </div>
             </div>
@@ -705,6 +837,24 @@ export function StudentDetailPage() {
                   label="Email"
                   value={student.parentEmail}
                 />
+                <div
+                  className="rounded-lg p-4 space-y-3"
+                  style={{ background: "var(--bg-panel)" }}
+                >
+                  <p
+                    className="text-sm"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    {parentReportStatus}
+                  </p>
+                  <Button
+                    variant="secondary"
+                    icon={<Send size={16} />}
+                    onClick={handleSendParentFeedback}
+                  >
+                    Изпрати отчет към родител
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -834,6 +984,75 @@ export function StudentDetailPage() {
                 ]}
                 data={lessons}
               />
+            </div>
+          </div>
+        )}
+
+        {activeTab === "determinator" && (
+          <div className="rounded-xl" style={{ background: "var(--bg-card)" }}>
+            <div
+              className="p-6 border-b"
+              style={{ borderColor: "var(--ghost-border)" }}
+            >
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h3 style={{ color: "var(--text-primary)" }}>
+                    История от детерминатор
+                  </h3>
+                  <p
+                    className="text-sm mt-2"
+                    style={{ color: "var(--text-secondary)" }}
+                  >
+                    Отчитане на стойностите от уреда и свързване към историята
+                    на курсиста.
+                  </p>
+                </div>
+                <Button variant="primary" icon={<BrainCircuit size={18} />}>
+                  Ново измерване
+                </Button>
+              </div>
+            </div>
+            <div className="p-6">
+              <DataTable
+                columns={[
+                  { key: "measuredAt", label: "Дата и час" },
+                  {
+                    key: "reactionScore",
+                    label: "Реакция",
+                    render: (value: number) => `${value}/100`,
+                  },
+                  {
+                    key: "concentrationScore",
+                    label: "Концентрация",
+                    render: (value: number) => `${value}/100`,
+                  },
+                  {
+                    key: "stressScore",
+                    label: "Стрес",
+                    render: (value: number) => `${value}/100`,
+                  },
+                  {
+                    key: "coordinationScore",
+                    label: "Координация",
+                    render: (value: number) => `${value}/100`,
+                  },
+                  { key: "overallResult", label: "Обобщение" },
+                  { key: "instructorNote", label: "Бележка" },
+                ]}
+                data={studentDeterminatorSessions}
+              />
+              {studentDeterminatorSessions.length === 0 && (
+                <div
+                  className="mt-4 rounded-lg p-4 flex items-center gap-3"
+                  style={{
+                    background: "var(--bg-panel)",
+                    color: "var(--text-secondary)",
+                  }}
+                >
+                  <ShieldCheck size={18} />
+                  За този курсист още няма записани измервания от детерминатор.
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -1100,6 +1319,8 @@ export function StudentDetailPage() {
                   milestone: <CheckCircle size={20} />,
                   theory: <BookOpen size={20} />,
                   payment: <DollarSign size={20} />,
+                  practice: <TriangleAlert size={20} />,
+                  admin: <AlertCircle size={20} />,
                 };
 
                 const icon = iconMap[notif.type as keyof typeof iconMap] || (

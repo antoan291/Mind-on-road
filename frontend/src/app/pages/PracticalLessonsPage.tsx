@@ -42,6 +42,7 @@ type PracticalLesson = {
   skills?: string[];
   rating?: number;
   parentNotificationSent?: boolean;
+  parentPerformanceSummary?: string;
   createdBy?: string;
   updatedBy?: string;
   createdAt?: string;
@@ -174,6 +175,8 @@ const MOCK_LESSONS: PracticalLesson[] = [
     kmDriven: 25,
     skills: ['Завиване', 'Спиране', 'Паркиране'],
     rating: 4,
+    parentNotificationSent: true,
+    parentPerformanceSummary: 'Изпратен отчет: стабилен напредък, добра работа по паркиране и нужда от още упражнения за престрояване.',
   },
   {
     id: 7,
@@ -198,6 +201,8 @@ const MOCK_LESSONS: PracticalLesson[] = [
     kmDriven: 45,
     skills: ['Магистрала', 'Обгонване', 'Скоростна кутия'],
     rating: 5,
+    parentNotificationSent: false,
+    parentPerformanceSummary: 'Подготвен отчет: отлична дисциплина и много добро изпълнение на извънградско каране.',
   },
   {
     id: 8,
@@ -429,6 +434,47 @@ export function PracticalLessonsPage() {
   };
 
   const handleSubmitEvaluation = () => {
+    if (!evaluationLesson) {
+      return;
+    }
+
+    const generatedParentSummary =
+      quickComment.trim().length > 0
+        ? `Изпратен отчет: оценка ${quickRating}/5 · ${quickComment.trim()}`
+        : `Изпратен отчет: оценка ${quickRating}/5 · Урокът е приключен успешно с отбелязани ключови наблюдения.`;
+
+    setLessons((current) =>
+      current.map((lesson) =>
+        lesson.id === evaluationLesson.id
+          ? {
+              ...lesson,
+              rating: quickRating,
+              evaluationStatus: 'completed',
+              notes: quickComment.trim().length > 0 ? quickComment.trim() : lesson.notes,
+              parentNotificationSent: true,
+              parentPerformanceSummary: generatedParentSummary,
+              updatedBy: 'Администратор',
+              updatedAt: new Date().toLocaleString('bg-BG'),
+            }
+          : lesson,
+      ),
+    );
+
+    setSelectedLesson((current) =>
+      current && current.id === evaluationLesson.id
+        ? {
+            ...current,
+            rating: quickRating,
+            evaluationStatus: 'completed',
+            notes: quickComment.trim().length > 0 ? quickComment.trim() : current.notes,
+            parentNotificationSent: true,
+            parentPerformanceSummary: generatedParentSummary,
+            updatedBy: 'Администратор',
+            updatedAt: new Date().toLocaleString('bg-BG'),
+          }
+        : current,
+    );
+
     // In production, this would save to backend
     console.log('Submitting evaluation:', {
       lessonId: evaluationLesson?.id,
@@ -440,6 +486,40 @@ export function PracticalLessonsPage() {
     setQuickRating(0);
     setQuickComment('');
     setNeedsFollowUp(false);
+  };
+
+  const handleSendParentPerformanceReport = (lessonId: number) => {
+    const sentAt = new Date().toLocaleString('bg-BG');
+
+    setLessons((current) =>
+      current.map((lesson) =>
+        lesson.id === lessonId
+          ? {
+              ...lesson,
+              parentNotificationSent: true,
+              parentPerformanceSummary:
+                lesson.parentPerformanceSummary ??
+                `Изпратен отчет към родител на ${sentAt}: ${lesson.notes || 'Урокът е отчетен без критични забележки.'}`,
+              updatedBy: 'Администратор',
+              updatedAt: sentAt,
+            }
+          : lesson,
+      ),
+    );
+
+    setSelectedLesson((current) =>
+      current && current.id === lessonId
+        ? {
+            ...current,
+            parentNotificationSent: true,
+            parentPerformanceSummary:
+              current.parentPerformanceSummary ??
+              `Изпратен отчет към родител на ${sentAt}: ${current.notes || 'Урокът е отчетен без критични забележки.'}`,
+            updatedBy: 'Администратор',
+            updatedAt: sentAt,
+          }
+        : current,
+    );
   };
 
   const toggleActionMenu = (e: React.MouseEvent, lessonId: number) => {
@@ -1630,6 +1710,9 @@ export function PracticalLessonsPage() {
                           <p style={{ color: 'var(--text-primary)', fontSize: '0.9375rem', marginBottom: '2px' }}>
                             Изпратено известие до родител
                           </p>
+                          <p style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '2px' }}>
+                            {selectedLesson.parentPerformanceSummary || 'Изпратен е кратък отчет за представянето след урока.'}
+                          </p>
                           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8125rem' }}>
                             Система • {selectedLesson.updatedAt}
                           </p>
@@ -1729,7 +1812,7 @@ export function PracticalLessonsPage() {
                     >
                       <Bell size={16} style={{ color: 'var(--accent-primary)' }} />
                       <span style={{ color: 'var(--accent-primary)', fontSize: '0.875rem' }}>
-                        Родител е известен за липсващо плащане
+                        Родител е известен за представянето след урока
                       </span>
                     </div>
                   )}
@@ -1749,6 +1832,16 @@ export function PracticalLessonsPage() {
                     }}
                   >
                     Добави оценка
+                  </Button>
+                )}
+                {selectedLesson.status === 'completed' && (
+                  <Button
+                    variant={selectedLesson.parentNotificationSent ? 'secondary' : 'primary'}
+                    icon={<Send size={18} />}
+                    fullWidth
+                    onClick={() => handleSendParentPerformanceReport(selectedLesson.id)}
+                  >
+                    {selectedLesson.parentNotificationSent ? 'Изпрати отново към родител' : 'Изпрати отчет към родител'}
                   </Button>
                 )}
                 <Button

@@ -28,6 +28,7 @@ import {
 import { DashboardQuickActionDialog } from "./dashboard/DashboardQuickActionDialog";
 import { FinanceOverviewCard } from "./dashboard/FinanceOverviewCard";
 import { dashboardAlerts, dashboardHeader, dashboardSections, dashboardQuickActions, dashboardLessons, dashboardExpiringDocuments, dashboardOverduePayments, dashboardStats, getDashboardIcon } from "./dashboard/dashboardContent";
+import { earlyEnrollmentReminders, inactivePracticeAlerts } from "../content/studentOperations";
 
 type QuickActionKey = "newStudent" | "newLesson" | "newDocument" | "registerPayment";
 type QuickActionDialogMeta = {
@@ -117,6 +118,23 @@ export function DashboardPage() {
   );
 
   const activeDialog = activeQuickAction ? quickActionMeta[activeQuickAction] : null;
+  const operationalAlerts = [
+    ...inactivePracticeAlerts.map((alert) => ({
+      variant: "warning" as const,
+      title: `Курсист без практика над 30 дни: ${alert.studentName}`,
+      message: alert.message,
+      actionLabel: "Отвори досие",
+      targetPath: `/students/${alert.studentId}`,
+    })),
+    ...earlyEnrollmentReminders.map((reminder) => ({
+      variant: "warning" as const,
+      title: `Ранно записване · напомни на админ за ${reminder.studentName}`,
+      message: reminder.message,
+      actionLabel: "Отвори досие",
+      targetPath: `/students/${reminder.studentId}`,
+    })),
+    ...dashboardAlerts,
+  ];
 
   return (
     <div className="space-y-6">
@@ -136,7 +154,7 @@ export function DashboardPage() {
       />
 
       <div className="space-y-3">
-        {dashboardAlerts.map((item) => (
+        {operationalAlerts.map((item) => (
           <Alert
             key={item.title}
             variant={item.variant as "warning" | "error"}

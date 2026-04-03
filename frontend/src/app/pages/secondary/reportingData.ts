@@ -1,4 +1,4 @@
-﻿export type DashboardTransactionType = 'income' | 'expense';
+﻿export type DashboardTransactionType = 'income' | 'expense' | 'friend-vat-expense';
 export type DashboardPaymentMethod = 'cash' | 'bank' | 'card' | 'pos';
 export type DashboardEntryStatus = 'success' | 'warning' | 'error';
 
@@ -16,6 +16,8 @@ export type DashboardReportEntry = {
   counterparty: string;
   note: string;
   currency: 'BGN' | 'EUR';
+  vatAmount?: number;
+  affectsOperationalExpense?: boolean;
 };
 
 export const reportEntries: DashboardReportEntry[] = [
@@ -108,6 +110,40 @@ export const reportEntries: DashboardReportEntry[] = [
     counterparty: 'Технически университет',
     note: 'Банково плащане към университет',
     currency: 'BGN'
+  },
+  {
+    id: 'entry-7',
+    title: 'Фактура гориво от приятел',
+    type: 'friend-vat-expense',
+    category: 'ДДС от приятели',
+    amount: 240,
+    date: '2026-03-20',
+    source: 'Приятелски документ',
+    paymentMethod: 'bank',
+    status: 'success',
+    documentReference: 'FR-VAT-0320',
+    counterparty: 'Партньор доставчик',
+    note: 'Не е реален разход в касата, използва се само за ДДС калкулация.',
+    currency: 'BGN',
+    vatAmount: 40,
+    affectsOperationalExpense: false
+  },
+  {
+    id: 'entry-8',
+    title: 'Сервизен документ от партньор',
+    type: 'friend-vat-expense',
+    category: 'ДДС от приятели',
+    amount: 180,
+    date: '2026-03-28',
+    source: 'Приятелски документ',
+    paymentMethod: 'bank',
+    status: 'success',
+    documentReference: 'FR-VAT-0328',
+    counterparty: 'Автосервиз партньор',
+    note: 'Отчетен само за ДДС, без да увеличава реалните разходи.',
+    currency: 'BGN',
+    vatAmount: 30,
+    affectsOperationalExpense: false
   }
 ];
 

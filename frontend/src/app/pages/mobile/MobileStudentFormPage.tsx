@@ -18,13 +18,21 @@ export function MobileStudentFormPage() {
     idNumber: '',
     educationLevel: '',
     category: '',
+    studentType: '',
+    previousLicenseCategory: '',
     instructor: '',
     startDate: '',
+    expectedArrivalDate: '',
     groupNumber: '',
     recordMode: '',
     insuranceStatus: '',
     extraHours: '',
+    failedExamAttempts: '',
     courseOutcome: '',
+    parentName: '',
+    parentPhone: '',
+    parentEmail: '',
+    parentFeedbackEnabled: '',
     address: '',
     notes: '',
   });
@@ -148,6 +156,18 @@ export function MobileStudentFormPage() {
             />
 
             <SelectField
+              label="Тип курсист"
+              value={formData.studentType}
+              onChange={(value) => setFormData({ ...formData, studentType: value })}
+              options={[
+                { value: '', label: 'Изберете тип курсист...' },
+                { value: 'standard', label: 'Стандартен курсист' },
+                { value: 'licensed-manual-hours', label: 'С книжка · ръчни часове' },
+              ]}
+              required
+            />
+
+            <SelectField
               label="Инструктор"
               value={formData.instructor}
               onChange={(value) => setFormData({ ...formData, instructor: value })}
@@ -171,6 +191,15 @@ export function MobileStudentFormPage() {
             />
 
             <InputField
+              label="Дата на идване при ранно записване"
+              type="text"
+              placeholder="ДД.ММ.ГГГГ"
+              value={formData.expectedArrivalDate}
+              onChange={(value) => setFormData({ ...formData, expectedArrivalDate: value })}
+              icon={<Calendar size={18} />}
+            />
+
+            <InputField
               label="Номер на група"
               placeholder="B-2024-03"
               value={formData.groupNumber}
@@ -189,6 +218,14 @@ export function MobileStudentFormPage() {
                 { value: 'hybrid', label: 'Хартиен и електронен' },
               ]}
               icon={<FileText size={18} />}
+            />
+
+            <InputField
+              label="Предходна категория книжка"
+              placeholder="Например B или A1"
+              value={formData.previousLicenseCategory}
+              onChange={(value) => setFormData({ ...formData, previousLicenseCategory: value })}
+              icon={<Car size={18} />}
             />
 
             <SelectField
@@ -213,6 +250,15 @@ export function MobileStudentFormPage() {
               icon={<Calendar size={18} />}
             />
 
+            <InputField
+              label="Брой скъсвания на изпит"
+              type="number"
+              placeholder="0"
+              value={formData.failedExamAttempts}
+              onChange={(value) => setFormData({ ...formData, failedExamAttempts: value })}
+              icon={<FileText size={18} />}
+            />
+
             <SelectField
               label="Изход на курса"
               value={formData.courseOutcome}
@@ -233,6 +279,44 @@ export function MobileStudentFormPage() {
               value={formData.address}
               onChange={(value) => setFormData({ ...formData, address: value })}
               icon={<MapPin size={18} />}
+            />
+
+            <InputField
+              label="Име на родител"
+              placeholder="Въведете име..."
+              value={formData.parentName}
+              onChange={(value) => setFormData({ ...formData, parentName: value })}
+              icon={<User size={18} />}
+            />
+
+            <InputField
+              label="Телефон на родител"
+              type="tel"
+              placeholder="+359 888 123 456"
+              value={formData.parentPhone}
+              onChange={(value) => setFormData({ ...formData, parentPhone: value })}
+              icon={<Phone size={18} />}
+            />
+
+            <InputField
+              label="Email на родител"
+              type="email"
+              placeholder="email@example.com"
+              value={formData.parentEmail}
+              onChange={(value) => setFormData({ ...formData, parentEmail: value })}
+              icon={<Mail size={18} />}
+            />
+
+            <SelectField
+              label="Отчет към родител"
+              value={formData.parentFeedbackEnabled}
+              onChange={(value) => setFormData({ ...formData, parentFeedbackEnabled: value })}
+              options={[
+                { value: '', label: 'Изберете...' },
+                { value: 'enabled', label: 'Разрешено по избор' },
+                { value: 'disabled', label: 'Забранено' },
+              ]}
+              icon={<Mail size={18} />}
             />
           </div>
         </div>

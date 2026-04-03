@@ -10,6 +10,8 @@ import {
   X,
   Wallet,
   Bot,
+  FileSignature,
+  BrainCircuit,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -233,6 +235,18 @@ export function MobileLayout() {
             <MenuLink
               to="/documents"
               label="Документи"
+              onClick={() => setMenuOpen(false)}
+            />
+            <MenuLink
+              to="/candidates"
+              label="Кандидати"
+              icon={<FileSignature size={20} />}
+              onClick={() => setMenuOpen(false)}
+            />
+            <MenuLink
+              to="/determinator"
+              label="Детерминатор"
+              icon={<BrainCircuit size={20} />}
               onClick={() => setMenuOpen(false)}
             />
             <MenuLink

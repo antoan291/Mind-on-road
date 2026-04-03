@@ -24,6 +24,8 @@ import {
   ChevronLeft,
   Wallet,
   Bot,
+  FileSignature,
+  BrainCircuit,
 } from "lucide-react";
 
 export function AppLayout() {
@@ -57,6 +59,8 @@ export function AppLayout() {
     { path: "/instructors", icon: UserCircle, label: "Инструктори" },
     { path: "/vehicles", icon: Car, label: "Автомобили" },
     { path: "/documents", icon: FolderOpen, label: "Документи" },
+    { path: "/candidates", icon: FileSignature, label: "Кандидати" },
+    { path: "/determinator", icon: BrainCircuit, label: "Детерминатор" },
     { path: "/road-sheets", icon: ClipboardList, label: "Пътни листове" },
     { path: "/notifications", icon: MessageSquare, label: "Известия" },
     { path: "/reports", icon: BarChart3, label: "Отчети" },
