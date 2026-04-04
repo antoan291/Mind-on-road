@@ -8,6 +8,8 @@ import {
 
 const PASSWORD_HASH_KEY_LENGTH = 64;
 
+const SCRYPT_PARAMS = { N: 16384, r: 8, p: 1 } as const;
+
 export function verifyPasswordHash(password: string, storedHash: string) {
   const [algorithm, salt, hash] = storedHash.split(':');
 
@@ -15,7 +17,7 @@ export function verifyPasswordHash(password: string, storedHash: string) {
     return false;
   }
 
-  const derivedHash = scryptSync(password, salt, PASSWORD_HASH_KEY_LENGTH).toString('hex');
+  const derivedHash = scryptSync(password, salt, PASSWORD_HASH_KEY_LENGTH, SCRYPT_PARAMS).toString('hex');
 
   return timingSafeEqual(
     Buffer.from(hash, 'hex'),
@@ -25,7 +27,7 @@ export function verifyPasswordHash(password: string, storedHash: string) {
 
 export function hashPassword(password: string) {
   const salt = randomBytes(16).toString('hex');
-  const hash = scryptSync(password, salt, PASSWORD_HASH_KEY_LENGTH).toString('hex');
+  const hash = scryptSync(password, salt, PASSWORD_HASH_KEY_LENGTH, SCRYPT_PARAMS).toString('hex');
 
   return `scrypt:${salt}:${hash}`;
 }

@@ -46,6 +46,8 @@ function toStudentSummary(student: StudentProfileRecord) {
     parentName: student.parentName,
     parentEmail: student.parentEmail,
     parentContactEnabled: student.parentContactStatus === 'ENABLED',
+    userMembershipId: student.userMembershipId,
+    parentMembershipId: student.parentMembershipId,
     enrollment: enrollment
       ? {
           id: enrollment.id,
@@ -54,6 +56,7 @@ function toStudentSummary(student: StudentProfileRecord) {
           trainingMode: enrollment.trainingMode,
           registerMode: enrollment.registerMode,
           instructorName: enrollment.assignedInstructorName,
+          instructorMembershipId: enrollment.instructorMembershipId,
           theoryGroupNumber: enrollment.theoryGroupNumber,
           enrollmentDate: enrollment.enrollmentDate.toISOString().slice(0, 10),
           expectedArrivalDate:

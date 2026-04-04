@@ -146,6 +146,7 @@ export interface AuthenticatedSession {
   expiresAt: string;
   tenantId: string;
   tenantSlug: string;
+  membershipId: string;
   mustChangePassword: boolean;
   user: {
     id: string;
@@ -185,6 +186,7 @@ export class SessionService {
       expiresAt: session.expiresAt.toISOString(),
       tenantId: session.tenantId,
       tenantSlug: session.tenantSlug,
+      membershipId: session.membershipId,
       mustChangePassword: session.mustChangePassword,
       user: {
         id: session.userId,

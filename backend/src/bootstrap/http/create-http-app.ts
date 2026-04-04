@@ -3,7 +3,7 @@ import cookie = require('cookie');
 import cors = require('cors');
 import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { resolve } from 'node:path';
 import { z } from 'zod';
 
 import { appConfig } from '../../config/app.config';
@@ -213,6 +213,43 @@ const loginRateLimiter = rateLimit({
     error: 'Too many login attempts. Try again later.'
   }
 });
+const changePasswordRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Too many password change attempts. Try again later.'
+  }
+});
+const aiAssistantRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Too many AI assistant requests. Try again later.'
+  }
+});
+const ocrRunRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Too many OCR requests. Try again later.'
+  }
+});
+const globalMutationRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS',
+  message: {
+    error: 'Too many requests. Please slow down.'
+  }
+});
 
 interface AuthenticatedRequest extends express.Request {
   auth?: Awaited<ReturnType<SessionService['authenticate']>>;
@@ -235,6 +272,18 @@ export function createHttpApp() {
     app.set('trust proxy', 1);
   }
   app.disable('x-powered-by');
+  app.use(globalMutationRateLimiter);
+  app.use((req, res, next) => {
+    if (
+      req.path.startsWith('/auth/') ||
+      req.path.startsWith('/reports/') ||
+      req.path.startsWith('/ai/')
+    ) {
+      res.set('Cache-Control', 'no-store');
+      res.set('Pragma', 'no-cache');
+    }
+    next();
+  });
   app.use(
     cors({
       origin: appConfig.webAppUrl,
@@ -243,8 +292,26 @@ export function createHttpApp() {
   );
   app.use(
     helmet({
-      contentSecurityPolicy: false,
-      crossOriginResourcePolicy: { policy: 'same-site' }
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+          connectSrc: ["'self'"],
+          fontSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          mediaSrc: ["'self'"],
+          frameSrc: ["'none'"]
+        }
+      },
+      crossOriginResourcePolicy: { policy: 'same-site' },
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true
+      },
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
     })
   );
   app.use(express.json({ limit: '16kb' }));
@@ -275,7 +342,7 @@ export function createHttpApp() {
 
       response.cookie(appConfig.authCookieName, result.accessToken, {
         httpOnly: true,
-        secure: appConfig.env === 'production',
+        secure: appConfig.env !== 'development',
         sameSite: 'strict',
         path: '/',
         maxAge: appConfig.sessionTtlHours * 60 * 60 * 1000
@@ -674,6 +741,15 @@ export function createHttpApp() {
         return;
       }
 
+      const paymentAccessScope = await resolveReadAccessScope(request.auth!);
+      if (
+        paymentAccessScope.mode !== 'tenant' &&
+        !paymentAccessScope.studentIds.has(parsedRequest.data.studentId)
+      ) {
+        response.status(403).json({ error: 'Forbidden.' });
+        return;
+      }
+
       const paymentNumber =
         parsedRequest.data.paymentNumber ??
         `PAY-${new Date()
@@ -1021,8 +1097,7 @@ export function createHttpApp() {
         accessScope.mode === 'student' ||
         accessScope.mode === 'parent' ||
         (accessScope.mode === 'instructor' &&
-          (!accessScope.studentIds.has(parsedRequest.data.studentId) ||
-            parsedRequest.data.instructorName !== accessScope.instructorName))
+          !accessScope.studentIds.has(parsedRequest.data.studentId))
       ) {
         response.status(403).json({
           error: 'Forbidden.'
@@ -1524,6 +1599,7 @@ export function createHttpApp() {
     '/documents/ocr-extractions/run',
     requireAuthenticatedSession,
     requirePermission('documents.manage'),
+    ocrRunRateLimiter,
     requireCsrfProtection,
     async (request: AuthenticatedRequest, response) => {
       const parsedRequest = documentOcrRunRequestSchema.safeParse(request.body);
@@ -1556,9 +1632,9 @@ export function createHttpApp() {
 
         response.status(statusCode).json({
           error:
-            error instanceof Error
-              ? error.message
-              : 'OCR worker execution failed.'
+            statusCode === 400
+              ? 'The provided file is invalid for OCR processing.'
+              : 'OCR processing failed. Please try again later.'
         });
       }
     }
@@ -1577,6 +1653,16 @@ export function createHttpApp() {
           error: 'Invalid document payload.',
           details: parsedRequest.error.flatten()
         });
+        return;
+      }
+
+      const docAccessScope = await resolveReadAccessScope(request.auth!);
+      if (
+        parsedRequest.data.studentId &&
+        docAccessScope.mode !== 'tenant' &&
+        !docAccessScope.studentIds.has(parsedRequest.data.studentId)
+      ) {
+        response.status(403).json({ error: 'Forbidden.' });
         return;
       }
 
@@ -2176,6 +2262,7 @@ export function createHttpApp() {
     '/ai/business-assistant',
     requireAuthenticatedSession,
     requirePermission('reports.read'),
+    aiAssistantRateLimiter,
     requireCsrfProtection,
     async (request: AuthenticatedRequest, response) => {
       const parsedRequest = businessAssistantRequestSchema.safeParse(
@@ -2316,7 +2403,7 @@ export function createHttpApp() {
 
       response.clearCookie(appConfig.authCookieName, {
         httpOnly: true,
-        secure: appConfig.env === 'production',
+        secure: appConfig.env !== 'development',
         sameSite: 'strict',
         path: '/'
       });
@@ -2329,6 +2416,7 @@ export function createHttpApp() {
     '/auth/change-password',
     requireAuthenticatedSession,
     requireCsrfProtection,
+    changePasswordRateLimiter,
     async (request, response) => {
     const parsedRequest = changePasswordRequestSchema.safeParse(request.body);
 
@@ -2357,7 +2445,7 @@ export function createHttpApp() {
 
       response.clearCookie(appConfig.authCookieName, {
         httpOnly: true,
-        secure: appConfig.env === 'production',
+        secure: appConfig.env !== 'development',
         sameSite: 'strict',
         path: '/'
       });
@@ -2501,9 +2589,15 @@ async function resolveReadAccessScope(
       cacheScope: `instructor:${auth.user.id}`,
       studentIds: new Set(
         students
-          .filter(
-            (student) => student.enrollment?.instructorName === instructorName
-          )
+          .filter((student) => {
+            const enrollment = student.enrollment;
+            if (!enrollment) return false;
+            // Prefer immutable FK match; fall back to name for records not yet migrated
+            if (enrollment.instructorMembershipId !== null) {
+              return enrollment.instructorMembershipId === auth.membershipId;
+            }
+            return enrollment.instructorName === instructorName;
+          })
           .map((student) => student.id)
       ),
       instructorName
@@ -2511,11 +2605,13 @@ async function resolveReadAccessScope(
   }
 
   if (roleKeys.has('student')) {
-    const ownStudent = students.find(
-      (student) =>
-        student.email === auth.user.email ||
-        student.name === auth.user.displayName
-    );
+    const ownStudent = students.find((student) => {
+      // Prefer immutable FK match; fall back to email for records not yet migrated
+      if (student.userMembershipId !== null) {
+        return student.userMembershipId === auth.membershipId;
+      }
+      return student.email === auth.user.email;
+    });
 
     return {
       mode: 'student',
@@ -2531,12 +2627,14 @@ async function resolveReadAccessScope(
       cacheScope: `parent:${auth.user.id}`,
       studentIds: new Set(
         students
-          .filter(
-            (student) =>
-              student.parentContactEnabled &&
-              (student.parentEmail === auth.user.email ||
-                student.parentName === auth.user.displayName)
-          )
+          .filter((student) => {
+            if (!student.parentContactEnabled) return false;
+            // Prefer immutable FK match; fall back to email for records not yet migrated
+            if (student.parentMembershipId !== null) {
+              return student.parentMembershipId === auth.membershipId;
+            }
+            return student.parentEmail === auth.user.email;
+          })
           .map((student) => student.id)
       ),
       instructorName: null
@@ -2559,7 +2657,7 @@ function buildScopedTenantCacheKey(
   return buildTenantCacheKey(auth.tenantId, `${scope}:${accessScope.cacheScope}`);
 }
 
-function filterStudentsForScope<TItem extends { id: string; enrollment: { instructorName: string | null } | null }>(
+function filterStudentsForScope<TItem extends { id: string }>(
   items: TItem[],
   accessScope: ReadAccessScope
 ) {
@@ -2567,20 +2665,11 @@ function filterStudentsForScope<TItem extends { id: string; enrollment: { instru
     return items;
   }
 
-  if (accessScope.mode === 'instructor') {
-    return items.filter(
-      (item) => item.enrollment?.instructorName === accessScope.instructorName
-    );
-  }
-
   return items.filter((item) => accessScope.studentIds.has(item.id));
 }
 
 function isStudentVisibleForScope(
-  student: {
-    id: string;
-    enrollment: { instructorName: string | null } | null;
-  },
+  student: { id: string },
   accessScope: ReadAccessScope
 ) {
   return filterStudentsForScope([student], accessScope).length === 1;
@@ -2604,16 +2693,10 @@ function filterDeterminatorSessionsForScope<
 }
 
 function filterPracticalLessonsForScope<
-  TItem extends { studentId: string; instructorName: string }
+  TItem extends { studentId: string }
 >(items: TItem[], accessScope: ReadAccessScope) {
   if (accessScope.mode === 'tenant') {
     return items;
-  }
-
-  if (accessScope.mode === 'instructor') {
-    return items.filter(
-      (item) => item.instructorName === accessScope.instructorName
-    );
   }
 
   return items.filter((item) => accessScope.studentIds.has(item.studentId));
@@ -2750,9 +2833,13 @@ async function listDocumentOcrExtractions() {
       )
       .sort((left, right) => left.name.localeCompare(right.name));
 
+    const baseDir = resolve(appConfig.documentOcrOutputDir);
     const parsedFiles = await Promise.all(
       ocrFiles.map(async (entry) => {
-        const filePath = join(appConfig.documentOcrOutputDir, entry.name);
+        const filePath = resolve(baseDir, entry.name);
+        if (!filePath.startsWith(baseDir + '/') && filePath !== baseDir) {
+          throw new Error('Invalid file path detected.');
+        }
         const rawContent = await readFile(filePath, 'utf8');
 
         return {
@@ -2914,7 +3001,7 @@ async function requireAuthenticatedSession(
     if (error instanceof SessionAuthenticationError) {
       response.clearCookie(appConfig.authCookieName, {
         httpOnly: true,
-        secure: appConfig.env === 'production',
+        secure: appConfig.env !== 'development',
         sameSite: 'strict',
         path: '/'
       });
@@ -2939,6 +3026,17 @@ function requirePermission(permissionKey: string) {
     const permissionKeys = request.auth?.user.permissionKeys ?? [];
 
     if (!permissionKeys.includes(permissionKey)) {
+      void authAuditService.record({
+        tenantId: request.auth?.tenantId,
+        userId: request.auth?.user.id,
+        sessionId: request.auth?.sessionId,
+        actorType: 'USER',
+        actionKey: 'authz.permission_denied',
+        outcome: 'FAILURE',
+        ipAddress: request.ip,
+        userAgent: request.get('user-agent') ?? undefined,
+        metadata: { requiredPermission: permissionKey, path: request.path }
+      });
       response.status(403).json({
         error: 'Forbidden.'
       });
@@ -2957,6 +3055,17 @@ function requireOwnerRole(
   const roleKeys = request.auth?.user.roleKeys ?? [];
 
   if (!roleKeys.includes('owner')) {
+    void authAuditService.record({
+      tenantId: request.auth?.tenantId,
+      userId: request.auth?.user.id,
+      sessionId: request.auth?.sessionId,
+      actorType: 'USER',
+      actionKey: 'authz.owner_role_denied',
+      outcome: 'FAILURE',
+      ipAddress: request.ip,
+      userAgent: request.get('user-agent') ?? undefined,
+      metadata: { path: request.path }
+    });
     response.status(403).json({
       error: 'Forbidden.'
     });

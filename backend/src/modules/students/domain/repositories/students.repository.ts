@@ -6,6 +6,7 @@ export interface StudentEnrollmentRecord {
   registerMode: string;
   theoryGroupNumber: string | null;
   assignedInstructorName: string | null;
+  instructorMembershipId: string | null;
   enrollmentDate: Date;
   expectedArrivalDate: Date | null;
   previousLicenseCategory: string | null;
@@ -32,6 +33,8 @@ export interface StudentProfileRecord {
   parentPhone: string | null;
   parentEmail: string | null;
   parentContactStatus: string;
+  userMembershipId: string | null;
+  parentMembershipId: string | null;
   status: string;
   createdAt: Date;
   updatedAt: Date;

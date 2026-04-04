@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import type {
   ExamApplicationStatus as PrismaExamApplicationStatus,
   Prisma,
@@ -405,7 +406,7 @@ function buildApplicationNumber() {
     .toISOString()
     .replace(/[-:.TZ]/g, '')
     .slice(0, 14);
-  const randomSuffix = Math.random().toString(36).slice(2, 6).toUpperCase();
+  const randomSuffix = randomBytes(2).toString('hex').toUpperCase();
 
   return `EXAM-${timestamp}-${randomSuffix}`;
 }

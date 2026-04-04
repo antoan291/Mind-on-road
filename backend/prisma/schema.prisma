@@ -268,6 +268,9 @@ model TenantMembership {
   user        User                   @relation(fields: [userId], references: [id], onDelete: Restrict)
   roles       MembershipRole[]
   sessions    UserSession[]
+  studentsAsUser     Student[]          @relation("StudentUserMembership")
+  studentsAsParent   Student[]          @relation("StudentParentMembership")
+  enrollmentsAsInstructor StudentEnrollment[] @relation("EnrollmentInstructorMembership")
 
   @@unique([tenantId, userId])
   @@index([tenantId, status])
@@ -393,10 +396,14 @@ model Student {
   parentPhone         String?             @db.VarChar(50)
   parentEmail         String?             @db.VarChar(320)
   parentContactStatus ParentContactStatus @default(DISABLED)
+  userMembershipId    String?             @db.Uuid
+  parentMembershipId  String?             @db.Uuid
   status              StudentStatus       @default(ACTIVE)
   createdAt           DateTime            @default(now()) @db.Timestamptz(6)
   updatedAt           DateTime            @updatedAt @db.Timestamptz(6)
   tenant              Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  userMembership      TenantMembership?   @relation("StudentUserMembership", fields: [userMembershipId], references: [id], onDelete: SetNull)
+  parentMembership    TenantMembership?   @relation("StudentParentMembership", fields: [parentMembershipId], references: [id], onDelete: SetNull)
   enrollments         StudentEnrollment[]
   determinatorSessions DeterminatorSession[]
   paymentRecords      PaymentRecord[]
@@ -410,6 +417,8 @@ model Student {
   @@unique([tenantId, nationalId])
   @@index([tenantId, status, createdAt])
   @@index([tenantId, displayName])
+  @@index([userMembershipId])
+  @@index([parentMembershipId])
   @@map("students")
 }
 
@@ -421,9 +430,10 @@ model StudentEnrollment {
   status                  StudentEnrollmentStatus @default(ACTIVE)
   trainingMode            StudentTrainingMode     @default(STANDARD_PACKAGE)
   registerMode            StudentRegisterMode     @default(ELECTRONIC)
-  theoryGroupNumber       String?                 @db.VarChar(50)
-  assignedInstructorName  String?                 @db.VarChar(200)
-  enrollmentDate          DateTime                @db.Date
+  theoryGroupNumber         String?                 @db.VarChar(50)
+  assignedInstructorName    String?                 @db.VarChar(200)
+  instructorMembershipId    String?                 @db.Uuid
+  enrollmentDate            DateTime                @db.Date
   expectedArrivalDate     DateTime?               @db.Date
   previousLicenseCategory String?                 @db.VarChar(20)
   packageHours            Int                     @default(0)
@@ -436,10 +446,12 @@ model StudentEnrollment {
   updatedAt               DateTime                @updatedAt @db.Timestamptz(6)
   tenant                  Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   student                 Student                 @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  instructorMembership    TenantMembership?       @relation("EnrollmentInstructorMembership", fields: [instructorMembershipId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, status, categoryCode])
   @@index([tenantId, studentId])
   @@index([tenantId, assignedInstructorName])
+  @@index([tenantId, instructorMembershipId])
   @@map("student_enrollments")
 }
 
