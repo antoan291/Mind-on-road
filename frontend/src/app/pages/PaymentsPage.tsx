@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   PageHeader, Badge, Button, Modal, Input, Select, Textarea
@@ -10,14 +10,24 @@ import {
   TrendingUp, Wallet, User, MoreVertical, Check,
   Mail, Edit2, FileCheck, ChevronRight
 } from 'lucide-react';
-import { mockPayments } from '../content/mockDb';
+import {
+  createPaymentRecord,
+  fetchPaymentRecords,
+  type PaymentRecordView,
+  updatePaymentRecord,
+} from '../services/paymentsApi';
+import {
+  fetchStudentOperations,
+} from '../services/studentsApi';
+import type { StudentOperationalRecord } from '../content/studentOperations';
+import { useAuthSession } from '../services/authSession';
 
-type Payment = {
-  id: number;
+type Payment = PaymentRecordView & {
+  id: string | number;
   paymentNumber: string;
   date: string;
   student: string;
-  studentId: number;
+  studentId: string | number;
   category: string;
   packageType: string;
   dueAmount: number;
@@ -84,21 +94,111 @@ const formatCurrency = (amount: number) => {
 };
 
 export function PaymentsPage() {
+  const { session } = useAuthSession();
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [isEditPaymentOpen, setIsEditPaymentOpen] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | number | null>(null);
+  const [payments, setPayments] = useState<Payment[]>(
+    [],
+  );
+  const [students, setStudents] = useState<StudentOperationalRecord[]>([]);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [sourceStatus, setSourceStatus] = useState<'loading' | 'backend' | 'fallback'>(
+    'loading',
+  );
   
   // Filter states
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterPeriod, setFilterPeriod] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterMethod, setFilterMethod] = useState('all');
+  const [filterInvoiceStatus, setFilterInvoiceStatus] = useState('all');
   const [filterOverdueOnly, setFilterOverdueOnly] = useState(false);
 
-  const payments: Payment[] = mockPayments as Payment[];
+  const filteredPayments = useMemo(
+    () =>
+      payments.filter((payment) => {
+        const query = searchValue.trim().toLowerCase();
+        const searchMatch =
+          !query ||
+          [
+            payment.student,
+            payment.paymentNumber,
+            payment.packageType,
+            payment.paymentMethod,
+            payment.invoiceNumber ?? '',
+          ].some((field) => field.toLowerCase().includes(query));
+
+        const categoryMatch =
+          filterCategory === 'all' ||
+          payment.category.toLowerCase() === filterCategory;
+
+        const statusMatch =
+          filterStatus === 'all' || payment.paymentStatus === filterStatus;
+
+        const invoiceMatch =
+          filterInvoiceStatus === 'all' ||
+          payment.invoiceStatus === filterInvoiceStatus;
+
+        const methodMatch =
+          filterMethod === 'all' ||
+          payment.paymentMethod.toLowerCase().includes(filterMethod);
+
+        const overdueMatch =
+          !filterOverdueOnly || payment.paymentStatus === 'overdue';
+
+        const periodMatch =
+          filterPeriod === 'all' ||
+          (filterPeriod === 'today' && payment.date === new Date().toISOString().slice(0, 10)) ||
+          (filterPeriod === 'week' && isWithinLastDays(payment.date, 7)) ||
+          (filterPeriod === 'month' && payment.date.startsWith(new Date().toISOString().slice(0, 7)));
+
+        return (
+          searchMatch &&
+          categoryMatch &&
+          statusMatch &&
+          invoiceMatch &&
+          methodMatch &&
+          overdueMatch &&
+          periodMatch
+        );
+      }),
+    [
+      payments,
+      searchValue,
+      filterCategory,
+      filterStatus,
+      filterMethod,
+      filterInvoiceStatus,
+      filterOverdueOnly,
+      filterPeriod,
+    ],
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([fetchPaymentRecords(), fetchStudentOperations()])
+      .then(([records, studentRows]) => {
+        if (!isMounted) return;
+        setPayments(records as Payment[]);
+        setStudents(studentRows);
+        setSourceStatus('backend');
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setPayments([]);
+        setStudents([]);
+        setSourceStatus('fallback');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Calculate summary metrics
   const totalDue = payments.reduce((sum, p) => sum + p.dueAmount, 0);
@@ -113,6 +213,7 @@ export function PaymentsPage() {
     filterPeriod !== 'all',
     filterStatus !== 'all',
     filterMethod !== 'all',
+    filterInvoiceStatus !== 'all',
     filterOverdueOnly,
   ].filter(Boolean).length;
 
@@ -121,6 +222,7 @@ export function PaymentsPage() {
     setFilterPeriod('all');
     setFilterStatus('all');
     setFilterMethod('all');
+    setFilterInvoiceStatus('all');
     setFilterOverdueOnly(false);
     setSearchValue('');
   };
@@ -130,19 +232,234 @@ export function PaymentsPage() {
     setOpenMenuId(null);
   };
 
-  const handleMarkAsPaid = (paymentId: number) => {
-    console.log('Mark as paid:', paymentId);
+  const handleMarkAsPaid = async (paymentId: string | number) => {
+    const paymentToUpdate = payments.find((payment) => payment.id === paymentId);
+
+    if (!paymentToUpdate) {
+      return;
+    }
+
+    const savedPayment = await updatePaymentRecord(
+      String(paymentId),
+      {
+        amount: paymentToUpdate.dueAmount,
+        paidAmount: paymentToUpdate.dueAmount,
+        status: 'PAID',
+        paidAt: normalizePaymentDate(paymentToUpdate.date),
+        method: paymentToUpdate.paymentMethod,
+        note: `${paymentToUpdate.notes ?? ''}\nМаркирано като платено от UI action.`.trim(),
+      },
+      session?.csrfToken ?? '',
+    );
+
+    setPayments((currentPayments) =>
+      currentPayments.map((payment) =>
+        payment.id === paymentId ? (savedPayment as Payment) : payment,
+      ),
+    );
+    setSelectedPayment((current) =>
+      current?.id === paymentId ? (savedPayment as Payment) : current,
+    );
     setOpenMenuId(null);
   };
 
-  const handleSendReminder = (paymentId: number) => {
-    console.log('Send reminder:', paymentId);
+  const handleSendReminder = async (paymentId: string | number) => {
+    const paymentToUpdate = payments.find((payment) => payment.id === paymentId);
+
+    if (!paymentToUpdate) {
+      return;
+    }
+
+    const savedPayment = await updatePaymentRecord(
+      String(paymentId),
+      {
+        note: `${paymentToUpdate.notes ?? ''}\nИзпратено е напомняне към родител/курсист.`.trim(),
+      },
+      session?.csrfToken ?? '',
+    );
+
+    setPayments((currentPayments) =>
+      currentPayments.map((payment) =>
+        payment.id === paymentId
+          ? ({
+              ...(savedPayment as Payment),
+              activity: [
+                {
+                  type: 'reminder_sent',
+                  description: 'Изпратено е напомняне за плащане от action менюто.',
+                  timestamp: new Date().toLocaleString('bg-BG'),
+                  user: 'Система',
+                },
+                ...((savedPayment as Payment).activity ?? []),
+              ],
+            } as Payment)
+          : payment,
+      ),
+    );
+    setSelectedPayment((current) =>
+      current?.id === paymentId
+        ? ({
+            ...(savedPayment as Payment),
+            activity: [
+              {
+                type: 'reminder_sent',
+                description: 'Изпратено е напомняне за плащане от action менюто.',
+                timestamp: new Date().toLocaleString('bg-BG'),
+                user: 'Система',
+              },
+              ...((savedPayment as Payment).activity ?? []),
+            ],
+          } as Payment)
+        : current,
+    );
     setOpenMenuId(null);
   };
 
-  const handleAddCorrection = (paymentId: number) => {
-    console.log('Add correction:', paymentId);
+  const handleAddCorrection = (paymentId: string | number) => {
+    const paymentToEdit = payments.find((payment) => payment.id === paymentId);
+    if (paymentToEdit) {
+      setSelectedPayment(paymentToEdit);
+      setIsEditPaymentOpen(true);
+    }
     setOpenMenuId(null);
+  };
+
+  const handleCreateNewPayment = () => {
+    const targetStudent = students[0];
+
+    if (!targetStudent) {
+      setSaveError('Няма наличен курсист от базата за създаване на плащане.');
+      return;
+    }
+
+    const nowIso = new Date().toISOString().slice(0, 10);
+    const nextPayment: Payment = {
+      id: `draft-${Date.now()}`,
+      paymentNumber: `PAY-DRAFT-${Date.now()}`,
+      date: nowIso,
+      student: targetStudent.name,
+      studentId: targetStudent.id,
+      category: targetStudent.category,
+      packageType: 'Такса обучение',
+      dueAmount: 0,
+      paidAmount: 0,
+      remainingAmount: 0,
+      paymentMethod: 'Банков превод',
+      paymentStatus: 'pending',
+      invoiceStatus: 'none',
+      invoiceNumber: undefined,
+      lastUpdatedBy: 'Администратор',
+      lastUpdatedDate: nowIso,
+      wasCorrected: false,
+      notes: 'Нов ръчно подготвен payment draft.',
+      activity: [
+        {
+          type: 'created',
+          description: 'Създаден е нов payment draft от бутона "Ново плащане".',
+          timestamp: new Date().toLocaleString('bg-BG'),
+          user: 'Администратор',
+        },
+      ],
+    };
+
+    setPayments((current) => [nextPayment, ...current]);
+    setSelectedPayment(nextPayment);
+    setIsEditPaymentOpen(true);
+  };
+
+  const handleUpdateSelectedPayment = (updates: Partial<Payment>) => {
+    setSelectedPayment((current) =>
+      current
+        ? {
+            ...current,
+            ...updates,
+            lastUpdatedBy: 'Администратор',
+            lastUpdatedDate: new Date().toISOString().slice(0, 10),
+            wasCorrected: true,
+            correctedBy: 'Администратор',
+          }
+        : current,
+    );
+  };
+
+  const handleSaveSelectedPayment = () => {
+    if (!selectedPayment) {
+      return;
+    }
+
+    const normalizedPayment: Payment = {
+      ...selectedPayment,
+      remainingAmount: Math.max(
+        Number(selectedPayment.dueAmount) - Number(selectedPayment.paidAmount),
+        0,
+      ),
+      paymentStatus:
+        Number(selectedPayment.paidAmount) >= Number(selectedPayment.dueAmount)
+          ? 'paid'
+          : Number(selectedPayment.paidAmount) > 0
+            ? 'partial'
+            : selectedPayment.paymentStatus,
+      activity: [
+        {
+          type: 'edited',
+          description: 'Плащането е редактирано и запазено от UI модала.',
+          timestamp: new Date().toLocaleString('bg-BG'),
+          user: 'Администратор',
+        },
+        ...(selectedPayment.activity ?? []),
+      ],
+    };
+
+    const persistPayment = async () => {
+      const isDraftPayment = String(normalizedPayment.id).startsWith('draft-');
+      const payload = {
+        studentId: String(normalizedPayment.studentId),
+        amount: Math.round(Number(normalizedPayment.dueAmount)),
+        paidAmount: Math.round(Number(normalizedPayment.paidAmount)),
+        method: normalizedPayment.paymentMethod,
+        status: mapPaymentStatusToApi(normalizedPayment.paymentStatus),
+        paidAt: normalizePaymentDate(normalizedPayment.date),
+        note: normalizedPayment.notes ?? null,
+      };
+
+      setSaveError(null);
+
+      try {
+        const savedPayment = isDraftPayment
+          ? await createPaymentRecord(payload, session?.csrfToken ?? '')
+          : await updatePaymentRecord(
+              String(normalizedPayment.id),
+              payload,
+              session?.csrfToken ?? '',
+            );
+
+        setPayments((current) =>
+          isDraftPayment
+            ? [
+                savedPayment as Payment,
+                ...current.filter(
+                  (payment) => payment.id !== normalizedPayment.id,
+                ),
+              ]
+            : current.map((payment) =>
+                payment.id === normalizedPayment.id
+                  ? (savedPayment as Payment)
+                  : payment,
+              ),
+        );
+        setSelectedPayment(savedPayment as Payment);
+        setIsEditPaymentOpen(false);
+        setSourceStatus('backend');
+      } catch (error) {
+        setSaveError(
+          error instanceof Error
+            ? error.message
+            : 'Плащането не беше записано в базата.',
+        );
+      }
+    };
+
+    void persistPayment();
   };
 
   return (
@@ -150,7 +467,13 @@ export function PaymentsPage() {
       {/* Page Header */}
       <PageHeader
         title="Плащания"
-        subtitle="Финансов контролен център на автошколата"
+        subtitle={`Финансов контролен център на автошколата • ${
+          sourceStatus === 'backend'
+            ? 'Данни от PostgreSQL'
+            : sourceStatus === 'fallback'
+              ? 'Fallback към локални тестови данни'
+              : 'Зареждане...'
+        }`}
         actions={
           <>
             <Button 
@@ -163,12 +486,14 @@ export function PaymentsPage() {
             <Button 
               variant="secondary" 
               icon={<Download size={18} />}
+              onClick={() => exportPaymentsCsv(filteredPayments)}
             >
               Експорт
             </Button>
             <Button 
               variant="primary" 
               icon={<Plus size={18} />}
+              onClick={handleCreateNewPayment}
             >
               Ново плащане
             </Button>
@@ -189,14 +514,14 @@ export function PaymentsPage() {
             icon={<CheckCircle size={18} />}
             label="Платено"
             value={`${formatCurrency(totalPaid)} лв`}
-            subtitle={`${((totalPaid / totalDue) * 100).toFixed(0)}%`}
+            subtitle={`${calculateSafePercent(totalPaid, totalDue)}%`}
             iconColor="var(--status-success)"
           />
           <TelemetryCard
             icon={<Clock size={18} />}
             label="Остават за плащане"
             value={`${formatCurrency(totalRemaining)} лв`}
-            subtitle={`${((totalRemaining / totalDue) * 100).toFixed(0)}%`}
+            subtitle={`${calculateSafePercent(totalRemaining, totalDue)}%`}
             iconColor="var(--status-warning)"
             alert={totalRemaining > 0}
           />
@@ -281,16 +606,14 @@ export function PaymentsPage() {
           {/* Expanded Filters */}
           {showFilters && (
             <div className="mt-4 pt-4 border-t" style={{ borderColor: 'var(--ghost-border)' }}>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
                 <FilterSelect
                   label="Категория"
                   value={filterCategory}
                   onChange={setFilterCategory}
                   options={[
                     { value: 'all', label: 'Всички категории' },
-                    { value: 'a', label: 'Категория A' },
                     { value: 'b', label: 'Категория B' },
-                    { value: 'c', label: 'Категория C' },
                   ]}
                 />
 
@@ -325,9 +648,21 @@ export function PaymentsPage() {
                   onChange={setFilterMethod}
                   options={[
                     { value: 'all', label: 'Всички методи' },
-                    { value: 'cash', label: 'В брой' },
-                    { value: 'card', label: 'Карта' },
-                    { value: 'transfer', label: 'Банков превод' },
+                    { value: 'брой', label: 'В брой' },
+                    { value: 'карта', label: 'Карта' },
+                    { value: 'банков', label: 'Банков превод' },
+                  ]}
+                />
+
+                <FilterSelect
+                  label="Фактура"
+                  value={filterInvoiceStatus}
+                  onChange={setFilterInvoiceStatus}
+                  options={[
+                    { value: 'all', label: 'Всички фактури' },
+                    { value: 'issued', label: 'С издадена фактура' },
+                    { value: 'pending', label: 'Очаква обработка' },
+                    { value: 'none', label: 'Без фактура' },
                   ]}
                 />
               </div>
@@ -363,7 +698,7 @@ export function PaymentsPage() {
                   Всички плащания
                 </h3>
                 <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  Показани {payments.length} от {payments.length} записа
+                  Показани {filteredPayments.length} от {payments.length} записа
                 </p>
               </div>
             </div>
@@ -400,7 +735,7 @@ export function PaymentsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {payments.map((payment, idx) => (
+                  {filteredPayments.map((payment, idx) => (
                     <tr
                       key={payment.id}
                       onClick={() => handleRowClick(payment)}
@@ -475,7 +810,7 @@ export function PaymentsPage() {
                         </p>
                         {payment.paidAmount > 0 && payment.remainingAmount > 0 && (
                           <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                            {((payment.paidAmount / payment.dueAmount) * 100).toFixed(0)}%
+                            {calculateSafePercent(payment.paidAmount, payment.dueAmount)}%
                           </p>
                         )}
                       </td>
@@ -574,7 +909,7 @@ export function PaymentsPage() {
                                 onClick={(e) => e.stopPropagation()}
                               >
                                 <button
-                                  onClick={() => handleMarkAsPaid(payment.id)}
+                                  onClick={() => void handleMarkAsPaid(payment.id)}
                                   className="w-full px-4 py-3 flex items-center gap-3 transition-all hover:bg-opacity-50 text-left"
                                   style={{ background: 'transparent' }}
                                 >
@@ -584,7 +919,7 @@ export function PaymentsPage() {
                                   </span>
                                 </button>
                                 <button
-                                  onClick={() => handleSendReminder(payment.id)}
+                                  onClick={() => void handleSendReminder(payment.id)}
                                   className="w-full px-4 py-3 flex items-center gap-3 transition-all hover:bg-opacity-50 text-left"
                                   style={{ background: 'transparent' }}
                                 >
@@ -631,7 +966,7 @@ export function PaymentsPage() {
               style={{ borderColor: 'var(--ghost-border)' }}
             >
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                Общо {payments.length} {payments.length === 1 ? 'плащане' : 'плащания'}
+                Общо {filteredPayments.length} {filteredPayments.length === 1 ? 'плащане' : 'плащания'}
               </p>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
@@ -663,7 +998,11 @@ export function PaymentsPage() {
             <p className="text-base mb-6" style={{ color: 'var(--text-secondary)' }}>
               Все още няма записани плащания в системата
             </p>
-            <Button variant="primary" icon={<Plus size={18} />}>
+            <Button
+              variant="primary"
+              icon={<Plus size={18} />}
+              onClick={handleCreateNewPayment}
+            >
               Създай първото плащане
             </Button>
           </div>
@@ -679,24 +1018,29 @@ export function PaymentsPage() {
           footer={
             <>
               <Button variant="secondary" onClick={() => setIsEditPaymentOpen(false)}>Отказ</Button>
-              <Button variant="primary" onClick={() => setIsEditPaymentOpen(false)}>Запази промените</Button>
+              <Button variant="primary" onClick={handleSaveSelectedPayment}>Запази промените</Button>
             </>
           }
         >
           <div className="space-y-5">
             <div className="rounded-2xl border p-4" style={{ background: 'rgba(15, 23, 42, 0.72)', borderColor: 'var(--ghost-border)' }}>
               <p className="mb-2 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Какво трябва да попълните</p>
-              <p className="text-sm leading-6" style={{ color: 'var(--text-secondary)' }}>Редактирайте основните данни по плащането. Формата е подготвена за бъдещо свързване с backend и може да се използва директно като основа за update заявка.</p>
+              <p className="text-sm leading-6" style={{ color: 'var(--text-secondary)' }}>Редактирайте основните данни по плащането. Промените се записват директно в PostgreSQL.</p>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Курсист</label><input defaultValue={selectedPayment.student} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
-              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Дата на плащане</label><input defaultValue={selectedPayment.date} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
-              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Дължима сума</label><input type="number" defaultValue={selectedPayment.dueAmount} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
-              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Платена сума</label><input type="number" defaultValue={selectedPayment.paidAmount} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
-              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Метод на плащане</label><select defaultValue={selectedPayment.paymentMethod} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}><option value={selectedPayment.paymentMethod}>{selectedPayment.paymentMethod}</option><option value="В брой">В брой</option><option value="Банков превод">Банков превод</option><option value="Карта">Карта</option></select></div>
-              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Статус</label><select defaultValue={selectedPayment.paymentStatus} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}><option value="paid">Платено</option><option value="partial">Частично</option><option value="overdue">Просрочено</option><option value="pending">Очаква</option><option value="canceled">Отказано</option></select></div>
-              <div className="md:col-span-2"><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Бележки</label><textarea defaultValue={selectedPayment.notes || ''} rows={4} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Курсист</label><select value={String(selectedPayment.studentId)} onChange={(event) => { const selectedStudent = students.find((student) => String(student.id) === event.target.value); if (selectedStudent) { handleUpdateSelectedPayment({ studentId: selectedStudent.id, student: selectedStudent.name, category: selectedStudent.category }); } }} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}>{students.length === 0 ? <option value={String(selectedPayment.studentId)}>{selectedPayment.student}</option> : students.map((student) => (<option key={student.id} value={String(student.id)}>{student.name} · Кат. {student.category}</option>))}</select></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Дата на плащане</label><input type="date" value={selectedPayment.date} onChange={(event) => handleUpdateSelectedPayment({ date: event.target.value })} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Дължима сума</label><input type="number" value={selectedPayment.dueAmount} onChange={(event) => handleUpdateSelectedPayment({ dueAmount: Number(event.target.value) })} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Платена сума</label><input type="number" value={selectedPayment.paidAmount} onChange={(event) => handleUpdateSelectedPayment({ paidAmount: Number(event.target.value) })} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Метод на плащане</label><select value={selectedPayment.paymentMethod} onChange={(event) => handleUpdateSelectedPayment({ paymentMethod: event.target.value })} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}><option value="В брой">В брой</option><option value="Банков превод">Банков превод</option><option value="Карта">Карта</option></select></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Статус</label><select value={selectedPayment.paymentStatus} onChange={(event) => handleUpdateSelectedPayment({ paymentStatus: event.target.value as Payment['paymentStatus'] })} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}><option value="paid">Платено</option><option value="partial">Частично</option><option value="overdue">Просрочено</option><option value="pending">Очаква</option><option value="canceled">Отказано</option></select></div>
+              <div className="md:col-span-2"><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Бележки</label><textarea value={selectedPayment.notes || ''} onChange={(event) => handleUpdateSelectedPayment({ notes: event.target.value })} rows={4} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
             </div>
+            {saveError && (
+              <p className="text-sm" style={{ color: 'var(--status-error)' }}>
+                {saveError}
+              </p>
+            )}
           </div>
         </Modal>
       )}
@@ -720,6 +1064,92 @@ export function PaymentsPage() {
       )}
     </div>
   );
+}
+
+function exportPaymentsCsv(payments: Payment[]) {
+  const csvRows = [
+    'Номер на плащане;Курсист;Дата;Дължима сума;Платена сума;Оставаща сума;Статус;Метод;История',
+    ...payments.map((payment) =>
+      [
+        payment.paymentNumber,
+        payment.student,
+        payment.date,
+        payment.dueAmount,
+        payment.paidAmount,
+        payment.remainingAmount,
+        getPaymentStatusLabel(payment.paymentStatus),
+        payment.paymentMethod,
+        (payment.activity ?? [])
+          .map(
+            (entry) =>
+              `${entry.timestamp} · ${entry.user} · ${entry.description}`,
+          )
+          .join(' | '),
+      ]
+        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+        .join(';'),
+    ),
+  ];
+  const blob = new Blob([`\uFEFF${csvRows.join('\n')}`], {
+    type: 'text/csv;charset=utf-8',
+  });
+  const downloadUrl = URL.createObjectURL(blob);
+  const anchor = globalThis.document.createElement('a');
+  anchor.href = downloadUrl;
+  anchor.download = 'plashtania_export.csv';
+  globalThis.document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(downloadUrl);
+}
+
+function calculateSafePercent(value: number, total: number) {
+  if (total <= 0) {
+    return '0';
+  }
+
+  return ((value / total) * 100).toFixed(0);
+}
+
+function isWithinLastDays(dateValue: string, days: number) {
+  const recordTime = new Date(`${dateValue}T00:00:00.000Z`).getTime();
+
+  if (Number.isNaN(recordTime)) {
+    return false;
+  }
+
+  const cutoffTime = Date.now() - days * 24 * 60 * 60 * 1000;
+
+  return recordTime >= cutoffTime;
+}
+
+function mapPaymentStatusToApi(status: Payment['paymentStatus']) {
+  switch (status) {
+    case 'paid':
+      return 'PAID' as const;
+    case 'partial':
+      return 'PARTIAL' as const;
+    case 'overdue':
+      return 'OVERDUE' as const;
+    case 'canceled':
+      return 'CANCELED' as const;
+    default:
+      return 'PENDING' as const;
+  }
+}
+
+function normalizePaymentDate(dateValue: string) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    return dateValue;
+  }
+
+  const [day = '', month = '', year = ''] = dateValue.split('.');
+
+  if (!day || !month || !year) {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
 // Telemetry Card Component
@@ -1093,13 +1523,3 @@ function PaymentDetailDrawer({
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-

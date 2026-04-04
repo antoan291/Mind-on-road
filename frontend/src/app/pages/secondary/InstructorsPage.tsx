@@ -1,16 +1,47 @@
 ﻿import { ChevronRight, Download, Plus, TriangleAlert, UserCircle, Users } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '../../components/ui-system/Button';
 import { FilterBar } from '../../components/ui-system/FilterBar';
 import { PageHeader } from '../../components/ui-system/PageHeader';
 import { StatusBadge } from '../../components/ui-system/StatusBadge';
-import { instructors } from './secondaryData';
+import {
+  buildInstructorRows,
+  fetchInstructorRows,
+} from '../../services/instructorsApi';
+import {
+  type InstructorRow,
+} from './secondaryData';
 import { InfoLine, MetricCard, MetricGrid, PageSection, Panel } from './secondaryShared';
 
 export function InstructorsPage() {
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState('');
+  const [instructors, setInstructors] =
+    useState<InstructorRow[]>([]);
+  const [sourceStatus, setSourceStatus] = useState<
+    'loading' | 'backend' | 'fallback'
+  >('loading');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchInstructorRows()
+      .then((records) => {
+        if (!isMounted) return;
+        setInstructors(records);
+        setSourceStatus('backend');
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setInstructors([]);
+        setSourceStatus('fallback');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filteredInstructors = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
@@ -19,20 +50,34 @@ export function InstructorsPage() {
     return instructors.filter((item) =>
       [item.name, item.role, item.vehicle, item.theoryGroup].some((field) => field.toLowerCase().includes(query)),
     );
-  }, [searchValue]);
+  }, [searchValue, instructors]);
 
   return (
     <div>
       <PageHeader
         title="Инструктори"
-        description="Преглед на всички инструктори и бърз достъп до детайлна страница с техните курсисти и оставащи часове."
+        description={`Преглед на всички инструктори и бърз достъп до детайлна страница с техните курсисти и оставащи часове. ${
+          sourceStatus === 'backend'
+            ? 'Данни от PostgreSQL.'
+            : sourceStatus === 'fallback'
+              ? 'Backend данните не са достъпни в момента.'
+              : 'Зареждане...'
+        }`}
         breadcrumbs={[{ label: 'Начало' }, { label: 'Инструктори' }]}
         actions={
           <>
-            <Button variant="secondary" icon={<Download size={18} />}>
+            <Button
+              variant="secondary"
+              icon={<Download size={18} />}
+              onClick={() => exportInstructorsCsv(filteredInstructors)}
+            >
               Експорт
             </Button>
-            <Button variant="primary" icon={<Plus size={18} />}>
+            <Button
+              variant="primary"
+              icon={<Plus size={18} />}
+              onClick={() => navigate('/students/new')}
+            >
               Добави инструктор
             </Button>
           </>
@@ -48,10 +93,39 @@ export function InstructorsPage() {
 
       <PageSection>
         <MetricGrid>
-          <MetricCard icon={<UserCircle size={18} />} label="Активни инструктори" value="12" detail="9 практика · 3 теория" />
-          <MetricCard icon={<Users size={18} />} label="Активни курсисти" value="186" detail="Средно 15.5 на инструктор" />
-          <MetricCard icon={<TriangleAlert size={18} />} label="Платежни сигнали" value="6" detail="Курсисти с нужда от напомняне" tone="warning" />
-          <MetricCard icon={<TriangleAlert size={18} />} label="Документи за преглед" value="2" detail="Изтичащи документи" tone="warning" />
+          <MetricCard
+            icon={<UserCircle size={18} />}
+            label="Активни инструктори"
+            value={String(instructors.length)}
+            detail="DB-derived от курсистите"
+          />
+          <MetricCard
+            icon={<Users size={18} />}
+            label="Активни курсисти"
+            value={String(
+              instructors.reduce((sum, item) => sum + item.students, 0),
+            )}
+            detail="Общо разпределени"
+          />
+          <MetricCard
+            icon={<TriangleAlert size={18} />}
+            label="Платежни сигнали"
+            value={String(
+              instructors.reduce((sum, item) => sum + item.paymentAlerts, 0),
+            )}
+            detail="Курсисти с нужда от напомняне"
+            tone="warning"
+          />
+          <MetricCard
+            icon={<TriangleAlert size={18} />}
+            label="Документи за преглед"
+            value={String(
+              instructors.filter((item) => item.documentStatus === 'warning')
+                .length,
+            )}
+            detail="Изтичащи документи"
+            tone="warning"
+          />
         </MetricGrid>
 
         <Panel
@@ -119,8 +193,52 @@ export function InstructorsPage() {
               </button>
             ))}
           </div>
+          {!filteredInstructors.length && (
+            <div
+              className="rounded-3xl p-6 text-sm"
+              style={{
+                background: 'var(--bg-card-elevated)',
+                color: 'var(--text-secondary)',
+                border: '1px solid var(--ghost-border)',
+              }}
+            >
+              Няма инструктори по текущите данни/филтри.
+            </div>
+          )}
         </Panel>
       </PageSection>
     </div>
   );
+}
+
+function exportInstructorsCsv(instructors: InstructorRow[]) {
+  const rows = [
+    'name;role;students;vehicle;nextLesson;theoryGroup;paymentAlerts;documentStatus;workload',
+    ...instructors.map((item) =>
+      [
+        item.name,
+        item.role,
+        item.students,
+        item.vehicle,
+        item.nextLesson,
+        item.theoryGroup,
+        item.paymentAlerts,
+        item.documentStatus,
+        item.workload,
+      ]
+        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+        .join(';'),
+    ),
+  ];
+  const blob = new Blob([`\uFEFF${rows.join('\n')}`], {
+    type: 'text/csv;charset=utf-8',
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'instructors_export.csv';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }

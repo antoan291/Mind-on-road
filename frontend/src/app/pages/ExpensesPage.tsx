@@ -7,13 +7,13 @@
   UserRound,
   Wallet,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../components/ui-system/Button';
 import { FilterBar } from '../components/ui-system/FilterBar';
+import { Modal } from '../components/ui-system/Modal';
 import { PageHeader } from '../components/ui-system/PageHeader';
 import { StatusBadge } from '../components/ui-system/StatusBadge';
 import {
-  InfoLine,
   MetricCard,
   MetricGrid,
   PageSection,
@@ -26,13 +26,22 @@ import {
   reportEntries,
   type DashboardReportEntry,
 } from './secondary/reportingData';
+import { useAuthSession } from '../services/authSession';
+import {
+  createExpenseRecord,
+  fetchExpenseRecords,
+  type ExpenseCreatePayload,
+  type ExpenseRecordView,
+} from '../services/expensesApi';
 
-type PeriodFilter = 'month' | 'quarter' | 'year';
+type PeriodFilter = 'all' | 'today' | 'day' | 'month' | 'year';
 type ExpenseFilter = 'all' | 'real' | 'friend-vat';
 
 const periodOptions: { value: PeriodFilter; label: string }[] = [
-  { value: 'month', label: 'Текущ месец' },
-  { value: 'quarter', label: 'Тримесечие' },
+  { value: 'all', label: 'Всички' },
+  { value: 'today', label: 'Днес' },
+  { value: 'day', label: 'Ден' },
+  { value: 'month', label: 'Месец' },
   { value: 'year', label: 'Година' },
 ];
 
@@ -42,12 +51,32 @@ const expenseTypeOptions: { value: ExpenseFilter; label: string }[] = [
   { value: 'friend-vat', label: 'Само ДДС от приятели' },
 ];
 
-function matchesPeriod(date: string, period: PeriodFilter) {
-  if (period === 'month') return date.startsWith('2026-03');
-  if (period === 'quarter') {
-    return date.startsWith('2026-03') || date.startsWith('2026-02') || date.startsWith('2026-01');
+function matchesPeriod(
+  date: string,
+  period: PeriodFilter,
+  selectedDate: string,
+  selectedMonth: string,
+  selectedYear: string,
+) {
+  const todayIso = new Date().toISOString().slice(0, 10);
+
+  if (period === 'all') {
+    return true;
   }
-  return date.startsWith('2026');
+
+  if (period === 'today') {
+    return date === todayIso;
+  }
+
+  if (period === 'day') {
+    return date === selectedDate;
+  }
+
+  if (period === 'month') {
+    return date.startsWith(selectedMonth);
+  }
+
+  return date.startsWith(selectedYear);
 }
 
 function paymentMethodLabel(method: string) {
@@ -63,24 +92,109 @@ function isVisibleByType(entry: DashboardReportEntry, filter: ExpenseFilter) {
   return entry.type === 'friend-vat-expense';
 }
 
+function buildYearOptions(entries: DashboardReportEntry[]) {
+  const years = Array.from(
+    new Set(entries.map((entry) => entry.date.slice(0, 4))),
+  ).sort((left, right) => Number(right) - Number(left));
+
+  return years.length > 0
+    ? years
+    : [new Date().toISOString().slice(0, 4)];
+}
+
+function calculateBulgarianVatFromGrossAmount(amountValue: string) {
+  const amount = Number.parseFloat(amountValue);
+
+  if (Number.isNaN(amount) || amount <= 0) {
+    return 0;
+  }
+
+  return Math.round((amount * 20) / 120);
+}
+
 export function ExpensesPage() {
+  const { session } = useAuthSession();
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const currentMonthIso = todayIso.slice(0, 7);
+  const currentYearIso = todayIso.slice(0, 4);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>('month');
+  const [selectedDate, setSelectedDate] = useState(todayIso);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthIso);
+  const [selectedYear, setSelectedYear] = useState(currentYearIso);
   const [expenseFilter, setExpenseFilter] = useState<ExpenseFilter>('all');
   const [searchValue, setSearchValue] = useState('');
+  const [entries, setEntries] = useState<DashboardReportEntry[]>(
+    reportEntries,
+  );
+  const [isCreateExpenseOpen, setIsCreateExpenseOpen] = useState(false);
+  const [draftExpense, setDraftExpense] = useState({
+    title: 'Нов разход',
+    category: 'Поддръжка',
+    source: 'Mind On Road',
+    counterparty: 'Доставчик',
+    paymentMethod: 'bank',
+    amount: '120',
+    vatAmount: '24',
+    type: 'expense' as DashboardReportEntry['type'],
+    note: 'Тестово въведен разход.',
+  });
+  const [sourceStatus, setSourceStatus] = useState<
+    'loading' | 'backend' | 'fallback'
+  >('loading');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchExpenseRecords()
+      .then((records) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setEntries(records.map((record) => mapExpenseRecord(record)));
+        setSourceStatus('backend');
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setEntries(reportEntries);
+        setSourceStatus('fallback');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const expenses = useMemo(
     () =>
-      reportEntries.filter(
+      entries.filter(
         (entry) =>
           (entry.type === 'expense' || entry.type === 'friend-vat-expense') &&
-          matchesPeriod(entry.date, periodFilter) &&
+          matchesPeriod(
+            entry.date,
+            periodFilter,
+            selectedDate,
+            selectedMonth,
+            selectedYear,
+          ) &&
           isVisibleByType(entry, expenseFilter) &&
           [entry.title, entry.category, entry.source, entry.counterparty, entry.note]
             .join(' ')
             .toLowerCase()
             .includes(searchValue.trim().toLowerCase()),
       ),
-    [expenseFilter, periodFilter, searchValue],
+    [
+      entries,
+      expenseFilter,
+      periodFilter,
+      searchValue,
+      selectedDate,
+      selectedMonth,
+      selectedYear,
+    ],
   );
 
   const realExpenses = expenses.filter(
@@ -95,27 +209,88 @@ export function ExpensesPage() {
   const pendingExpenses = expenses.filter((entry) => entry.status === 'warning').length;
   const friendVatBase = friendVatExpenses.reduce((sum, entry) => sum + entry.amount, 0);
   const friendVatAmount = friendVatExpenses.reduce((sum, entry) => sum + (entry.vatAmount ?? 0), 0);
+  const savedVatTotal = expenses.reduce((sum, entry) => sum + (entry.vatAmount ?? 0), 0);
 
-  const groupedByCategory = Array.from(
-    expenses.reduce((map, entry) => {
-      const current = map.get(entry.category) ?? 0;
-      map.set(entry.category, current + entry.amount);
-      return map;
-    }, new Map<string, number>()),
-  ).sort((a, b) => b[1] - a[1]);
+  const handleCreateExpense = async () => {
+    const payload: ExpenseCreatePayload = {
+      title: draftExpense.title,
+      type: draftExpense.type,
+      category: draftExpense.category,
+      amount: Number(draftExpense.amount) || 0,
+      vatAmount:
+        draftExpense.type === 'friend-vat-expense'
+          ? calculateBulgarianVatFromGrossAmount(draftExpense.amount)
+          : 0,
+      paymentMethod: draftExpense.paymentMethod,
+      source: draftExpense.source,
+      counterparty: draftExpense.counterparty,
+      note: draftExpense.note,
+      status: 'warning',
+      affectsOperationalExpense: draftExpense.type !== 'friend-vat-expense',
+      date: new Date().toISOString().slice(0, 10),
+    };
+
+    const nextEntry: DashboardReportEntry = {
+      id: `EXP-${Date.now()}`,
+      date: payload.date,
+      title: payload.title,
+      type: payload.type,
+      category: payload.category,
+      amount: payload.amount,
+      vatAmount: payload.vatAmount,
+      paymentMethod: payload.paymentMethod as DashboardReportEntry['paymentMethod'],
+      source: payload.source,
+      counterparty: payload.counterparty,
+      note: payload.note,
+      status: payload.status,
+      documentReference: `EXP-${Date.now()}`,
+      currency: 'BGN',
+      affectsOperationalExpense: payload.affectsOperationalExpense,
+    };
+
+    if (session?.csrfToken) {
+      try {
+        const created = await createExpenseRecord(payload, session.csrfToken);
+
+        setEntries((current) => [mapExpenseRecord(created), ...current]);
+        setSourceStatus('backend');
+        setIsCreateExpenseOpen(false);
+        return;
+      } catch {
+        setSourceStatus('fallback');
+      }
+    };
+
+    setEntries((current) => [nextEntry, ...current]);
+    setIsCreateExpenseOpen(false);
+  };
 
   return (
     <div>
       <PageHeader
         title="Разходи"
-        description="Удобен работен екран без хоризонтално избиване: разходите са cards, а ДДС редовете от приятели са ясно отделени."
+        description={`Удобен работен екран без хоризонтално избиване: разходите са cards, а ДДС редовете от приятели са ясно отделени. ${
+          sourceStatus === 'backend'
+            ? 'Данни от PostgreSQL + Redis.'
+            : sourceStatus === 'fallback'
+              ? 'Fallback към локални записи.'
+              : 'Зареждане...'
+        }`}
         breadcrumbs={[{ label: 'Начало' }, { label: 'Разходи' }]}
         actions={
           <>
-            <Button variant="secondary" icon={<Download size={18} />}>
+            <Button
+              variant="secondary"
+              icon={<Download size={18} />}
+              onClick={() => exportExpensesCsv(expenses)}
+            >
               Експорт
             </Button>
-            <Button variant="primary" icon={<Receipt size={18} />}>
+            <Button
+              variant="primary"
+              icon={<Receipt size={18} />}
+              onClick={() => setIsCreateExpenseOpen(true)}
+            >
               Добави разход
             </Button>
           </>
@@ -159,142 +334,364 @@ export function ExpensesPage() {
             detail={`Основа ${formatDashboardMoney(friendVatBase)}`}
             tone={friendVatAmount > 0 ? 'info' : 'neutral'}
           />
+          <MetricCard
+            icon={<Banknote size={18} />}
+            label="Спестено ДДС"
+            value={formatDashboardMoney(savedVatTotal)}
+            detail="Общо по текущите филтри"
+            tone={savedVatTotal > 0 ? 'success' : 'neutral'}
+          />
         </MetricGrid>
 
         <Panel
           title="Филтри"
-          subtitle="Смени периода и типа записи без странична навигация и без да товариш таблица извън екрана."
+          subtitle="Избери точен период по ден, месец или година и отдели реалните разходи от ДДС редовете."
         >
-          <div className="flex flex-wrap gap-3">
-            {periodOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setPeriodFilter(option.value)}
-                className="inline-flex h-11 items-center justify-center rounded-2xl px-4 text-sm font-medium transition-all"
-                style={{
-                  background:
-                    periodFilter === option.value
-                      ? 'rgba(99, 102, 241, 0.16)'
-                      : 'rgba(255,255,255,0.04)',
-                  color: 'var(--text-primary)',
-                  border:
-                    periodFilter === option.value
-                      ? '1px solid rgba(99, 102, 241, 0.28)'
-                      : '1px solid var(--ghost-border)',
-                }}
-              >
-                {option.label}
-              </button>
-            ))}
+          <div className="space-y-5">
+            <div className="flex flex-wrap gap-3">
+              {periodOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setPeriodFilter(option.value)}
+                  className="inline-flex h-11 items-center justify-center rounded-2xl px-4 text-sm font-medium transition-all"
+                  style={{
+                    background:
+                      periodFilter === option.value
+                        ? 'rgba(99, 102, 241, 0.16)'
+                        : 'rgba(255,255,255,0.04)',
+                    color: 'var(--text-primary)',
+                    border:
+                      periodFilter === option.value
+                        ? '1px solid rgba(99, 102, 241, 0.28)'
+                        : '1px solid var(--ghost-border)',
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
 
-            {expenseTypeOptions.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setExpenseFilter(option.value)}
-                className="inline-flex h-11 items-center justify-center rounded-2xl px-4 text-sm font-medium transition-all"
-                style={{
-                  background:
-                    expenseFilter === option.value
-                      ? 'rgba(59, 130, 246, 0.16)'
-                      : 'rgba(255,255,255,0.04)',
-                  color: 'var(--text-primary)',
-                  border:
-                    expenseFilter === option.value
-                      ? '1px solid rgba(59, 130, 246, 0.28)'
-                      : '1px solid var(--ghost-border)',
-                }}
-              >
-                {option.label}
-              </button>
-            ))}
+            <div className="grid gap-4 md:grid-cols-3">
+              <label className="block">
+                <span
+                  className="mb-2 block text-sm font-medium"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  Ден
+                </span>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(event) => {
+                    setSelectedDate(event.target.value);
+                    setPeriodFilter('day');
+                  }}
+                  className="h-11 w-full rounded-xl px-4 text-sm outline-none focus:ring-2 focus:ring-sky-500/20"
+                  style={{
+                    background: 'rgba(15, 23, 42, 0.22)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid rgba(148, 163, 184, 0.32)',
+                  }}
+                />
+              </label>
+
+              <label className="block">
+                <span
+                  className="mb-2 block text-sm font-medium"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  Месец
+                </span>
+                <input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(event) => {
+                    setSelectedMonth(event.target.value);
+                    setPeriodFilter('month');
+                  }}
+                  className="h-11 w-full rounded-xl px-4 text-sm outline-none focus:ring-2 focus:ring-sky-500/20"
+                  style={{
+                    background: 'rgba(15, 23, 42, 0.22)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid rgba(148, 163, 184, 0.32)',
+                  }}
+                />
+              </label>
+
+              <label className="block">
+                <span
+                  className="mb-2 block text-sm font-medium"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  Година
+                </span>
+                <select
+                  value={selectedYear}
+                  onChange={(event) => {
+                    setSelectedYear(event.target.value);
+                    setPeriodFilter('year');
+                  }}
+                  className="h-11 w-full rounded-xl px-4 text-sm outline-none focus:ring-2 focus:ring-sky-500/20"
+                  style={{
+                    backgroundColor: 'rgba(15, 23, 42, 0.22)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid rgba(148, 163, 184, 0.32)',
+                  }}
+                >
+                  {buildYearOptions(entries).map((yearOption) => (
+                    <option key={yearOption} value={yearOption}>
+                      {yearOption}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              {expenseTypeOptions.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setExpenseFilter(option.value)}
+                  className="inline-flex h-11 items-center justify-center rounded-2xl px-4 text-sm font-medium transition-all"
+                  style={{
+                    background:
+                      expenseFilter === option.value
+                        ? 'rgba(59, 130, 246, 0.16)'
+                        : 'rgba(255,255,255,0.04)',
+                    color: 'var(--text-primary)',
+                    border:
+                      expenseFilter === option.value
+                        ? '1px solid rgba(59, 130, 246, 0.28)'
+                        : '1px solid var(--ghost-border)',
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
           </div>
         </Panel>
 
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1.2fr)_380px]">
-          <Panel
-            title="Регистър на разходите"
-            subtitle="Всеки ред е компактна карта с ясен финансов ефект, така че екранът да не избива настрани."
-          >
-            <div className="space-y-4">
-              {expenses.map((entry) => (
-                <ExpenseCard key={entry.id} entry={entry} />
-              ))}
+        <Panel
+          title="Регистър на разходите"
+          subtitle="Всеки ред е компактна карта с ясен финансов ефект, така че екранът да не избива настрани."
+        >
+          <div className="space-y-4">
+            {expenses.map((entry) => (
+              <ExpenseCard key={entry.id} entry={entry} />
+            ))}
 
-              {!expenses.length && (
-                <div
-                  className="rounded-3xl p-8 text-center text-sm"
-                  style={{
-                    background: 'var(--bg-card-elevated)',
-                    color: 'var(--text-secondary)',
-                    border: '1px solid var(--ghost-border)',
-                  }}
-                >
-                  Няма разходи по текущите филтри.
-                </div>
-              )}
-            </div>
-          </Panel>
-
-          <Panel
-            title="Разбивка"
-            subtitle="Категории + ДДС обобщение в фиксирана дясна колона, без раздуване на основния регистър."
-          >
-            <div className="space-y-4">
+            {!expenses.length && (
               <div
-                className="rounded-3xl p-5"
+                className="rounded-3xl p-8 text-center text-sm"
                 style={{
-                  background: 'linear-gradient(180deg, rgba(18, 27, 50, 0.96), rgba(14, 22, 42, 0.98))',
+                  background: 'var(--bg-card-elevated)',
+                  color: 'var(--text-secondary)',
                   border: '1px solid var(--ghost-border)',
                 }}
               >
-                <InfoLine label="ДДС основа от приятели" value={formatDashboardMoney(friendVatBase)} />
-                <div className="mt-4">
-                  <InfoLine label="ДДС сума" value={formatDashboardMoney(friendVatAmount)} />
-                </div>
-                <p className="mt-4 text-sm leading-6" style={{ color: 'var(--text-secondary)' }}>
-                  Тези записи не увеличават реалния разход, а само участват в данъчната калкулация.
-                </p>
+                Няма разходи по текущите филтри.
               </div>
-
-              {groupedByCategory.map(([category, amount]) => (
-                <div
-                  key={category}
-                  className="rounded-3xl p-4"
-                  style={{
-                    background: 'var(--bg-card-elevated)',
-                    border: '1px solid var(--ghost-border)',
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="min-w-0">
-                      <p
-                        className="truncate text-sm font-medium"
-                        style={{ color: 'var(--text-primary)' }}
-                      >
-                        {category}
-                      </p>
-                      <p
-                        className="mt-1 text-xs uppercase tracking-[0.16em]"
-                        style={{ color: 'var(--text-tertiary)' }}
-                      >
-                        Категория
-                      </p>
-                    </div>
-                    <p
-                      className="shrink-0 text-base font-semibold"
-                      style={{ color: 'var(--status-warning)' }}
-                    >
-                      {formatDashboardMoney(amount)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Panel>
-        </div>
+            )}
+          </div>
+        </Panel>
       </PageSection>
+
+      <Modal
+        isOpen={isCreateExpenseOpen}
+        onClose={() => setIsCreateExpenseOpen(false)}
+        title="Нов разход"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setIsCreateExpenseOpen(false)}
+            >
+              Отказ
+            </Button>
+            <Button variant="primary" onClick={handleCreateExpense}>
+              Запази разхода
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <ExpenseDraftField label="Име на разхода">
+            <input
+              value={draftExpense.title}
+              onChange={(event) =>
+                setDraftExpense((current) => ({
+                  ...current,
+                  title: event.target.value,
+                }))
+              }
+              placeholder="Например: Гориво, ремонт, офис консумативи"
+              className="h-12 w-full rounded-2xl border px-4 text-sm outline-none focus:ring-2 focus:ring-sky-500/20"
+              style={{
+                background: 'rgba(15, 23, 42, 0.22)',
+                borderColor: 'rgba(148, 163, 184, 0.32)',
+                color: 'var(--text-primary)',
+              }}
+            />
+          </ExpenseDraftField>
+
+          <ExpenseDraftField label="Категория">
+            <input
+              value={draftExpense.category}
+              onChange={(event) =>
+                setDraftExpense((current) => ({
+                  ...current,
+                  category: event.target.value,
+                }))
+              }
+              placeholder="Например: Поддръжка, гориво, офис"
+              className="h-12 w-full rounded-2xl border px-4 text-sm outline-none focus:ring-2 focus:ring-sky-500/20"
+              style={{
+                background: 'rgba(15, 23, 42, 0.22)',
+                borderColor: 'rgba(148, 163, 184, 0.32)',
+                color: 'var(--text-primary)',
+              }}
+            />
+          </ExpenseDraftField>
+
+          <ExpenseDraftField label="Тип разход">
+            <select
+              value={draftExpense.type}
+              onChange={(event) =>
+                setDraftExpense((current) => ({
+                  ...current,
+                  type: event.target.value as DashboardReportEntry['type'],
+                  vatAmount:
+                    event.target.value === 'friend-vat-expense'
+                      ? String(
+                          calculateBulgarianVatFromGrossAmount(current.amount),
+                        )
+                      : '0',
+                }))
+              }
+              className="h-12 w-full rounded-2xl border px-4 text-sm outline-none focus:ring-2 focus:ring-sky-500/20"
+              style={{
+                backgroundColor: 'rgba(15, 23, 42, 0.22)',
+                borderColor: 'rgba(148, 163, 184, 0.32)',
+                color: 'var(--text-primary)',
+              }}
+            >
+              <option value="expense">Реален разход</option>
+              <option value="friend-vat-expense">ДДС от приятели</option>
+            </select>
+          </ExpenseDraftField>
+
+          <ExpenseDraftField label="Метод на плащане">
+            <select
+              value={draftExpense.paymentMethod}
+              onChange={(event) =>
+                setDraftExpense((current) => ({
+                  ...current,
+                  paymentMethod: event.target.value,
+                }))
+              }
+              className="h-12 w-full rounded-2xl border px-4 text-sm outline-none focus:ring-2 focus:ring-sky-500/20"
+              style={{
+                backgroundColor: 'rgba(15, 23, 42, 0.22)',
+                borderColor: 'rgba(148, 163, 184, 0.32)',
+                color: 'var(--text-primary)',
+              }}
+            >
+              <option value="bank">Банков превод</option>
+              <option value="card">Карта</option>
+              <option value="cash">В брой</option>
+            </select>
+          </ExpenseDraftField>
+
+          <ExpenseDraftField label="Източник">
+            <input
+              value={draftExpense.source}
+              onChange={(event) =>
+                setDraftExpense((current) => ({
+                  ...current,
+                  source: event.target.value,
+                }))
+              }
+              placeholder="Например: Mind On Road"
+              className="h-12 w-full rounded-2xl border px-4 text-sm outline-none focus:ring-2 focus:ring-sky-500/20"
+              style={{
+                background: 'rgba(15, 23, 42, 0.22)',
+                borderColor: 'rgba(148, 163, 184, 0.32)',
+                color: 'var(--text-primary)',
+              }}
+            />
+          </ExpenseDraftField>
+
+          <ExpenseDraftField label="Доставчик / контрагент">
+            <input
+              value={draftExpense.counterparty}
+              onChange={(event) =>
+                setDraftExpense((current) => ({
+                  ...current,
+                  counterparty: event.target.value,
+                }))
+              }
+              placeholder="Например: Shell, OMV, сервиз"
+              className="h-12 w-full rounded-2xl border px-4 text-sm outline-none focus:ring-2 focus:ring-sky-500/20"
+              style={{
+                background: 'rgba(15, 23, 42, 0.22)',
+                borderColor: 'rgba(148, 163, 184, 0.32)',
+                color: 'var(--text-primary)',
+              }}
+            />
+          </ExpenseDraftField>
+
+          <ExpenseDraftField label="Сума">
+            <input
+              type="number"
+              value={draftExpense.amount}
+              onChange={(event) =>
+                setDraftExpense((current) => ({
+                  ...current,
+                  amount: event.target.value,
+                  vatAmount:
+                    current.type === 'friend-vat-expense'
+                      ? String(
+                          calculateBulgarianVatFromGrossAmount(
+                            event.target.value,
+                          ),
+                        )
+                      : current.vatAmount,
+                }))
+              }
+              placeholder="Например: 120"
+              className="h-12 w-full rounded-2xl border px-4 text-sm outline-none focus:ring-2 focus:ring-sky-500/20"
+              style={{
+                background: 'rgba(15, 23, 42, 0.22)',
+                borderColor: 'rgba(148, 163, 184, 0.32)',
+                color: 'var(--text-primary)',
+              }}
+            />
+          </ExpenseDraftField>
+
+          <ExpenseDraftField label="Бележка" className="md:col-span-2">
+            <textarea
+              value={draftExpense.note}
+              onChange={(event) =>
+                setDraftExpense((current) => ({
+                  ...current,
+                  note: event.target.value,
+                }))
+              }
+              rows={4}
+              placeholder="Кратко описание или вътрешна бележка"
+              className="w-full rounded-2xl border px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-sky-500/20"
+              style={{
+                background: 'rgba(15, 23, 42, 0.22)',
+                borderColor: 'rgba(148, 163, 184, 0.32)',
+                color: 'var(--text-primary)',
+              }}
+            />
+          </ExpenseDraftField>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -358,6 +755,67 @@ function ExpenseCard({ entry }: { entry: DashboardReportEntry }) {
   );
 }
 
+function exportExpensesCsv(expenses: DashboardReportEntry[]) {
+  const rows = [
+    'Дата;Име на разхода;Тип разход;Категория;Сума;ДДС сума;Метод на плащане;Източник;Доставчик / контрагент;Бележка',
+    ...expenses.map((entry) =>
+      [
+        entry.date,
+        entry.title,
+        entry.type === 'friend-vat-expense'
+          ? 'ДДС от приятели'
+          : 'Реален разход',
+        entry.category,
+        entry.amount,
+        entry.vatAmount ?? 0,
+        paymentMethodLabel(entry.paymentMethod),
+        entry.source,
+        entry.counterparty,
+        entry.note,
+      ]
+        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+        .join(';'),
+    ),
+  ];
+  const blob = new Blob([`\uFEFF${rows.join('\n')}`], {
+    type: 'text/csv;charset=utf-8',
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'razhodi_export.csv';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
+function mapExpenseRecord(record: ExpenseRecordView): DashboardReportEntry {
+  return {
+    id: record.id,
+    title: record.title,
+    type: record.type,
+    category: record.category,
+    amount: record.amount,
+    date: record.date,
+    source: record.source,
+    paymentMethod:
+      record.paymentMethod === 'bank' ||
+      record.paymentMethod === 'card' ||
+      record.paymentMethod === 'pos' ||
+      record.paymentMethod === 'cash'
+        ? record.paymentMethod
+        : 'bank',
+    status: record.status,
+    documentReference: `EXP-${record.id.slice(0, 8)}`,
+    counterparty: record.counterparty,
+    note: record.note,
+    currency: 'BGN',
+    vatAmount: record.vatAmount,
+    affectsOperationalExpense: record.affectsOperationalExpense,
+  };
+}
+
 function InfoChip({
   icon,
   label,
@@ -380,5 +838,27 @@ function InfoChip({
         {value}
       </p>
     </div>
+  );
+}
+
+function ExpenseDraftField({
+  label,
+  className = '',
+  children,
+}: {
+  label: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className={`block ${className}`}>
+      <span
+        className="mb-2 block text-sm font-medium"
+        style={{ color: 'var(--text-primary)' }}
+      >
+        {label}
+      </span>
+      {children}
+    </label>
   );
 }

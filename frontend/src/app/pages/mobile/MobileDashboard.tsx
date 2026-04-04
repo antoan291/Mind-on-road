@@ -1,25 +1,66 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   TrendingUp, Users, Calendar, Clock, 
   AlertCircle, CheckCircle, DollarSign, FileText,
   ChevronRight, Bell
 } from 'lucide-react';
+import {
+  studentOperationalRecords,
+  type StudentOperationalRecord,
+} from '../../content/studentOperations';
+import { fetchStudentOperations } from '../../services/studentsApi';
 
 export function MobileDashboard() {
   const navigate = useNavigate();
+  const [students, setStudents] = useState<StudentOperationalRecord[]>(studentOperationalRecords);
+  const [sourceStatus, setSourceStatus] = useState<'loading' | 'backend' | 'fallback'>('loading');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchStudentOperations()
+      .then((records) => {
+        if (!isMounted) return;
+        setStudents(records);
+        setSourceStatus('backend');
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setStudents(studentOperationalRecords);
+        setSourceStatus('fallback');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const mainStudent =
+    students[0] ??
+    (sourceStatus === 'backend' ? null : studentOperationalRecords[0]);
 
   const stats = [
-    { label: 'Активни курсисти', value: '127', trend: '+12', icon: Users, color: 'var(--primary-accent)' },
-    { label: 'Часове днес', value: '18', trend: '3 активни', icon: Calendar, color: 'var(--ai-accent)' },
+    { label: 'Активни курсисти', value: String(students.length), trend: mainStudent?.name ?? 'Няма курсист', icon: Users, color: 'var(--primary-accent)' },
+    { label: 'Часове днес', value: mainStudent ? '1' : '0', trend: mainStudent?.instructor ?? 'Няма час', icon: Calendar, color: 'var(--ai-accent)' },
     { label: 'Приходи месец', value: '12,450 лв', trend: '+8%', icon: DollarSign, color: 'var(--status-success)' },
     { label: 'Нови заявки', value: '7', trend: 'Тази седмица', icon: Bell, color: 'var(--status-warning)' },
   ];
 
   const todayLessons = [
-    { id: 1, time: '09:00', student: 'Петър Георгиев', instructor: 'Георги Петров', status: 'confirmed', statusLabel: 'Потвърден', location: 'Център' },
-    { id: 2, time: '10:30', student: 'Елена Димитрова', instructor: 'Иван Димитров', status: 'in-progress', statusLabel: 'В процес', location: 'Младост' },
-    { id: 3, time: '14:00', student: 'Мартин Иванов', instructor: 'Георги Петров', status: 'scheduled', statusLabel: 'Записан', location: 'Люлин' },
-    { id: 4, time: '16:00', student: 'София Николова', instructor: 'Мария Петкова', status: 'scheduled', statusLabel: 'Записан', location: 'Студентски град' },
+    ...(mainStudent
+      ? [
+          {
+            id: String(mainStudent.id),
+            time: '09:00',
+            student: mainStudent.name,
+            instructor: mainStudent.instructor,
+            status: 'scheduled',
+            statusLabel: 'Записан',
+            location: 'Център',
+          },
+        ]
+      : []),
   ];
 
   const alerts = [
@@ -165,7 +206,7 @@ export function MobileDashboard() {
           {todayLessons.map((lesson) => (
             <button
               key={lesson.id}
-              onClick={() => navigate(`/practical-lessons/${lesson.id}`)}
+              onClick={() => navigate(`/students/${lesson.id}`)}
               className="w-full p-4 rounded-xl text-left transition-all active:scale-98"
               style={{ background: 'var(--bg-card)' }}
             >

@@ -58,6 +58,21 @@ export const permissionSeeds: PermissionSeedDefinition[] = [
     description: 'Upload and update operational document records.'
   },
   {
+    key: 'invoices.read',
+    displayName: 'Read invoices',
+    description: 'View issued invoices, draft invoices, and payment linkage state.'
+  },
+  {
+    key: 'vehicles.read',
+    displayName: 'Read vehicles',
+    description: 'View vehicles, assigned instructors, and operational readiness.'
+  },
+  {
+    key: 'scheduling.read',
+    displayName: 'Read scheduling',
+    description: 'View theory groups, lectures, and practical lesson schedules.'
+  },
+  {
     key: 'scheduling.manage',
     displayName: 'Manage scheduling',
     description: 'Manage lessons, calendars, and instructor schedules.'
@@ -102,9 +117,12 @@ export const roleTemplateSeeds: RoleTemplateSeedDefinition[] = [
       'students.manage_register',
       'payments.read',
       'payments.record',
+      'invoices.read',
+      'vehicles.read',
       'reports.read',
       'documents.read',
       'documents.manage',
+      'scheduling.read',
       'scheduling.manage',
       'users.manage'
     ]
@@ -118,7 +136,31 @@ export const roleTemplateSeeds: RoleTemplateSeedDefinition[] = [
       'students.update',
       'students.manage_register',
       'documents.read',
+      'vehicles.read',
+      'scheduling.read',
       'scheduling.manage'
+    ]
+  },
+  {
+    key: 'student',
+    displayName: 'Student',
+    description: 'Student portal access limited to own records.',
+    permissionKeys: [
+      'students.read',
+      'payments.read',
+      'invoices.read',
+      'documents.read',
+      'scheduling.read'
+    ]
+  },
+  {
+    key: 'parent',
+    displayName: 'Parent',
+    description: 'Parent portal access limited to own child lesson history and allowed documents.',
+    permissionKeys: [
+      'students.read',
+      'documents.read',
+      'scheduling.read'
     ]
   },
   {
@@ -129,8 +171,11 @@ export const roleTemplateSeeds: RoleTemplateSeedDefinition[] = [
       'students.read',
       'payments.read',
       'payments.record',
+      'invoices.read',
+      'vehicles.read',
       'reports.read',
-      'documents.read'
+      'documents.read',
+      'scheduling.read'
     ]
   }
 ];

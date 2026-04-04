@@ -71,6 +71,11 @@ async function main() {
       email: config.BOOTSTRAP_OWNER_EMAIL
     },
     update: {
+      ...(config.BOOTSTRAP_OWNER_PASSWORD
+        ? {
+            passwordHash: hashPassword(config.BOOTSTRAP_OWNER_PASSWORD)
+          }
+        : {}),
       firstName: config.BOOTSTRAP_OWNER_FIRST_NAME,
       lastName: config.BOOTSTRAP_OWNER_LAST_NAME,
       displayName: `${config.BOOTSTRAP_OWNER_FIRST_NAME} ${config.BOOTSTRAP_OWNER_LAST_NAME}`,

@@ -1,32 +1,129 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import {
   ChevronLeft, Phone, Mail, MapPin, Calendar,
   CheckCircle, Clock, AlertCircle, CreditCard,
   FileText, User, ChevronRight, Plus
 } from 'lucide-react';
+import type { StudentOperationalRecord } from '../../content/studentOperations';
+import { fetchStudentOperationalDetail } from '../../services/studentsApi';
 
 export function MobileStudentProfile() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const routeStudentId = id ?? '';
   const [activeTab, setActiveTab] = useState<'overview' | 'lessons' | 'payments' | 'documents'>('overview');
+  const [studentRecord, setStudentRecord] =
+    useState<StudentOperationalRecord | null>(null);
+  const [studentSourceStatus, setStudentSourceStatus] = useState<'loading' | 'backend' | 'fallback' | 'invalid'>('loading');
 
-  // Mock data
+  useEffect(() => {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(routeStudentId)) {
+      setStudentRecord(null);
+      setStudentSourceStatus('invalid');
+      return;
+    }
+
+    let isMounted = true;
+    setStudentSourceStatus('loading');
+
+    fetchStudentOperationalDetail(routeStudentId)
+      .then((record) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setStudentRecord(record);
+        setStudentSourceStatus('backend');
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setStudentRecord(null);
+        setStudentSourceStatus('fallback');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [routeStudentId]);
+
+  if (!studentRecord) {
+    return (
+      <div className="min-h-screen" style={{ background: 'var(--bg-page)' }}>
+        <div
+          className="sticky top-0 z-10 px-4 py-3 border-b"
+          style={{
+            background: 'var(--bg-panel)',
+            borderColor: 'var(--ghost-border)',
+          }}
+        >
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/students')}
+              className="w-9 h-9 rounded-lg flex items-center justify-center"
+              style={{
+                background: 'var(--bg-card)',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <div className="flex-1">
+              <h1
+                className="text-base font-semibold"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                {studentSourceStatus === 'loading'
+                  ? 'Зареждане на курсист'
+                  : 'Курсистът не е намерен'}
+              </h1>
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                {studentSourceStatus === 'loading'
+                  ? 'PostgreSQL'
+                  : 'Отвори курсиста от обновения списък'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4">
+          <div className="rounded-xl p-4" style={{ background: 'var(--bg-card)' }}>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              {studentSourceStatus === 'loading'
+                ? 'Моля, изчакай...'
+                : studentSourceStatus === 'fallback'
+                  ? 'Неуспешно зареждане на курсиста от базата.'
+                  : 'Невалиден стар локален идентификатор.'}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const student = {
-    id: 1,
-    name: 'Петър Георгиев',
-    email: 'petar.georgiev@email.com',
-    phone: '+359 88 123 4567',
-    address: 'София, ул. Витоша 15',
-    category: 'B',
-    status: 'active',
-    statusLabel: 'Активен',
-    enrollmentDate: '15.01.2026',
-    progress: 68,
+    id: studentRecord.id,
+    name: studentRecord.name,
+    email: studentRecord.email,
+    phone: studentRecord.phone,
+    address: studentRecord.address ?? 'Няма въведен адрес',
+    category: studentRecord.category,
+    status: studentRecord.status,
+    statusLabel: studentRecord.statusLabel,
+    enrollmentDate: studentRecord.trainingStartDate || studentRecord.startDate,
+    progress: studentRecord.progress,
   };
 
   const stats = [
-    { label: 'Практика', value: '12/30', subtitle: '40% завършени', color: 'var(--primary-accent)' },
+    {
+      label: 'Практика',
+      value: `${studentRecord.used}/${studentRecord.total}`,
+      subtitle: `${studentRecord.progress}% завършени`,
+      color: 'var(--primary-accent)',
+    },
     { label: 'Теория', value: '18/20', subtitle: '90% посещения', color: 'var(--ai-accent)' },
     { label: 'Изпити', value: '1/2', subtitle: 'Теория - изд.', color: 'var(--status-success)' },
     { label: 'Остатък', value: '450 лв', subtitle: 'От 1200 лв', color: 'var(--status-warning)' },
@@ -77,7 +174,11 @@ export function MobileStudentProfile() {
               {student.name}
             </h1>
             <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              Категория {student.category}
+              Категория {student.category} • {
+                studentSourceStatus === 'backend'
+                  ? 'PostgreSQL'
+                  : 'Недостъпен backend'
+              }
             </p>
           </div>
           <div

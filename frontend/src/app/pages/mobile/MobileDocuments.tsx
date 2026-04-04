@@ -15,7 +15,7 @@ export function MobileDocuments() {
     {
       id: 1,
       name: 'Медицинско свидетелство',
-      student: 'Петър Георгиев',
+      student: 'Антоан Тест',
       type: 'medical',
       typeLabel: 'Медицинско',
       status: 'approved',
@@ -27,7 +27,7 @@ export function MobileDocuments() {
     {
       id: 2,
       name: 'Лична карта - копие',
-      student: 'Петър Георгиев',
+      student: 'Антоан Тест',
       type: 'id',
       typeLabel: 'Лична карта',
       status: 'approved',
@@ -39,7 +39,7 @@ export function MobileDocuments() {
     {
       id: 3,
       name: 'Снимка',
-      student: 'Елена Димитрова',
+      student: 'Антоан Тест',
       type: 'photo',
       typeLabel: 'Снимка',
       status: 'pending',
@@ -51,7 +51,7 @@ export function MobileDocuments() {
     {
       id: 4,
       name: 'Медицинско свидетелство',
-      student: 'София Николова',
+      student: 'Антоан Тест',
       type: 'medical',
       typeLabel: 'Медицинско',
       status: 'pending',
@@ -63,7 +63,7 @@ export function MobileDocuments() {
     {
       id: 5,
       name: 'Лична карта - копие',
-      student: 'Мартин Иванов',
+      student: 'Антоан Тест',
       type: 'id',
       typeLabel: 'Лична карта',
       status: 'rejected',
@@ -126,7 +126,7 @@ export function MobileDocuments() {
             </p>
           </div>
           <button
-            onClick={() => {}}
+            onClick={() => navigate('/documents')}
             className="w-11 h-11 rounded-xl flex items-center justify-center transition-all active:scale-95"
             style={{
               background: 'var(--primary-accent)',
@@ -207,6 +207,7 @@ export function MobileDocuments() {
               Няма документи за показване
             </p>
             <button
+              onClick={() => navigate('/documents')}
               className="text-sm font-medium"
               style={{ color: 'var(--primary-accent)' }}
             >

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   PageHeader, Badge, Button, Modal
@@ -11,14 +11,27 @@ import {
   XCircle, Link as LinkIcon, FileX, User, CreditCard,
   Check, FilePlus
 } from 'lucide-react';
-import { mockInvoiceFormStudents, mockInvoicePackages, mockInvoices } from '../content/mockDb';
+import { mockInvoicePackages } from '../content/mockDb';
+import {
+  createInvoiceRecord,
+  fetchInvoiceRecords,
+  type InvoiceRecordView,
+  updateInvoiceRecord,
+} from '../services/invoicesApi';
+import type { StudentOperationalRecord } from '../content/studentOperations';
+import { fetchStudentOperations } from '../services/studentsApi';
+import {
+  fetchPaymentRecords,
+  type PaymentRecordView,
+} from '../services/paymentsApi';
+import { useAuthSession } from '../services/authSession';
 
-type Invoice = {
-  id: number;
+type Invoice = InvoiceRecordView & {
+  id: string | number;
   invoiceNumber: string;
   invoiceDate: string;
   student: string;
-  studentId: number;
+  studentId: string | number;
   category: string;
   invoiceReason: string;
   packageType: string;
@@ -117,13 +130,29 @@ const formatCurrency = (amount: number) => {
 };
 
 export function InvoicesPage() {
+  const { session } = useAuthSession();
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState('');
+  const [studentSearchValue, setStudentSearchValue] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [isEditInvoiceOpen, setIsEditInvoiceOpen] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | number | null>(null);
   const [showCreateInvoice, setShowCreateInvoice] = useState(false);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [students, setStudents] = useState<StudentOperationalRecord[]>([]);
+  const [payments, setPayments] = useState<PaymentRecordView[]>([]);
+  const [invoiceEditDraft, setInvoiceEditDraft] = useState({
+    invoiceDate: '',
+    student: '',
+    totalAmount: '',
+    invoiceStatus: 'draft' as Invoice['invoiceStatus'],
+    paymentLinkStatus: 'not_linked' as Invoice['paymentLinkStatus'],
+    notes: '',
+  });
+  const [sourceStatus, setSourceStatus] = useState<
+    'loading' | 'backend' | 'fallback'
+  >('loading');
   
   // Filter states
   const [filterCategory, setFilterCategory] = useState('all');
@@ -135,12 +164,85 @@ export function InvoicesPage() {
   const [filterNoPaymentLink, setFilterNoPaymentLink] = useState(false);
   const [filterCorrectedOnly, setFilterCorrectedOnly] = useState(false);
 
-  const invoices: Invoice[] = mockInvoices as Invoice[];
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([
+      fetchInvoiceRecords(),
+      fetchStudentOperations(),
+      fetchPaymentRecords(),
+    ])
+      .then(([records, studentRows, paymentRows]) => {
+        if (!isMounted) return;
+        setInvoices(records as Invoice[]);
+        setStudents(studentRows);
+        setPayments(paymentRows);
+        setSourceStatus('backend');
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setInvoices([]);
+        setSourceStatus('fallback');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const todayIsoDate = new Date().toISOString().slice(0, 10);
+  const filteredInvoices = invoices.filter((invoice) => {
+    const normalizedSearch = searchValue.trim().toLowerCase();
+    const invoiceDateIso = toIsoInvoiceDate(invoice.invoiceDate);
+    const normalizedStudentSearch = studentSearchValue.trim().toLowerCase();
+    const matchesSearch =
+      !normalizedSearch ||
+      [invoice.invoiceNumber, invoice.category, invoice.packageType, invoice.invoiceReason, invoice.paymentNumber ?? '']
+        .join(' ')
+        .toLowerCase()
+        .includes(normalizedSearch);
+    const matchesStudentSearch =
+      !normalizedStudentSearch ||
+      invoice.student.toLowerCase().includes(normalizedStudentSearch);
+    const matchesCategory =
+      filterCategory === 'all' ||
+      invoice.category.toLowerCase() === filterCategory.toLowerCase();
+    const matchesPeriod =
+      filterPeriod === 'all' ||
+      isInvoiceInPeriod(invoiceDateIso, filterPeriod, todayIsoDate);
+    const matchesInvoiceStatus =
+      filterInvoiceStatus === 'all' ||
+      invoice.invoiceStatus === filterInvoiceStatus;
+    const matchesPaymentLink =
+      filterPaymentLink === 'all' ||
+      invoice.paymentLinkStatus === filterPaymentLink;
+    const matchesDrafts = !filterDraftsOnly || invoice.invoiceStatus === 'draft';
+    const matchesNoPayment =
+      !filterNoPaymentLink || invoice.paymentLinkStatus === 'not_linked';
+    const matchesCorrected =
+      !filterCorrectedOnly ||
+      invoice.invoiceStatus === 'canceled' ||
+      invoice.wasCorrected;
+
+    return (
+      matchesSearch &&
+      matchesStudentSearch &&
+      matchesCategory &&
+      matchesPeriod &&
+      matchesInvoiceStatus &&
+      matchesPaymentLink &&
+      matchesDrafts &&
+      matchesNoPayment &&
+      matchesCorrected
+    );
+  });
 
   // Calculate summary metrics
   const totalInvoices = invoices.length;
-  const issuedToday = invoices.filter(i => 
-    i.invoiceDate === '24.03.2024' && i.invoiceStatus === 'issued'
+  const issuedToday = invoices.filter(
+    (invoice) =>
+      toIsoInvoiceDate(invoice.invoiceDate) === todayIsoDate &&
+      invoice.invoiceStatus === 'issued',
   ).length;
   const draftsCount = invoices.filter(i => i.invoiceStatus === 'draft').length;
   const linkedCount = invoices.filter(i => i.paymentLinkStatus === 'linked').length;
@@ -171,6 +273,7 @@ export function InvoicesPage() {
     setFilterNoPaymentLink(false);
     setFilterCorrectedOnly(false);
     setSearchValue('');
+    setStudentSearchValue('');
   };
 
   const handleRowClick = (invoice: Invoice) => {
@@ -178,34 +281,130 @@ export function InvoicesPage() {
     setOpenMenuId(null);
   };
 
-  const handlePreview = (invoiceId: number) => {
-    console.log('Preview invoice:', invoiceId);
+  const handlePreview = (invoiceId: string | number) => {
+    const invoiceToPreview = invoices.find((invoice) => invoice.id === invoiceId);
+    if (invoiceToPreview) {
+      setSelectedInvoice(invoiceToPreview);
+    }
     setOpenMenuId(null);
   };
 
-  const handleDownload = (invoiceId: number) => {
-    console.log('Download invoice:', invoiceId);
+  const handleDownload = (invoiceId: string | number) => {
+    const invoiceToDownload = invoices.find((invoice) => invoice.id === invoiceId);
+    if (invoiceToDownload) {
+      downloadInvoiceText(invoiceToDownload);
+    }
     setOpenMenuId(null);
   };
 
-  const handlePrint = (invoiceId: number) => {
-    console.log('Print invoice:', invoiceId);
+  const handlePrint = (invoiceId: string | number) => {
+    const invoiceToPrint = invoices.find((invoice) => invoice.id === invoiceId);
+    if (invoiceToPrint) {
+      downloadInvoiceText(invoiceToPrint);
+    }
     setOpenMenuId(null);
   };
 
-  const handleCreateCorrection = (invoiceId: number) => {
-    console.log('Create correction:', invoiceId);
+  const handleCreateCorrection = (invoiceId: string | number) => {
+    const invoiceToEdit = invoices.find((invoice) => invoice.id === invoiceId);
+    if (invoiceToEdit) {
+      setSelectedInvoice(invoiceToEdit);
+      setInvoiceEditDraft({
+        invoiceDate: toIsoInvoiceDate(invoiceToEdit.invoiceDate),
+        student: invoiceToEdit.student,
+        totalAmount: String(invoiceToEdit.totalAmount),
+        invoiceStatus: invoiceToEdit.invoiceStatus,
+        paymentLinkStatus: invoiceToEdit.paymentLinkStatus,
+        notes: invoiceToEdit.notes || '',
+      });
+      setIsEditInvoiceOpen(true);
+    }
     setOpenMenuId(null);
   };
 
-  const handleCancelInvoice = (invoiceId: number) => {
-    console.log('Cancel invoice:', invoiceId);
+  const handleCancelInvoice = async (invoiceId: string | number) => {
+    const updatedInvoice = await updateInvoiceRecord(
+      String(invoiceId),
+      {
+        status: 'CANCELED',
+        wasCorrected: true,
+        correctionReason: 'Фактурата е анулирана през UI action.',
+      },
+      session?.csrfToken ?? '',
+    );
+
+    setInvoices((currentInvoices) =>
+      currentInvoices.map((invoice) =>
+        invoice.id === invoiceId ? (updatedInvoice as Invoice) : invoice,
+      ),
+    );
+    setSelectedInvoice((current) =>
+      current?.id === invoiceId ? (updatedInvoice as Invoice) : current,
+    );
     setOpenMenuId(null);
   };
 
-  const handleIssueInvoice = (invoiceId: number) => {
-    console.log('Issue invoice:', invoiceId);
+  const handleIssueInvoice = async (invoiceId: string | number) => {
+    const invoiceToIssue = invoices.find((invoice) => invoice.id === invoiceId);
+
+    if (!invoiceToIssue) {
+      return;
+    }
+
+    const updatedInvoice = await updateInvoiceRecord(
+      String(invoiceId),
+      {
+        status: 'ISSUED',
+        paymentLinkStatus: invoiceToIssue.paymentNumber
+          ? 'LINKED'
+          : 'NOT_LINKED',
+        issuedDate: new Date().toISOString().slice(0, 10),
+      },
+      session?.csrfToken ?? '',
+    );
+
+    setInvoices((currentInvoices) =>
+      currentInvoices.map((invoice) =>
+        invoice.id === invoiceId ? (updatedInvoice as Invoice) : invoice,
+      ),
+    );
+    setSelectedInvoice((current) =>
+      current?.id === invoiceId ? (updatedInvoice as Invoice) : current,
+    );
     setOpenMenuId(null);
+  };
+
+  const handleSaveInvoiceEdit = async () => {
+    if (!selectedInvoice) {
+      return;
+    }
+
+    const updatedInvoice = await updateInvoiceRecord(
+      String(selectedInvoice.id),
+      {
+        invoiceDate: invoiceEditDraft.invoiceDate,
+        recipientName: invoiceEditDraft.student,
+        totalAmount: Math.round(Number(invoiceEditDraft.totalAmount || '0')),
+        status: mapUiInvoiceStatusToApi(invoiceEditDraft.invoiceStatus),
+        paymentLinkStatus: mapUiPaymentLinkStatusToApi(
+          invoiceEditDraft.paymentLinkStatus,
+        ),
+        notes: invoiceEditDraft.notes.trim() || null,
+        wasCorrected: true,
+        correctionReason: 'Фактурата е редактирана през UI.',
+      },
+      session?.csrfToken ?? '',
+    );
+
+    setInvoices((currentInvoices) =>
+      currentInvoices.map((invoice) =>
+        invoice.id === selectedInvoice.id
+          ? (updatedInvoice as Invoice)
+          : invoice,
+      ),
+    );
+    setSelectedInvoice(updatedInvoice as Invoice);
+    setIsEditInvoiceOpen(false);
   };
 
   return (
@@ -213,7 +412,13 @@ export function InvoicesPage() {
       {/* Page Header */}
       <PageHeader
         title="Фактури"
-        subtitle="Документен контролен център на автошколата"
+        subtitle={`Документен контролен център на автошколата • ${
+          sourceStatus === 'backend'
+            ? 'Данни от PostgreSQL'
+            : sourceStatus === 'fallback'
+              ? 'Fallback към локални тестови данни'
+              : 'Зареждане...'
+        }`}
         actions={
           <>
             <Button 
@@ -226,6 +431,7 @@ export function InvoicesPage() {
             <Button 
               variant="secondary" 
               icon={<Download size={18} />}
+              onClick={() => exportInvoicesCsv(invoices)}
             >
               Експорт
             </Button>
@@ -333,6 +539,8 @@ export function InvoicesPage() {
                 <input
                   type="text"
                   placeholder="Търсене по курсист..."
+                  value={studentSearchValue}
+                  onChange={(e) => setStudentSearchValue(e.target.value)}
                   className="w-full h-12 pl-12 pr-4 rounded-lg border-none outline-none text-base"
                   style={{
                     background: 'var(--bg-panel)',
@@ -459,7 +667,7 @@ export function InvoicesPage() {
         </div>
 
         {/* Main Invoices Table */}
-        {invoices.length > 0 ? (
+        {filteredInvoices.length > 0 ? (
           <div 
             className="rounded-xl overflow-hidden"
             style={{ background: 'var(--bg-card)' }}
@@ -471,7 +679,7 @@ export function InvoicesPage() {
                   Всички фактури
                 </h3>
                 <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  Показани {invoices.length} от {invoices.length} записа
+                  Показани {filteredInvoices.length} от {invoices.length} записа
                 </p>
               </div>
             </div>
@@ -508,7 +716,7 @@ export function InvoicesPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {invoices.map((invoice, idx) => (
+                  {filteredInvoices.map((invoice, idx) => (
                     <tr
                       key={invoice.id}
                       onClick={() => handleRowClick(invoice)}
@@ -688,7 +896,9 @@ export function InvoicesPage() {
                               >
                                 {invoice.invoiceStatus === 'draft' && (
                                   <button
-                                    onClick={() => handleIssueInvoice(invoice.id)}
+                                    onClick={() =>
+                                      void handleIssueInvoice(invoice.id)
+                                    }
                                     className="w-full px-4 py-3 flex items-center gap-3 transition-all hover:bg-opacity-50 text-left"
                                     style={{ background: 'transparent' }}
                                   >
@@ -743,7 +953,9 @@ export function InvoicesPage() {
                                 )}
                                 {(invoice.invoiceStatus === 'draft' || invoice.invoiceStatus === 'issued') && (
                                   <button
-                                    onClick={() => handleCancelInvoice(invoice.id)}
+                                    onClick={() =>
+                                      void handleCancelInvoice(invoice.id)
+                                    }
                                     className="w-full px-4 py-3 flex items-center gap-3 transition-all hover:bg-opacity-50 text-left"
                                     style={{ background: 'transparent' }}
                                   >
@@ -793,7 +1005,8 @@ export function InvoicesPage() {
               style={{ borderColor: 'var(--ghost-border)' }}
             >
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                Общо {invoices.length} {invoices.length === 1 ? 'фактура' : 'фактури'}
+                Общо {filteredInvoices.length}{' '}
+                {filteredInvoices.length === 1 ? 'фактура' : 'фактури'}
               </p>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
@@ -801,7 +1014,13 @@ export function InvoicesPage() {
                     Обща стойност:
                   </span>
                   <span className="text-lg font-bold font-mono" style={{ color: 'var(--primary-accent)' }}>
-                    {formatCurrency(invoices.reduce((sum, i) => sum + i.totalAmount, 0))} лв
+                    {formatCurrency(
+                      filteredInvoices.reduce(
+                        (sum, invoice) => sum + invoice.totalAmount,
+                        0,
+                      ),
+                    )}{' '}
+                    лв
                   </span>
                 </div>
               </div>
@@ -825,7 +1044,11 @@ export function InvoicesPage() {
             <p className="text-base mb-6" style={{ color: 'var(--text-secondary)' }}>
               Все още няма създадени фактури в системата
             </p>
-            <Button variant="primary" icon={<Plus size={18} />}>
+            <Button
+              variant="primary"
+              icon={<Plus size={18} />}
+              onClick={() => setShowCreateInvoice(true)}
+            >
               Създай първата фактура
             </Button>
           </div>
@@ -839,24 +1062,34 @@ export function InvoicesPage() {
           title="Редакция на фактура"
           footer={
             <>
-              <Button variant="secondary" onClick={() => setIsEditInvoiceOpen(false)}>Отказ</Button>
-              <Button variant="primary" onClick={() => setIsEditInvoiceOpen(false)}>Запази промените</Button>
+              <Button
+                variant="secondary"
+                onClick={() => setIsEditInvoiceOpen(false)}
+              >
+                Отказ
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => void handleSaveInvoiceEdit()}
+              >
+                Запази промените
+              </Button>
             </>
           }
         >
           <div className="space-y-5">
             <div className="rounded-2xl border p-4" style={{ background: 'rgba(15, 23, 42, 0.72)', borderColor: 'var(--ghost-border)' }}>
               <p className="mb-2 text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Какво трябва да попълните</p>
-              <p className="text-sm leading-6" style={{ color: 'var(--text-secondary)' }}>Актуализирайте основните данни по фактурата. Диалогът е готов за бъдещо свързване към backend update flow.</p>
+              <p className="text-sm leading-6" style={{ color: 'var(--text-secondary)' }}>Актуализирайте основните данни по фактурата. Промените се записват директно в PostgreSQL.</p>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Номер на фактура</label><input defaultValue={selectedInvoice.invoiceNumber} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
-              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Дата на фактура</label><input defaultValue={selectedInvoice.invoiceDate} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
-              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Курсист</label><input defaultValue={selectedInvoice.student} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
-              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Сума</label><input type="number" defaultValue={selectedInvoice.totalAmount} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
-              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Статус</label><select defaultValue={selectedInvoice.invoiceStatus} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}><option value="draft">Чернова</option><option value="issued">Издадена</option><option value="corrected">Коригирана</option><option value="canceled">Анулирана</option><option value="overdue">Просрочена</option></select></div>
-              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Връзка с плащане</label><select defaultValue={selectedInvoice.paymentLinkStatus} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}><option value="linked">Свързано</option><option value="partial">Частично</option><option value="not_linked">Без връзка</option></select></div>
-              <div className="md:col-span-2"><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Бележки</label><textarea defaultValue={selectedInvoice.notes || ''} rows={4} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Номер на фактура</label><input value={selectedInvoice.invoiceNumber} readOnly className="h-11 w-full rounded-xl px-4 text-sm outline-none opacity-80" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Дата на фактура</label><input type="date" value={invoiceEditDraft.invoiceDate} onChange={(event) => setInvoiceEditDraft((current) => ({ ...current, invoiceDate: event.target.value }))} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Курсист</label><input value={invoiceEditDraft.student} onChange={(event) => setInvoiceEditDraft((current) => ({ ...current, student: event.target.value }))} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Сума</label><input type="number" value={invoiceEditDraft.totalAmount} onChange={(event) => setInvoiceEditDraft((current) => ({ ...current, totalAmount: event.target.value }))} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Статус</label><select value={invoiceEditDraft.invoiceStatus} onChange={(event) => setInvoiceEditDraft((current) => ({ ...current, invoiceStatus: event.target.value as Invoice['invoiceStatus'] }))} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}><option value="draft">Чернова</option><option value="issued">Издадена</option><option value="corrected">Коригирана</option><option value="canceled">Анулирана</option><option value="overdue">Просрочена</option></select></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Връзка с плащане</label><select value={invoiceEditDraft.paymentLinkStatus} onChange={(event) => setInvoiceEditDraft((current) => ({ ...current, paymentLinkStatus: event.target.value as Invoice['paymentLinkStatus'] }))} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}><option value="linked">Свързано</option><option value="partial">Частично</option><option value="not_linked">Без връзка</option></select></div>
+              <div className="md:col-span-2"><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Бележки</label><textarea value={invoiceEditDraft.notes} onChange={(event) => setInvoiceEditDraft((current) => ({ ...current, notes: event.target.value }))} rows={4} className="w-full rounded-xl px-4 py-3 text-sm outline-none resize-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
             </div>
           </div>
         </Modal>
@@ -879,6 +1112,17 @@ export function InvoicesPage() {
         <CreateInvoiceModal
           onClose={() => setShowCreateInvoice(false)}
           formatCurrency={formatCurrency}
+          students={students}
+          payments={payments}
+          onSave={async (payload) => {
+            const createdInvoice = await createInvoiceRecord(
+              payload,
+              session?.csrfToken ?? '',
+            );
+            setInvoices((current) => [createdInvoice as Invoice, ...current]);
+            setShowCreateInvoice(false);
+            setSourceStatus('backend');
+          }}
         />
       )}
 
@@ -891,6 +1135,145 @@ export function InvoicesPage() {
       )}
     </div>
   );
+}
+
+function downloadInvoiceText(invoice: Invoice) {
+  const blob = new Blob(
+    [
+      [
+        `Фактура: ${invoice.invoiceNumber}`,
+        `Получател: ${invoice.student}`,
+        `Дата: ${invoice.invoiceDate}`,
+        `Пакет: ${invoice.packageType}`,
+        `Основание: ${invoice.invoiceReason}`,
+        `Общо: ${invoice.totalAmount} лв`,
+        `ДДС: ${invoice.vat ?? 0} лв`,
+        `Статус: ${getInvoiceStatusLabel(invoice.invoiceStatus)}`,
+        `Плащане: ${invoice.paymentNumber ?? 'Няма'}`,
+      ].join('\n'),
+    ],
+    { type: 'text/plain;charset=utf-8' },
+  );
+  const downloadUrl = URL.createObjectURL(blob);
+  const anchor = globalThis.document.createElement('a');
+  anchor.href = downloadUrl;
+  anchor.download = `${invoice.invoiceNumber}.txt`;
+  anchor.click();
+  URL.revokeObjectURL(downloadUrl);
+}
+
+function exportInvoicesCsv(invoices: Invoice[]) {
+  const csvRows = [
+    'invoiceNumber,student,invoiceDate,totalAmount,status,paymentLinkStatus,paymentNumber',
+    ...invoices.map((invoice) =>
+      [
+        invoice.invoiceNumber,
+        invoice.student,
+        invoice.invoiceDate,
+        invoice.totalAmount,
+        getInvoiceStatusLabel(invoice.invoiceStatus),
+        getPaymentLinkStatusLabel(invoice.paymentLinkStatus),
+        invoice.paymentNumber ?? '',
+      ]
+        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+        .join(','),
+    ),
+  ];
+  const blob = new Blob([csvRows.join('\n')], {
+    type: 'text/csv;charset=utf-8',
+  });
+  const downloadUrl = URL.createObjectURL(blob);
+  const anchor = globalThis.document.createElement('a');
+  anchor.href = downloadUrl;
+  anchor.download = 'invoices_export.csv';
+  anchor.click();
+  URL.revokeObjectURL(downloadUrl);
+}
+
+function toIsoInvoiceDate(dateValue?: string) {
+  if (!dateValue) {
+    return '';
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    return dateValue;
+  }
+
+  const [day = '', month = '', year = ''] = dateValue.split('.');
+
+  if (!day || !month || !year) {
+    return '';
+  }
+
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
+function isInvoiceInPeriod(
+  invoiceDateIso: string,
+  filterPeriod: string,
+  todayIsoDate: string,
+) {
+  if (!invoiceDateIso) {
+    return false;
+  }
+
+  const invoiceDate = new Date(`${invoiceDateIso}T00:00:00.000Z`);
+  const today = new Date(`${todayIsoDate}T00:00:00.000Z`);
+
+  if (Number.isNaN(invoiceDate.getTime()) || Number.isNaN(today.getTime())) {
+    return false;
+  }
+
+  if (filterPeriod === 'today') {
+    return invoiceDateIso === todayIsoDate;
+  }
+
+  const dayMs = 24 * 60 * 60 * 1000;
+  const diffDays = Math.floor(
+    (today.getTime() - invoiceDate.getTime()) / dayMs,
+  );
+
+  if (filterPeriod === 'week') {
+    return diffDays >= 0 && diffDays <= 7;
+  }
+
+  if (filterPeriod === 'month') {
+    return diffDays >= 0 && diffDays <= 31;
+  }
+
+  return true;
+}
+
+function mapUiInvoiceStatusToApi(status: Invoice['invoiceStatus']) {
+  switch (status) {
+    case 'draft':
+      return 'DRAFT' as const;
+    case 'issued':
+      return 'ISSUED' as const;
+    case 'canceled':
+      return 'CANCELED' as const;
+    case 'corrected':
+      return 'CORRECTED' as const;
+    case 'overdue':
+      return 'OVERDUE' as const;
+    default:
+      return 'DRAFT' as const;
+  }
+}
+
+function mapUiPaymentLinkStatusToApi(
+  status: Invoice['paymentLinkStatus'],
+) {
+  switch (status) {
+    case 'linked':
+      return 'LINKED' as const;
+    case 'partial':
+      return 'PARTIAL' as const;
+    case 'not_linked':
+      return 'NOT_LINKED' as const;
+    default:
+      return 'NOT_LINKED' as const;
+  }
 }
 
 // Telemetry Card Component
@@ -1018,8 +1401,8 @@ function InvoiceDetailDrawer({
   onClose: () => void;
   onEdit: () => void;
   formatCurrency: (amount: number) => string;
-  onDownload: (id: number) => void;
-  onPrint: (id: number) => void;
+  onDownload: (id: string | number) => void;
+  onPrint: (id: string | number) => void;
 }) {
   const navigate = useNavigate();
 
@@ -1525,10 +1908,31 @@ function InvoiceDetailDrawer({
 // Create Invoice Modal Component
 function CreateInvoiceModal({
   onClose,
-  formatCurrency
+  formatCurrency,
+  students,
+  payments,
+  onSave
 }: {
   onClose: () => void;
   formatCurrency: (amount: number) => string;
+  students: StudentOperationalRecord[];
+  payments: PaymentRecordView[];
+  onSave: (payload: {
+    studentId: string;
+    invoiceDate: string;
+    recipientName: string;
+    categoryCode: string;
+    invoiceReason: string;
+    packageType: string;
+    totalAmount: number;
+    status: 'DRAFT' | 'ISSUED';
+    paymentLinkStatus: 'LINKED' | 'NOT_LINKED';
+    paymentNumber?: string | null;
+    paymentStatus?: string | null;
+    notes?: string | null;
+    issuedDate?: string | null;
+    dueDate?: string | null;
+  }) => Promise<void>;
 }) {
   const [step, setStep] = useState(1);
   const [selectedStudent, setSelectedStudent] = useState('');
@@ -1538,12 +1942,14 @@ function CreateInvoiceModal({
   const [linkedPayment, setLinkedPayment] = useState('');
   const [notes, setNotes] = useState('');
 
-  const students = mockInvoiceFormStudents;
+  const studentOptions = students;
   const packages = mockInvoicePackages;
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleStudentSelect = (studentId: string) => {
     setSelectedStudent(studentId);
-    const student = students.find(s => s.id.toString() === studentId);
+    const student = studentOptions.find(s => s.id.toString() === studentId);
     if (student) {
       setSelectedCategory(student.category);
     }
@@ -1557,14 +1963,59 @@ function CreateInvoiceModal({
     }
   };
 
-  const handleCreateDraft = () => {
-    console.log('Create draft invoice');
-    onClose();
+  const submitInvoice = async (status: 'DRAFT' | 'ISSUED') => {
+    const student = studentOptions.find(
+      (item) => item.id.toString() === selectedStudent,
+    );
+    const selectedPackageRecord = packages.find(
+      (pkg) => pkg.id.toString() === selectedPackage,
+    );
+
+    if (!student || !selectedPackageRecord || isSaving) {
+      setSaveError('Избери курсист и пакет преди запис на фактура.');
+      return;
+    }
+
+    setSaveError(null);
+    setIsSaving(true);
+
+    try {
+      await onSave({
+        studentId: String(student.id),
+        invoiceDate: new Date().toISOString().slice(0, 10),
+        recipientName: student.name,
+        categoryCode: student.category,
+        invoiceReason: 'Такса обучение',
+        packageType: selectedPackageRecord.name,
+        totalAmount: Math.round(Number(amount || '0')),
+        status,
+        paymentLinkStatus: linkedPayment ? 'LINKED' : 'NOT_LINKED',
+        paymentNumber: linkedPayment || null,
+        paymentStatus: linkedPayment ? 'PAID' : 'PENDING',
+        notes: notes.trim() || null,
+        issuedDate:
+          status === 'ISSUED'
+            ? new Date().toISOString().slice(0, 10)
+            : null,
+        dueDate: null,
+      });
+    } catch (error) {
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : 'Фактурата не беше записана в базата.',
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleIssueInvoice = () => {
-    console.log('Issue invoice immediately');
-    onClose();
+    void submitInvoice('ISSUED');
+  };
+
+  const handleCreateDraft = () => {
+    void submitInvoice('DRAFT');
   };
 
   return (
@@ -1692,7 +2143,7 @@ function CreateInvoiceModal({
                     Изберете курсист
                   </label>
                   <div className="grid grid-cols-1 gap-3">
-                    {students.map(student => (
+                    {studentOptions.map(student => (
                       <button
                         key={student.id}
                         onClick={() => handleStudentSelect(student.id.toString())}
@@ -1809,8 +2260,11 @@ function CreateInvoiceModal({
                     }}
                   >
                     <option value="">Без връзка с плащане</option>
-                    <option value="PAY-2024-0156">PAY-2024-0156 - Платено</option>
-                    <option value="PAY-2024-0155">PAY-2024-0155 - Частично платено</option>
+                    {payments.map((payment) => (
+                      <option key={payment.id} value={payment.number}>
+                        {payment.number} - {getPaymentStatusLabel(payment.status)}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -1867,7 +2321,7 @@ function CreateInvoiceModal({
                       <div>
                         <p className="text-xs mb-1" style={{ color: 'var(--text-tertiary)' }}>Курсист</p>
                         <p className="text-base font-semibold" style={{ color: 'var(--text-primary)' }}>
-                          {students.find(s => s.id.toString() === selectedStudent)?.name}
+                          {studentOptions.find(s => s.id.toString() === selectedStudent)?.name}
                         </p>
                       </div>
                       <div>
@@ -1923,6 +2377,14 @@ function CreateInvoiceModal({
             className="px-6 py-4 border-t flex items-center justify-between"
             style={{ borderColor: 'var(--ghost-border)' }}
           >
+            {saveError && (
+              <p
+                className="max-w-xs text-sm"
+                style={{ color: 'var(--status-error)' }}
+              >
+                {saveError}
+              </p>
+            )}
             <div>
               {step > 1 && (
                 <Button 
@@ -1941,7 +2403,10 @@ function CreateInvoiceModal({
                 <Button 
                   variant="primary" 
                   onClick={() => setStep(step + 1)}
-                  disabled={step === 1 && !selectedStudent || step === 2 && !selectedPackage}
+                  disabled={
+                    (step === 1 && !selectedStudent) ||
+                    (step === 2 && !selectedPackage)
+                  }
                 >
                   Напред
                 </Button>
@@ -1951,15 +2416,17 @@ function CreateInvoiceModal({
                     variant="secondary" 
                     icon={<FilePlus size={18} />}
                     onClick={handleCreateDraft}
+                    disabled={isSaving}
                   >
-                    Запази като чернова
+                    {isSaving ? 'Записване...' : 'Запази като чернова'}
                   </Button>
                   <Button 
                     variant="primary" 
                     icon={<FileCheck size={18} />}
                     onClick={handleIssueInvoice}
+                    disabled={isSaving}
                   >
-                    Издай фактура
+                    {isSaving ? 'Записване...' : 'Издай фактура'}
                   </Button>
                 </>
               )}
@@ -1970,11 +2437,3 @@ function CreateInvoiceModal({
     </>
   );
 }
-
-
-
-
-
-
-
-

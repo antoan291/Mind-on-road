@@ -28,7 +28,7 @@ export type StudentOperationalProfile = {
 
 export type DeterminatorSession = {
   id: string;
-  studentId: number;
+  studentId: string | number;
   studentName: string;
   registrationNumber: string;
   measuredAt: string;
@@ -77,68 +77,6 @@ const operationalProfiles: Record<number, StudentOperationalProfile> = {
     adminReminderDue: false,
     parentFeedbackEnabled: true,
     latestParentFeedbackStatus: 'Готов за изпращане след следващия урок',
-  },
-  2: {
-    studentId: 2,
-    studentTypeLabel: 'Стандартен курсист',
-    trainingMode: 'standard-package',
-    hasPreviousLicense: false,
-    hoursEntryPolicy: 'Автоматично намаляване от пакет, но с разрешени допълнителни часове.',
-    examOutcome: 'failed',
-    examOutcomeLabel: 'Скъсан на практика',
-    failedExamAttempts: 1,
-    additionalHoursAssigned: 4,
-    maxTrainingHours: 24,
-    lastPracticeDate: '2026-02-20',
-    daysWithoutPractice: 42,
-    inactivityAlert: true,
-    earlyEnrollment: false,
-    expectedArrivalDate: '2026-02-22',
-    adminReminderDue: false,
-    parentFeedbackEnabled: true,
-    latestParentFeedbackStatus: 'Изпратена препоръка за 4 допълнителни часа',
-  },
-  3: {
-    studentId: 3,
-    studentTypeLabel: 'Курсист с книжка',
-    trainingMode: 'licensed-manual-hours',
-    hasPreviousLicense: true,
-    previousLicenseCategory: 'B',
-    hoursEntryPolicy: 'Часовете се добавят ръчно от администратор или инструктор, защото курсистът вече има книжка.',
-    examOutcome: 'passed',
-    examOutcomeLabel: 'Изпит взет',
-    failedExamAttempts: 0,
-    additionalHoursAssigned: 1,
-    maxTrainingHours: 18,
-    lastPracticeDate: '2026-03-28',
-    daysWithoutPractice: 6,
-    inactivityAlert: false,
-    earlyEnrollment: false,
-    expectedArrivalDate: '2023-12-10',
-    adminReminderDue: false,
-    parentFeedbackEnabled: false,
-    latestParentFeedbackStatus: 'Няма активиран родителски контакт',
-  },
-  4: {
-    studentId: 4,
-    studentTypeLabel: 'Курсист с книжка',
-    trainingMode: 'licensed-manual-hours',
-    hasPreviousLicense: true,
-    previousLicenseCategory: 'A1',
-    hoursEntryPolicy: 'Ръчно добавяне на часове в хартиен + електронен контролен режим.',
-    examOutcome: 'active',
-    examOutcomeLabel: 'Активен курс',
-    failedExamAttempts: 0,
-    additionalHoursAssigned: 2,
-    maxTrainingHours: 22,
-    lastPracticeDate: '2026-03-31',
-    daysWithoutPractice: 3,
-    inactivityAlert: false,
-    earlyEnrollment: true,
-    expectedArrivalDate: '2026-04-13',
-    adminReminderDue: true,
-    parentFeedbackEnabled: true,
-    latestParentFeedbackStatus: 'Чака обратна връзка след последния урок',
   },
 };
 
@@ -201,7 +139,18 @@ export const studentOperationalRecords = mockStudents.map((student) => {
   };
 });
 
-export type StudentOperationalRecord = (typeof studentOperationalRecords)[number];
+type StaticStudentOperationalRecord = (typeof studentOperationalRecords)[number];
+
+export type StudentOperationalRecord = Omit<StaticStudentOperationalRecord, 'id'> & {
+  id: string | number;
+  firstName?: string;
+  lastName?: string;
+  birthDate?: string | null;
+  address?: string | null;
+  parentName?: string;
+  parentPhone?: string;
+  parentEmail?: string;
+};
 
 export const inactivePracticeAlerts = studentOperationalRecords
   .filter((student) => student.inactivityAlert)
@@ -233,9 +182,9 @@ export const determinatorSessions: DeterminatorSession[] = [
   {
     id: 'det-001',
     studentId: 1,
-    studentName: 'Петър Георгиев',
-    registrationNumber: '315003',
-    measuredAt: '2026-03-29 09:40',
+    studentName: 'Антоан Тест',
+    registrationNumber: 'AT-001',
+    measuredAt: '2026-04-03 09:40',
     autoTempoCorrectReactions: 69,
     autoTempoWrongReactions: 1,
     autoTempoSuccessCoefficient: 34.5,
@@ -244,42 +193,8 @@ export const determinatorSessions: DeterminatorSession[] = [
     forcedTempoWrongResults: 0,
     forcedTempoMissedStimuli: 0,
     forcedTempoSuccessCoefficient: 60,
-    overallResult: 'Стабилно представяне при автотемп и много добър резултат при наложен темп.',
+    overallResult: 'Стабилно тестово представяне при автотемп и много добър резултат при наложен темп.',
     instructorNote: 'Да се запази текущото темпо и да се следи за грешни реакции при автотемп.',
-  },
-  {
-    id: 'det-002',
-    studentId: 2,
-    studentName: 'Елена Димитрова',
-    registrationNumber: '315004',
-    measuredAt: '2026-03-21 14:20',
-    autoTempoCorrectReactions: 62,
-    autoTempoWrongReactions: 4,
-    autoTempoSuccessCoefficient: 31,
-    forcedTempoCorrectReactions: 53,
-    forcedTempoDelayedReactions: 3,
-    forcedTempoWrongResults: 2,
-    forcedTempoMissedStimuli: 1,
-    forcedTempoSuccessCoefficient: 53,
-    overallResult: 'Има спад при наложен темп заради забавени реакции и единични пропуснати стимули.',
-    instructorNote: 'Препоръчани са допълнителни часове и повторен детерминатор след една седмица.',
-  },
-  {
-    id: 'det-003',
-    studentId: 4,
-    studentName: 'София Николова',
-    registrationNumber: '315010',
-    measuredAt: '2026-04-01 16:45',
-    autoTempoCorrectReactions: 66,
-    autoTempoWrongReactions: 2,
-    autoTempoSuccessCoefficient: 33,
-    forcedTempoCorrectReactions: 57,
-    forcedTempoDelayedReactions: 1,
-    forcedTempoWrongResults: 1,
-    forcedTempoMissedStimuli: 0,
-    forcedTempoSuccessCoefficient: 57,
-    overallResult: 'Добра стабилност, но има леко влошаване при по-дълга серия на наложен темп.',
-    instructorNote: 'Да се направи още едно измерване след следващите два практически часа.',
   },
 ];
 
@@ -300,43 +215,35 @@ export function calculateForcedTempoSuccessCoefficient(
 
 export const candidatePackets: CandidatePacket[] = [
   {
-    id: 'cand-1',
-    candidateName: 'Никола Маринов',
-    phone: '+359 887 444 111',
+    id: 'cand-test-1',
+    candidateName: 'Антоан Тест',
+    phone: '0886612503',
     category: 'B',
     location: 'София - Младост',
     pdfTemplate: 'mindonroad-category-b-sofia-mladost.pdf',
     status: 'ready',
     sentAt: '—',
   },
-  {
-    id: 'cand-2',
-    candidateName: 'Виктория Пенева',
-    phone: '+359 889 101 202',
-    category: 'A',
-    location: 'София - Център',
-    pdfTemplate: 'mindonroad-category-a-sofia-center.pdf',
-    status: 'sent',
-    sentAt: '2026-04-01 11:10',
-  },
-  {
-    id: 'cand-3',
-    candidateName: 'Георги Радев',
-    phone: '+359 888 909 808',
-    category: 'C',
-    location: 'Пловдив - Тракия',
-    pdfTemplate: 'mindonroad-category-c-plovdiv-trakia.pdf',
-    status: 'ready',
-    sentAt: '—',
-  },
 ];
 
-export function getStudentOperationalRecord(studentId: number) {
-  return studentOperationalRecords.find((student) => student.id === studentId) ?? studentOperationalRecords[0];
+export function getStudentOperationalRecord(studentId: string | number) {
+  const normalizedStudentId =
+    typeof studentId === 'string' && /^\d+$/.test(studentId)
+      ? Number(studentId)
+      : studentId;
+
+  return (
+    studentOperationalRecords.find(
+      (student) => student.id === normalizedStudentId,
+    ) ?? studentOperationalRecords[0]
+  );
 }
 
-export function getInstructorStudents(instructorName: string) {
-  return studentOperationalRecords
+export function getInstructorStudents(
+  instructorName: string,
+  sourceRecords: StudentOperationalRecord[] = studentOperationalRecords,
+) {
+  return sourceRecords
     .filter((student) => student.instructor === instructorName)
     .map((student) => ({
       id: student.id,

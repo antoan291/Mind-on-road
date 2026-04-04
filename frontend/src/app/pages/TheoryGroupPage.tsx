@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { 
   PageHeader, Badge, Button 
@@ -9,11 +9,17 @@ import {
   ChevronDown, ChevronUp, User, MessageCircle,
   AlertCircle, TrendingUp, Target, MapPin, Phone
 } from 'lucide-react';
+import {
+  fetchTheoryGroups,
+  saveTheoryLectureAttendance,
+  type TheoryApiGroup,
+} from '../services/theoryApi';
+import { useAuthSession } from '../services/authSession';
 
 type AttendanceStatus = 'present' | 'absent' | 'excused' | 'late' | 'not-marked';
 
 type Student = {
-  id: number;
+  id: string;
   name: string;
   phone: string;
   parentPhone?: string;
@@ -23,7 +29,7 @@ type Student = {
 };
 
 type LectureAttendance = {
-  studentId: number;
+  studentId: string;
   status: AttendanceStatus;
   viber: boolean;
   markedAt?: string;
@@ -31,7 +37,7 @@ type LectureAttendance = {
 };
 
 type Lecture = {
-  id: number;
+  id: string;
   number: number;
   title: string;
   date: string;
@@ -44,7 +50,7 @@ type Lecture = {
 };
 
 type TheoryGroup = {
-  id: number;
+  id: string;
   name: string;
   category: string;
   startDate: string;
@@ -56,138 +62,162 @@ type TheoryGroup = {
   lectures: Lecture[];
 };
 
-// Mock data
-const MOCK_GROUP: TheoryGroup = {
-  id: 1,
-  name: 'B-2024-03-Утро',
-  category: 'B',
-  startDate: '2024-03-01',
-  schedule: 'Понеделник и Сряда, 09:00 - 12:00',
-  totalLectures: 28,
-  completedLectures: 12,
-  students: [
-    {
-      id: 1,
-      name: 'Мария Иванова',
-      phone: '+359 88 123 4567',
-      parentPhone: '+359 88 111 2222',
-      category: 'B',
-      attendanceCount: 12,
-      absenceCount: 0,
-    },
-    {
-      id: 2,
-      name: 'Георги Димитров',
-      phone: '+359 88 234 5678',
-      category: 'B',
-      attendanceCount: 11,
-      absenceCount: 1,
-    },
-    {
-      id: 3,
-      name: 'Елена Стоянова',
-      phone: '+359 88 345 6789',
-      parentPhone: '+359 88 333 4444',
-      category: 'B',
-      attendanceCount: 9,
-      absenceCount: 3,
-    },
-    {
-      id: 4,
-      name: 'Иван Петров',
-      phone: '+359 88 456 7890',
-      category: 'B',
-      attendanceCount: 12,
-      absenceCount: 0,
-    },
-    {
-      id: 5,
-      name: 'Александра Георгиева',
-      phone: '+359 88 567 8901',
-      parentPhone: '+359 88 555 6666',
-      category: 'B',
-      attendanceCount: 10,
-      absenceCount: 2,
-    },
-    {
-      id: 6,
-      name: 'Николай Василев',
-      phone: '+359 88 678 9012',
-      category: 'B',
-      attendanceCount: 12,
-      absenceCount: 0,
-    },
-  ],
-  lectures: [
-    {
-      id: 101,
-      number: 13,
-      title: 'Пътни знаци - продължение',
-      date: '2024-03-24',
-      time: '09:00',
-      endTime: '12:00',
-      instructor: 'Иван Петров',
-      location: 'Зала 1',
-      status: 'scheduled',
-      attendance: [],
-    },
-    {
-      id: 102,
-      number: 12,
-      title: 'Основни пътни знаци',
-      date: '2024-03-22',
-      time: '09:00',
-      endTime: '12:00',
-      instructor: 'Иван Петров',
-      location: 'Зала 1',
-      status: 'completed',
-      attendance: [
-        { studentId: 1, status: 'present', viber: false, markedAt: '2024-03-22 09:15', markedBy: 'Иван Петров' },
-        { studentId: 2, status: 'present', viber: false, markedAt: '2024-03-22 09:15', markedBy: 'Иван Петров' },
-        { studentId: 3, status: 'absent', viber: true, markedAt: '2024-03-22 09:20', markedBy: 'Иван Петров' },
-        { studentId: 4, status: 'present', viber: false, markedAt: '2024-03-22 09:15', markedBy: 'Иван Петров' },
-        { studentId: 5, status: 'present', viber: false, markedAt: '2024-03-22 09:15', markedBy: 'Иван Петров' },
-        { studentId: 6, status: 'late', viber: false, markedAt: '2024-03-22 09:30', markedBy: 'Иван Петров' },
-      ],
-    },
-    {
-      id: 103,
-      number: 11,
-      title: 'Пътна маркировка',
-      date: '2024-03-20',
-      time: '09:00',
-      endTime: '12:00',
-      instructor: 'Иван Петров',
-      location: 'Зала 1',
-      status: 'completed',
-      attendance: [
-        { studentId: 1, status: 'present', viber: false },
-        { studentId: 2, status: 'present', viber: false },
-        { studentId: 3, status: 'present', viber: false },
-        { studentId: 4, status: 'present', viber: false },
-        { studentId: 5, status: 'absent', viber: true },
-        { studentId: 6, status: 'present', viber: false },
-      ],
-    },
-  ],
-};
+function exportTheoryGroupAttendanceCsv(group: TheoryGroup) {
+  const header = [
+    'Група',
+    'Лекция',
+    'Дата',
+    'Курсист',
+    'Телефон',
+    'Статус',
+    'Viber',
+  ];
+
+  const rows = group.lectures.flatMap((lecture) =>
+    group.students.map((student) => {
+      const attendance = lecture.attendance.find(
+        (record) => record.studentId === student.id,
+      );
+
+      return [
+        group.name,
+        `${lecture.number}. ${lecture.title}`,
+        lecture.date,
+        student.name,
+        student.phone,
+        attendance?.status ?? 'not-marked',
+        attendance?.viber ? 'sent' : 'not-sent',
+      ]
+        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+        .join(',');
+    }),
+  );
+
+  const csvContent = [header.join(','), ...rows].join('\n');
+  const csvBlob = new Blob([`\uFEFF${csvContent}`], {
+    type: 'text/csv;charset=utf-8;',
+  });
+  const downloadUrl = URL.createObjectURL(csvBlob);
+  const downloadLink = document.createElement('a');
+  downloadLink.href = downloadUrl;
+  downloadLink.download = `theory-group-${group.name}-attendance.csv`;
+  downloadLink.click();
+  URL.revokeObjectURL(downloadUrl);
+}
+
+function normalizeTheoryGroupForDetails(group: TheoryApiGroup): TheoryGroup {
+  return {
+    ...group,
+    lectures: group.lectures.map((lecture) => ({
+      ...lecture,
+      attendance: group.students.map((student) => {
+        const persistedAttendance = lecture.students.find(
+          (lectureStudent) => lectureStudent.studentId === student.id,
+        );
+
+        return {
+          studentId: student.id,
+          status: persistedAttendance?.status ?? 'not-marked',
+          viber: persistedAttendance?.viberSent ?? false,
+          markedAt: persistedAttendance?.markedAt,
+          markedBy: persistedAttendance?.markedBy,
+        };
+      }),
+    })),
+  };
+}
 
 export function TheoryGroupPage() {
+  const { session } = useAuthSession();
   const navigate = useNavigate();
   const { id } = useParams();
-  const [expandedLecture, setExpandedLecture] = useState<number | null>(null);
-  const [attendanceData, setAttendanceData] = useState<Record<number, Record<number, AttendanceStatus>>>({});
+  const [expandedLecture, setExpandedLecture] = useState<string | null>(null);
+  const [attendanceData, setAttendanceData] = useState<Record<string, Record<string, AttendanceStatus>>>({});
   const [viberSent, setViberSent] = useState<Record<string, boolean>>({});
+  const [group, setGroup] = useState<TheoryGroup | null>(null);
+  const [actionMessage, setActionMessage] = useState(
+    'Зареждане на теория групата от PostgreSQL.',
+  );
 
-  const group = MOCK_GROUP; // In real app, fetch by id
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchTheoryGroups()
+      .then((groups) => {
+        if (!isMounted) {
+          return;
+        }
+
+        const matchedGroup =
+          groups.find((item) => item.id === id) ?? null;
+
+        setGroup(
+          matchedGroup ? normalizeTheoryGroupForDetails(matchedGroup) : null,
+        );
+        setActionMessage(
+          matchedGroup
+            ? 'Групата е заредена от PostgreSQL.'
+            : 'Тази теория група не е намерена в базата.',
+        );
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setGroup(null);
+        setActionMessage('Неуспешно зареждане на теория групата от базата.');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
+
+  if (!group) {
+    return (
+      <div>
+        <PageHeader
+          title="Теория група"
+          subtitle={actionMessage}
+          actions={
+            <Button
+              variant="secondary"
+              icon={<ArrowLeft size={18} />}
+              onClick={() => navigate('/theory')}
+            >
+              Назад към групите
+            </Button>
+          }
+        />
+        <div className="p-6 lg:p-8">
+          <div
+            className="rounded-3xl p-6"
+            style={{
+              background: 'var(--bg-card)',
+              border: '1px solid var(--ghost-border)',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            {actionMessage}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const nextLecture = group.lectures.find(l => l.status === 'scheduled');
   const remainingLectures = group.totalLectures - group.completedLectures;
 
-  const toggleLecture = (lectureId: number) => {
+  const toggleLecture = (lectureId: string) => {
     setExpandedLecture(expandedLecture === lectureId ? null : lectureId);
   };
 
-  const handleMarkAttendance = (lectureId: number, studentId: number, status: AttendanceStatus) => {
+  const handleMarkAttendance = (
+    lectureId: string,
+    studentId: string,
+    status: AttendanceStatus,
+  ) => {
     setAttendanceData(prev => ({
       ...prev,
       [lectureId]: {
@@ -197,15 +227,26 @@ export function TheoryGroupPage() {
     }));
   };
 
-  const handleSendViber = (lectureId: number, studentId: number) => {
+  const handleSendViber = async (lectureId: string, studentId: string) => {
     const key = `${lectureId}-${studentId}`;
-    setViberSent(prev => ({ ...prev, [key]: true }));
-    
-    // In real app, trigger Viber message API
-    console.log('Sending Viber message for lecture', lectureId, 'student', studentId);
+    const nextViberSent = {
+      ...viberSent,
+      [key]: true,
+    };
+
+    setViberSent(nextViberSent);
+
+    await persistLectureAttendance(
+      lectureId,
+      attendanceData[lectureId] ?? {},
+      nextViberSent,
+    );
   };
 
-  const getAttendanceStatus = (lectureId: number, studentId: number): AttendanceStatus => {
+  const getAttendanceStatus = (
+    lectureId: string,
+    studentId: string,
+  ): AttendanceStatus => {
     // Check if manually marked
     if (attendanceData[lectureId]?.[studentId]) {
       return attendanceData[lectureId][studentId];
@@ -221,7 +262,7 @@ export function TheoryGroupPage() {
     return 'not-marked';
   };
 
-  const isViberSent = (lectureId: number, studentId: number): boolean => {
+  const isViberSent = (lectureId: string, studentId: string): boolean => {
     const key = `${lectureId}-${studentId}`;
     if (viberSent[key]) return true;
     
@@ -230,7 +271,7 @@ export function TheoryGroupPage() {
     return saved?.viber || false;
   };
 
-  const getAttendanceSummary = (lectureId: number) => {
+  const getAttendanceSummary = (lectureId: string) => {
     const lecture = group.lectures.find(l => l.id === lectureId);
     let present = 0;
     let absent = 0;
@@ -246,6 +287,57 @@ export function TheoryGroupPage() {
     });
 
     return { present, absent, late, notMarked, total: group.students.length };
+  };
+
+  const persistLectureAttendance = async (
+    lectureId: string,
+    nextLectureAttendance: Record<string, AttendanceStatus>,
+    nextViberSent: Record<string, boolean> = viberSent,
+  ) => {
+    try {
+      const updatedGroup = await saveTheoryLectureAttendance(
+        group.id,
+        lectureId,
+        group.students
+          .map((student) => ({
+            studentId: student.id,
+            status:
+              nextLectureAttendance[student.id] ??
+              getAttendanceStatus(lectureId, student.id),
+            viberSent:
+              nextViberSent[`${lectureId}-${student.id}`] ||
+              isViberSent(lectureId, student.id),
+          }))
+          .filter(
+            (attendanceRecord) => attendanceRecord.status !== 'not-marked',
+          )
+          .map((attendanceRecord) => ({
+            studentId: attendanceRecord.studentId,
+            status: attendanceRecord.status as
+              | 'present'
+              | 'absent'
+              | 'excused'
+              | 'late',
+            viberSent: attendanceRecord.viberSent,
+          })),
+        session?.csrfToken ?? '',
+      );
+
+      setGroup(normalizeTheoryGroupForDetails(updatedGroup));
+      setAttendanceData((current) => ({
+        ...current,
+        [lectureId]: {},
+      }));
+      setActionMessage(
+        'Присъствието за лекцията е записано в PostgreSQL. Viber статусите са синхронизирани в системата.',
+      );
+    } catch (error) {
+      setActionMessage(
+        error instanceof Error
+          ? `Неуспешен запис на присъствие: ${error.message}`
+          : 'Неуспешен запис на присъствие в базата.',
+      );
+    }
   };
 
   return (
@@ -271,6 +363,12 @@ export function TheoryGroupPage() {
             <Button
               variant="secondary"
               icon={<Download size={18} />}
+              onClick={() => {
+                exportTheoryGroupAttendanceCsv(group);
+                setActionMessage(
+                  `Експортирано е присъствието за ${group.lectures.length} лекции и ${group.students.length} курсисти в CSV файл.`,
+                );
+              }}
             >
               Експорт присъствие
             </Button>
@@ -280,6 +378,17 @@ export function TheoryGroupPage() {
 
       {/* Group Summary */}
       <div className="px-6 lg:px-8 py-6">
+        <div
+          className="mb-6 rounded-xl p-4 text-sm"
+          style={{
+            background: 'var(--bg-card)',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          {actionMessage}
+        </div>
+
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Total Students */}
           <div
@@ -426,7 +535,7 @@ export function TheoryGroupPage() {
         <div className="space-y-4">
           {group.lectures.map((lecture) => {
             const isExpanded = expandedLecture === lecture.id;
-            const isToday = lecture.date === '2024-03-24' || lecture.date === '2026-03-24';
+            const isToday = lecture.date === new Date().toISOString().slice(0, 10);
             const summary = getAttendanceSummary(lecture.id);
 
             return (
@@ -548,7 +657,7 @@ export function TheoryGroupPage() {
                             variant="secondary"
                             size="sm"
                             onClick={() => {
-                              const newData: Record<number, AttendanceStatus> = {};
+                              const newData: Record<string, AttendanceStatus> = {};
                               group.students.forEach(s => {
                                 newData[s.id] = 'present';
                               });
@@ -712,7 +821,9 @@ export function TheoryGroupPage() {
 
                                 {/* Viber Message Button */}
                                 <button
-                                  onClick={() => handleSendViber(lecture.id, student.id)}
+                                  onClick={() =>
+                                    void handleSendViber(lecture.id, student.id)
+                                  }
                                   disabled={viberSentStatus || status !== 'absent'}
                                   className="px-6 py-3.5 rounded-xl transition-all font-semibold flex items-center gap-2"
                                   style={{
@@ -759,7 +870,10 @@ export function TheoryGroupPage() {
                           variant="primary"
                           fullWidth
                           onClick={() => {
-                            console.log('Saving attendance for lecture', lecture.id, attendanceData[lecture.id]);
+                            void persistLectureAttendance(
+                              lecture.id,
+                              attendanceData[lecture.id] ?? {},
+                            );
                             setExpandedLecture(null);
                           }}
                         >

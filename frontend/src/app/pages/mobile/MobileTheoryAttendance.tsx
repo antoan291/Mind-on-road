@@ -77,7 +77,7 @@ export function MobileTheoryAttendance() {
   const students = [
     {
       id: 1,
-      name: 'Петър Георгиев',
+      name: 'Антоан Тест',
       category: 'B',
       attended: 18,
       total: 20,
@@ -87,7 +87,7 @@ export function MobileTheoryAttendance() {
     },
     {
       id: 2,
-      name: 'Елена Димитрова',
+      name: 'Антоан Тест',
       category: 'B',
       attended: 20,
       total: 20,
@@ -97,7 +97,7 @@ export function MobileTheoryAttendance() {
     },
     {
       id: 3,
-      name: 'Мартин Иванов',
+      name: 'Антоан Тест',
       category: 'B',
       attended: 15,
       total: 20,
@@ -107,7 +107,7 @@ export function MobileTheoryAttendance() {
     },
     {
       id: 4,
-      name: 'София Николова',
+      name: 'Антоан Тест',
       category: 'B',
       attended: 12,
       total: 20,
@@ -364,6 +364,7 @@ function CompletedClassCard({ cls }: { cls: any }) {
 }
 
 function StudentAttendanceCard({ student }: { student: any }) {
+  const navigate = useNavigate();
   const getStatusIcon = () => {
     if (student.status === 'excellent') return <CheckCircle size={16} style={{ color: 'var(--status-success)' }} />;
     if (student.status === 'good') return <CheckCircle size={16} style={{ color: 'var(--primary-accent)' }} />;
@@ -380,7 +381,7 @@ function StudentAttendanceCard({ student }: { student: any }) {
 
   return (
     <button
-      onClick={() => {}}
+      onClick={() => navigate(`/students/${student.id}`)}
       className="w-full p-4 rounded-xl text-left transition-all active:scale-98"
       style={{ background: 'var(--bg-card)' }}
     >

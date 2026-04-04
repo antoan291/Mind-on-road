@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   PageHeader, Badge, Button, Modal, Input, Select
@@ -11,13 +11,18 @@ import {
   ChevronRight, ChevronDown, ChevronUp, Bell, Award,
   ClipboardList, BarChart3, Activity, User, Hash, FileText
 } from 'lucide-react';
+import {
+  fetchTheoryGroups,
+  saveTheoryLectureAttendance,
+} from '../services/theoryApi';
+import { useAuthSession } from '../services/authSession';
 
 type AttendanceStatus = 'present' | 'absent' | 'excused' | 'late';
 type RecoveryStatus = 'not-required' | 'required' | 'in-progress' | 'completed';
 type MessageStatus = 'not-sent' | 'sent' | 'scheduled';
 
 type TheoryStudent = {
-  id: number;
+  id: string;
   name: string;
   category: string;
   phone: string;
@@ -31,7 +36,7 @@ type TheoryStudent = {
 };
 
 type TheoryLecture = {
-  id: number;
+  id: string;
   number: number;
   title: string;
   date: string;
@@ -45,7 +50,7 @@ type TheoryLecture = {
   lateCount: number;
   status: 'scheduled' | 'in-progress' | 'completed' | 'canceled';
   students?: Array<{
-    studentId: number;
+    studentId: string;
     studentName: string;
     status: AttendanceStatus;
     notes?: string;
@@ -53,7 +58,7 @@ type TheoryLecture = {
 };
 
 type TheoryGroup = {
-  id: number;
+  id: string;
   name: string;
   category: string;
   startDate: string;
@@ -70,166 +75,6 @@ type TheoryGroup = {
   lectures: TheoryLecture[];
   students: TheoryStudent[];
 };
-
-const MOCK_THEORY_GROUPS: TheoryGroup[] = [
-  {
-    id: 1,
-    name: 'B-2024-03-Утро',
-    category: 'B',
-    startDate: '2024-03-01',
-    studentCount: 18,
-    totalLectures: 28,
-    completedLectures: 12,
-    activeStudents: 17,
-    studentsWithAbsences: 5,
-    studentsNeedingRecovery: 2,
-    averageAttendance: 94.5,
-    status: 'active',
-    schedule: 'Понеделник и Сряда, 09:00 - 12:00',
-    lectures: [
-      {
-        id: 101,
-        number: 13,
-        title: 'Пътни знаци - продължение',
-        date: '2024-03-24',
-        time: '09:00',
-        endTime: '12:00',
-        duration: 180,
-        instructor: 'Иван Петров',
-        location: 'Зала 1',
-        attendanceCount: 16,
-        absentCount: 2,
-        lateCount: 0,
-        status: 'scheduled',
-      },
-      {
-        id: 102,
-        number: 12,
-        title: 'Основни пътни знаци',
-        date: '2024-03-22',
-        time: '09:00',
-        endTime: '12:00',
-        duration: 180,
-        instructor: 'Иван Петров',
-        location: 'Зала 1',
-        attendanceCount: 17,
-        absentCount: 1,
-        lateCount: 0,
-        status: 'completed',
-        students: [
-          { studentId: 1, studentName: 'Мария Иванова', status: 'present' },
-          { studentId: 2, studentName: 'Георги Димитров', status: 'present' },
-          { studentId: 3, studentName: 'Елена Стоянова', status: 'absent', notes: 'Изпратено SMS на родител' },
-        ],
-      },
-    ],
-    students: [
-      {
-        id: 1,
-        name: 'Мария Иванова',
-        category: 'B',
-        phone: '+359 88 123 4567',
-        email: 'maria@example.com',
-        attendanceCount: 12,
-        absenceCount: 0,
-        recoveryStatus: 'not-required',
-        messageStatus: 'not-sent',
-      },
-      {
-        id: 2,
-        name: 'Георги Димитров',
-        category: 'B',
-        phone: '+359 88 234 5678',
-        email: 'georgi@example.com',
-        attendanceCount: 11,
-        absenceCount: 1,
-        recoveryStatus: 'not-required',
-        messageStatus: 'not-sent',
-      },
-      {
-        id: 3,
-        name: 'Елена Стоянова',
-        category: 'B',
-        phone: '+359 88 345 6789',
-        email: 'elena@example.com',
-        attendanceCount: 9,
-        absenceCount: 3,
-        recoveryStatus: 'required',
-        messageStatus: 'sent',
-        dueAmount: 25,
-        lastAbsenceDate: '2024-03-22',
-      },
-    ],
-  },
-  {
-    id: 2,
-    name: 'B-2024-03-Вечер',
-    category: 'B',
-    startDate: '2024-03-04',
-    studentCount: 22,
-    totalLectures: 28,
-    completedLectures: 11,
-    activeStudents: 21,
-    studentsWithAbsences: 8,
-    studentsNeedingRecovery: 1,
-    averageAttendance: 91.2,
-    status: 'active',
-    schedule: 'Вторник и Четвъртък, 18:00 - 21:00',
-    lectures: [
-      {
-        id: 201,
-        number: 12,
-        title: 'Пътна маркировка',
-        date: '2024-03-23',
-        time: '18:00',
-        endTime: '21:00',
-        duration: 180,
-        instructor: 'Мария Георгиева',
-        location: 'Зала 2',
-        attendanceCount: 20,
-        absentCount: 2,
-        lateCount: 0,
-        status: 'completed',
-      },
-    ],
-    students: [],
-  },
-  {
-    id: 3,
-    name: 'A-2024-02-Събота',
-    category: 'A',
-    startDate: '2024-02-10',
-    studentCount: 12,
-    totalLectures: 20,
-    completedLectures: 18,
-    activeStudents: 12,
-    studentsWithAbsences: 3,
-    studentsNeedingRecovery: 0,
-    averageAttendance: 96.8,
-    status: 'active',
-    schedule: 'Събота, 10:00 - 16:00',
-    lectures: [],
-    students: [],
-  },
-  {
-    id: 4,
-    name: 'B-2024-02-Утро',
-    category: 'B',
-    startDate: '2024-02-01',
-    endDate: '2024-03-15',
-    studentCount: 20,
-    totalLectures: 28,
-    completedLectures: 28,
-    activeStudents: 20,
-    studentsWithAbsences: 4,
-    studentsNeedingRecovery: 0,
-    averageAttendance: 97.5,
-    status: 'completed',
-    schedule: 'Понеделник и Сряда, 09:00 - 12:00',
-    lectures: [],
-    students: [],
-  },
-];
 
 const getRecoveryStatusInfo = (status: RecoveryStatus) => {
   switch (status) {
@@ -256,33 +101,127 @@ const getGroupStatusInfo = (status: TheoryGroup['status']) => {
 };
 
 export function TheoryPage() {
+  const { session } = useAuthSession();
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
   const [selectedGroup, setSelectedGroup] = useState<TheoryGroup | null>(null);
   const [isGroupDetailOpen, setIsGroupDetailOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [expandedLecture, setExpandedLecture] = useState<number | null>(null);
+  const [expandedLecture, setExpandedLecture] = useState<string | null>(null);
   const [isAttendanceModalOpen, setIsAttendanceModalOpen] = useState(false);
   const [attendanceLecture, setAttendanceLecture] = useState<TheoryLecture | null>(null);
-  const [attendanceData, setAttendanceData] = useState<Record<number, AttendanceStatus>>({});
+  const [attendanceData, setAttendanceData] = useState<Record<string, AttendanceStatus>>({});
   const [selectedAbsentStudent, setSelectedAbsentStudent] = useState<{
     student: TheoryStudent;
     lecture: TheoryLecture;
     group: TheoryGroup;
   } | null>(null);
   const [isAbsenceDetailOpen, setIsAbsenceDetailOpen] = useState(false);
+  const [theoryGroups, setTheoryGroups] =
+    useState<TheoryGroup[]>([]);
+  const [sourceStatus, setSourceStatus] = useState<
+    'loading' | 'backend' | 'fallback'
+  >('loading');
+  const [actionMessage, setActionMessage] = useState(
+    'Зареждане на теория групите от PostgreSQL.',
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchTheoryGroups()
+      .then((groups) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setTheoryGroups(groups);
+        setSourceStatus('backend');
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setTheoryGroups([]);
+        setSourceStatus('fallback');
+        setActionMessage('Неуспешно зареждане на теория групите от базата.');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Calculate summary statistics
-  const activeGroups = MOCK_THEORY_GROUPS.filter(g => g.status === 'active');
-  const todayLectures = MOCK_THEORY_GROUPS.flatMap(g => 
-    g.lectures.filter(l => l.date === '2024-03-24' || l.date === '2026-03-24')
+  const filteredGroups = theoryGroups.filter((group) => {
+    const query = searchValue.trim().toLowerCase();
+    const searchMatch =
+      !query ||
+      [group.name, group.category, ...group.students.map((student) => student.name)].some((value) =>
+        value.toLowerCase().includes(query),
+      );
+
+    const categoryMatch =
+      categoryFilter === 'all' || group.category === categoryFilter;
+
+    const statusMatch =
+      statusFilter === 'all' || group.status === statusFilter;
+
+    const todayIso = new Date().toISOString().slice(0, 10);
+    const dateMatch =
+      dateFilter === 'all' ||
+      (dateFilter === 'today' && group.lectures.some((lecture) => lecture.date === todayIso)) ||
+      (dateFilter === 'week' && group.lectures.some((lecture) => isWithinCurrentWeek(lecture.date))) ||
+      (dateFilter === 'month' && group.startDate.startsWith(todayIso.slice(0, 7)));
+
+    const recoveryFilterMatch =
+      !activeFilters.includes('needs-recovery') || group.studentsNeedingRecovery > 0;
+    const todayFilterMatch =
+      !activeFilters.includes('today') ||
+      group.lectures.some((lecture) => lecture.date === todayIso);
+    const activeFilterMatch =
+      !activeFilters.includes('active') || group.status === 'active';
+    const nearCompletionFilterMatch =
+      !activeFilters.includes('near-completion') ||
+      group.completedLectures / Math.max(group.totalLectures, 1) >= 0.8;
+    const messagesFilterMatch =
+      !activeFilters.includes('messages-sent') ||
+      group.students.some((student) => student.messageStatus === 'sent');
+    const presentFilterMatch =
+      !activeFilters.includes('present-today') ||
+      group.lectures.some((lecture) => lecture.date === todayIso && lecture.attendanceCount > 0);
+    const absentFilterMatch =
+      !activeFilters.includes('absent-today') ||
+      group.lectures.some((lecture) => lecture.date === todayIso && lecture.absentCount > 0);
+
+    return (
+      searchMatch &&
+      categoryMatch &&
+      statusMatch &&
+      dateMatch &&
+      recoveryFilterMatch &&
+      todayFilterMatch &&
+      activeFilterMatch &&
+      nearCompletionFilterMatch &&
+      messagesFilterMatch &&
+      presentFilterMatch &&
+      absentFilterMatch
+    );
+  });
+  const activeGroups = theoryGroups.filter(g => g.status === 'active');
+  const todayLectures = theoryGroups.flatMap(g =>
+    g.lectures.filter(l => l.date === new Date().toISOString().slice(0, 10))
   );
   const totalPresentToday = todayLectures.reduce((sum, l) => sum + l.attendanceCount, 0);
   const totalAbsentToday = todayLectures.reduce((sum, l) => sum + l.absentCount, 0);
-  const studentsNeedingRecovery = MOCK_THEORY_GROUPS.reduce((sum, g) => sum + g.studentsNeedingRecovery, 0);
-  const messagesAutomated = MOCK_THEORY_GROUPS.flatMap(g => g.students).filter(s => s.messageStatus === 'sent').length;
-  const groupsNearingCompletion = MOCK_THEORY_GROUPS.filter(g => 
+  const studentsNeedingRecovery = theoryGroups.reduce((sum, g) => sum + g.studentsNeedingRecovery, 0);
+  const messagesAutomated = theoryGroups.flatMap(g => g.students).filter(s => s.messageStatus === 'sent').length;
+  const groupsNearingCompletion = theoryGroups.filter(g =>
     g.status === 'active' && (g.completedLectures / g.totalLectures) >= 0.8
   );
 
@@ -297,7 +236,7 @@ export function TheoryPage() {
     setSelectedGroup(group);
     
     // Initialize attendance data with current status
-    const initialData: Record<number, AttendanceStatus> = {};
+    const initialData: Record<string, AttendanceStatus> = {};
     if (lecture.students) {
       lecture.students.forEach(s => {
         initialData[s.studentId] = s.status;
@@ -314,17 +253,51 @@ export function TheoryPage() {
 
   const handleMarkAllPresent = () => {
     if (!selectedGroup) return;
-    const newData: Record<number, AttendanceStatus> = {};
+    const newData: Record<string, AttendanceStatus> = {};
     selectedGroup.students.forEach(s => {
       newData[s.id] = 'present';
     });
     setAttendanceData(newData);
   };
 
-  const handleSubmitAttendance = () => {
-    console.log('Submitting attendance:', attendanceData);
-    setIsAttendanceModalOpen(false);
-    setAttendanceData({});
+  const handleSubmitAttendance = async () => {
+    if (!selectedGroup || !attendanceLecture) {
+      return;
+    }
+
+    try {
+      const updatedGroup = await saveTheoryLectureAttendance(
+        selectedGroup.id,
+        attendanceLecture.id,
+        selectedGroup.students.map((student) => ({
+          studentId: student.id,
+          status: attendanceData[student.id] ?? 'present',
+          viberSent:
+            attendanceLecture.students?.find(
+              (lectureStudent) => lectureStudent.studentId === student.id,
+            )?.viberSent ?? false,
+        })),
+        session?.csrfToken ?? '',
+      );
+
+      setTheoryGroups((current) =>
+        current.map((group) =>
+          group.id === updatedGroup.id ? updatedGroup : group,
+        ),
+      );
+      setSelectedGroup(updatedGroup);
+      setActionMessage(
+        `Присъствието за лекция ${attendanceLecture.number} е записано в PostgreSQL.`,
+      );
+      setIsAttendanceModalOpen(false);
+      setAttendanceData({});
+    } catch (error) {
+      setActionMessage(
+        error instanceof Error
+          ? `Неуспешен запис на присъствие: ${error.message}`
+          : 'Неуспешен запис на присъствие в базата.',
+      );
+    }
   };
 
   const handleViewAbsentStudent = (student: TheoryStudent, lecture: TheoryLecture, group: TheoryGroup) => {
@@ -332,7 +305,7 @@ export function TheoryPage() {
     setIsAbsenceDetailOpen(true);
   };
 
-  const toggleLecture = (lectureId: number) => {
+  const toggleLecture = (lectureId: string) => {
     setExpandedLecture(expandedLecture === lectureId ? null : lectureId);
   };
 
@@ -356,7 +329,13 @@ export function TheoryPage() {
       {/* Page Header */}
       <PageHeader
         title="Теория"
-        description="Управление на теоретично обучение, групи, лекции и присъствие"
+        description={`Управление на теоретично обучение, групи, лекции и присъствие · ${
+          sourceStatus === 'backend'
+            ? 'PostgreSQL + Redis'
+            : sourceStatus === 'fallback'
+              ? 'Fallback данни'
+              : 'Зареждане...'
+        }`}
         breadcrumbs={[
           { label: 'Начало', onClick: () => navigate('/') },
           { label: 'Теория' }
@@ -380,6 +359,12 @@ export function TheoryPage() {
             <Button
               variant="secondary"
               icon={<Download size={18} />}
+              onClick={() => {
+                exportTheoryGroupsCsv(filteredGroups);
+                setActionMessage(
+                  `Експортирани са ${filteredGroups.length} теоретични групи в CSV файл.`,
+                );
+              }}
             >
               Експорт
             </Button>
@@ -396,6 +381,17 @@ export function TheoryPage() {
 
       {/* Summary Cards */}
       <div className="px-6 lg:px-8 py-6">
+        <div
+          className="rounded-xl p-4 mb-6 text-sm"
+          style={{
+            background: 'var(--bg-card)',
+            color: 'var(--text-secondary)',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+          }}
+        >
+          {actionMessage}
+        </div>
+
         <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
           {/* Active Groups */}
           <button
@@ -614,6 +610,8 @@ export function TheoryPage() {
 
             {/* Category Filter */}
             <select
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
               className="px-4 py-2.5 rounded-lg outline-none cursor-pointer transition-all min-w-[160px]"
               style={{
                 background: 'var(--bg-primary)',
@@ -621,14 +619,16 @@ export function TheoryPage() {
                 border: '1px solid rgba(255, 255, 255, 0.06)',
               }}
             >
-              <option>Всички категории</option>
-              <option>Категория A</option>
-              <option>Категория B</option>
-              <option>Категория C</option>
+              <option value="all">Всички категории</option>
+              <option value="A">Категория A</option>
+              <option value="B">Категория B</option>
+              <option value="C">Категория C</option>
             </select>
 
             {/* Status Filter */}
             <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
               className="px-4 py-2.5 rounded-lg outline-none cursor-pointer transition-all min-w-[160px]"
               style={{
                 background: 'var(--bg-primary)',
@@ -636,14 +636,16 @@ export function TheoryPage() {
                 border: '1px solid rgba(255, 255, 255, 0.06)',
               }}
             >
-              <option>Всички групи</option>
-              <option>Активни</option>
-              <option>Завършени</option>
-              <option>Предстоящи</option>
+              <option value="all">Всички групи</option>
+              <option value="active">Активни</option>
+              <option value="completed">Завършени</option>
+              <option value="upcoming">Предстоящи</option>
             </select>
 
             {/* Date Filter */}
             <select
+              value={dateFilter}
+              onChange={(event) => setDateFilter(event.target.value)}
               className="px-4 py-2.5 rounded-lg outline-none cursor-pointer transition-all min-w-[160px]"
               style={{
                 background: 'var(--bg-primary)',
@@ -651,10 +653,10 @@ export function TheoryPage() {
                 border: '1px solid rgba(255, 255, 255, 0.06)',
               }}
             >
-              <option>Всички дати</option>
-              <option>Днес</option>
-              <option>Тази седмица</option>
-              <option>Този месец</option>
+              <option value="all">Всички дати</option>
+              <option value="today">Днес</option>
+              <option value="week">Тази седмица</option>
+              <option value="month">Този месец</option>
             </select>
 
             {/* More Filters Button */}
@@ -699,7 +701,7 @@ export function TheoryPage() {
 
       {/* Theory Groups List */}
       <div className="px-6 lg:px-8 pb-8">
-        {MOCK_THEORY_GROUPS.length === 0 ? (
+        {filteredGroups.length === 0 ? (
           /* Empty State */
           <div
             className="rounded-xl p-16 text-center"
@@ -733,7 +735,7 @@ export function TheoryPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {MOCK_THEORY_GROUPS.map((group) => {
+            {filteredGroups.map((group) => {
             const statusInfo = getGroupStatusInfo(group.status);
             const progress = (group.completedLectures / group.totalLectures) * 100;
             const hasIssues = group.studentsNeedingRecovery > 0;
@@ -1438,7 +1440,7 @@ export function TheoryPage() {
               </Button>
               <Button
                 variant="primary"
-                onClick={handleSubmitAttendance}
+                onClick={() => void handleSubmitAttendance()}
                 fullWidth
               >
                 Запази присъствие
@@ -1883,8 +1885,47 @@ export function TheoryPage() {
   );
 }
 
+function isWithinCurrentWeek(dateValue: string) {
+  const value = new Date(`${dateValue}T12:00:00`);
+  const today = new Date();
+  const weekStart = new Date(today);
+  weekStart.setDate(today.getDate() - today.getDay() + 1);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
 
+  return value >= weekStart && value <= weekEnd;
+}
 
-
-
-
+function exportTheoryGroupsCsv(groups: TheoryGroup[]) {
+  const rows = [
+    'name;category;startDate;status;studentCount;totalLectures;completedLectures;averageAttendance;students',
+    ...groups.map((group) =>
+      [
+        group.name,
+        group.category,
+        group.startDate,
+        getGroupStatusInfo(group.status).label,
+        group.studentCount,
+        group.totalLectures,
+        group.completedLectures,
+        group.averageAttendance.toFixed(1),
+        group.students.map((student) => student.name).join(' | '),
+      ]
+        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+        .join(';'),
+    ),
+  ];
+  const blob = new Blob([`\uFEFF${rows.join('\n')}`], {
+    type: 'text/csv;charset=utf-8',
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'theory_groups_export.csv';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}

@@ -886,7 +886,7 @@ function DataTable() {
   const students = [
     {
       id: 1,
-      name: "Петър Георгиев",
+      name: "Антоан Тест",
       category: "B",
       instructor: "Георги Петров",
       lessons: 12,
@@ -894,7 +894,7 @@ function DataTable() {
     },
     {
       id: 2,
-      name: "Елена Димитрова",
+      name: "Антоан Тест",
       category: "B",
       instructor: "Иван Димитров",
       lessons: 8,
@@ -902,7 +902,7 @@ function DataTable() {
     },
     {
       id: 3,
-      name: "Мартин Иванов",
+      name: "Антоан Тест",
       category: "A",
       instructor: "Георги Петров",
       lessons: 15,
@@ -910,7 +910,7 @@ function DataTable() {
     },
     {
       id: 4,
-      name: "София Николова",
+      name: "Антоан Тест",
       category: "B",
       instructor: "Иван Димитров",
       lessons: 5,

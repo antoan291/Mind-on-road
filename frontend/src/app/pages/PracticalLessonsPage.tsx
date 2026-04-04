@@ -1,5 +1,6 @@
-﻿import { useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { useMemo } from 'react';
 import {
   PageHeader, Badge, Button, Modal, Input, Select, Textarea
 } from '../components/shared';
@@ -12,18 +13,33 @@ import {
   User, Timer, Hash, ChevronRight, Fuel, Settings,
   ChevronDown, ChevronUp, Bell, BellOff, Send, Activity
 } from 'lucide-react';
+import {
+  createPracticalLessonRecord,
+  deletePracticalLessonRecord,
+  fetchPracticalLessonRecords,
+  submitPracticalLessonParentFeedback,
+  submitPracticalLessonStudentFeedback,
+  updatePracticalLessonRecord,
+} from '../services/practicalLessonsApi';
+import { useAuthSession } from '../services/authSession';
+import {
+  type StudentOperationalRecord,
+  studentOperationalRecords,
+} from '../content/studentOperations';
+import { fetchStudentOperations } from '../services/studentsApi';
 
 type LessonStatus = 'scheduled' | 'in-progress' | 'completed' | 'canceled' | 'no-show' | 'late';
 type PaymentStatus = 'paid' | 'pending' | 'overdue' | 'not-required';
 type EvaluationStatus = 'pending' | 'completed' | 'not-required';
+type LessonDateFilter = 'all' | 'today' | 'week' | 'month';
 
 type PracticalLesson = {
-  id: number;
+  id: string;
   date: string;
   time: string;
   endTime: string;
   student: string;
-  studentId: number;
+  studentId: string;
   studentPhone: string;
   instructor: string;
   instructorId: number;
@@ -43,6 +59,18 @@ type PracticalLesson = {
   rating?: number;
   parentNotificationSent?: boolean;
   parentPerformanceSummary?: string;
+  parentFeedbackRating?: number;
+  parentFeedbackComment?: string;
+  parentFeedbackSubmittedAt?: string;
+  studentFeedbackRating?: number;
+  studentFeedbackComment?: string;
+  studentFeedbackSubmittedAt?: string;
+  revisionHistory: Array<{
+    id: string;
+    actorName: string;
+    changeSummary: string;
+    changedAt: string;
+  }>;
   createdBy?: string;
   updatedBy?: string;
   createdAt?: string;
@@ -51,198 +79,37 @@ type PracticalLesson = {
 
 const MOCK_LESSONS: PracticalLesson[] = [
   {
-    id: 1,
-    date: '2026-03-24',
+    id: '00000000-0000-0000-0000-000000000201',
+    date: '2026-04-04',
     time: '09:00',
     endTime: '10:30',
-    student: 'Мария Иванова',
-    studentId: 101,
-    studentPhone: '+359 88 123 4567',
-    instructor: 'Георги Димитров',
+    student: 'Антоан Тест',
+    studentId: '00000000-0000-0000-0000-000000000101',
+    studentPhone: '0886612503',
+    instructor: 'Георги Петров',
     instructorId: 1,
-    vehicle: 'VW Golf',
-    vehicleReg: 'СА 1234 ВВ',
-    category: 'B',
-    duration: 90,
-    status: 'in-progress',
-    paymentStatus: 'paid',
-    evaluationStatus: 'pending',
-    startLocation: 'Автошкола - ул. Витоша 15',
-    route: 'Градско каране - Зона 3',
-    skills: ['Паркиране', 'Маневри'],
-  },
-  {
-    id: 2,
-    date: '2026-03-24',
-    time: '11:00',
-    endTime: '12:30',
-    student: 'Иван Петров',
-    studentId: 102,
-    studentPhone: '+359 88 234 5678',
-    instructor: 'Мария Георгиева',
-    instructorId: 2,
-    vehicle: 'Opel Astra',
-    vehicleReg: 'СА 5678 АА',
-    category: 'B',
-    duration: 90,
-    status: 'scheduled',
-    paymentStatus: 'pending',
-    evaluationStatus: 'not-required',
-    startLocation: 'Автошкола - ул. Витоша 15',
-    route: 'Магистрала - обучение',
-  },
-  {
-    id: 3,
-    date: '2026-03-24',
-    time: '13:30',
-    endTime: '15:00',
-    student: 'Елена Стоянова',
-    studentId: 103,
-    studentPhone: '+359 88 345 6789',
-    instructor: 'Георги Димитров',
-    instructorId: 1,
-    vehicle: 'VW Golf',
-    vehicleReg: 'СА 1234 ВВ',
-    category: 'B',
-    duration: 90,
-    status: 'no-show',
-    paymentStatus: 'overdue',
-    evaluationStatus: 'not-required',
-    startLocation: 'Автошкола - ул. Витоша 15',
-    notes: 'Курсистът не се яви без предизвестие',
-  },
-  {
-    id: 4,
-    date: '2026-03-24',
-    time: '15:30',
-    endTime: '17:00',
-    student: 'Петър Христов',
-    studentId: 104,
-    studentPhone: '+359 88 456 7890',
-    instructor: 'Стоян Кирилов',
-    instructorId: 3,
-    vehicle: 'Renault Clio',
-    vehicleReg: 'СА 9012 СС',
-    category: 'B',
-    duration: 90,
-    status: 'scheduled',
-    paymentStatus: 'paid',
-    evaluationStatus: 'not-required',
-    startLocation: 'Автошкола - ул. Витоша 15',
-    route: 'Градско каране - Зона 1',
-  },
-  {
-    id: 5,
-    date: '2026-03-24',
-    time: '17:00',
-    endTime: '18:30',
-    student: 'Ана Василева',
-    studentId: 105,
-    studentPhone: '+359 88 567 8901',
-    instructor: 'Мария Георгиева',
-    instructorId: 2,
-    vehicle: 'Opel Astra',
-    vehicleReg: 'СА 5678 АА',
-    category: 'B',
-    duration: 90,
-    status: 'late',
-    paymentStatus: 'paid',
-    evaluationStatus: 'pending',
-    startLocation: 'Автошкола - ул. Витоша 15',
-    route: 'Нощно каране - обучение',
-    notes: 'Закъснение от 15 минути - трафик',
-  },
-  {
-    id: 6,
-    date: '2026-03-23',
-    time: '10:00',
-    endTime: '11:30',
-    student: 'Димитър Георгиев',
-    studentId: 106,
-    studentPhone: '+359 88 678 9012',
-    instructor: 'Георги Димитров',
-    instructorId: 1,
-    vehicle: 'VW Golf',
-    vehicleReg: 'СА 1234 ВВ',
-    category: 'B',
-    duration: 90,
-    status: 'completed',
-    paymentStatus: 'paid',
-    evaluationStatus: 'pending',
-    startLocation: 'Автошкола - ул. Витоша 15',
-    endLocation: 'Автошкола - ул. Витоша 15',
-    route: 'Градско каране - Зона 2',
-    kmDriven: 25,
-    skills: ['Завиване', 'Спиране', 'Паркиране'],
-    rating: 4,
-    parentNotificationSent: true,
-    parentPerformanceSummary: 'Изпратен отчет: стабилен напредък, добра работа по паркиране и нужда от още упражнения за престрояване.',
-  },
-  {
-    id: 7,
-    date: '2026-03-23',
-    time: '14:00',
-    endTime: '15:30',
-    student: 'София Николова',
-    studentId: 107,
-    studentPhone: '+359 88 789 0123',
-    instructor: 'Стоян Кирилов',
-    instructorId: 3,
-    vehicle: 'Renault Clio',
-    vehicleReg: 'СА 9012 СС',
+    vehicle: 'Toyota Corolla',
+    vehicleReg: 'CA 1234 AB',
     category: 'B',
     duration: 90,
     status: 'completed',
     paymentStatus: 'paid',
     evaluationStatus: 'completed',
-    startLocation: 'Автошкола - ул. Витоша 15',
-    endLocation: 'Автошкола - ул. Витоша 15',
-    route: 'Извън града - обучение',
-    kmDriven: 45,
-    skills: ['Магистрала', 'Обгонване', 'Скоростна кутия'],
+    startLocation: 'Автошкола Mind on Road',
+    endLocation: 'Автошкола Mind on Road',
+    route: 'Градско каране - тестов маршрут',
+    kmDriven: 18,
+    skills: ['Паркиране', 'Маневри'],
     rating: 5,
-    parentNotificationSent: false,
-    parentPerformanceSummary: 'Подготвен отчет: отлична дисциплина и много добро изпълнение на извънградско каране.',
-  },
-  {
-    id: 8,
-    date: '2026-03-23',
-    time: '16:00',
-    endTime: '17:30',
-    student: 'Николай Тодоров',
-    studentId: 108,
-    studentPhone: '+359 88 890 1234',
-    instructor: 'Мария Георгиева',
-    instructorId: 2,
-    vehicle: 'Opel Astra',
-    vehicleReg: 'СА 5678 АА',
-    category: 'B',
-    duration: 90,
-    status: 'canceled',
-    paymentStatus: 'not-required',
-    evaluationStatus: 'not-required',
-    startLocation: 'Автошкола - ул. Витоша 15',
-    notes: 'Отменен от курсиста - семейни причини',
-  },
-  {
-    id: 9,
-    date: '2026-03-25',
-    time: '10:00',
-    endTime: '11:30',
-    student: 'Виктория Стефанова',
-    studentId: 109,
-    studentPhone: '+359 88 901 2345',
-    instructor: 'Георги Димитров',
-    instructorId: 1,
-    vehicle: 'VW Golf',
-    vehicleReg: 'СА 1234 ВВ',
-    category: 'B',
-    duration: 90,
-    status: 'scheduled',
-    paymentStatus: 'paid',
-    evaluationStatus: 'not-required',
-    startLocation: 'Автошкола - ул. Витоша 15',
-    route: 'Изпит симулация - маршрут 1',
+    parentNotificationSent: true,
+    parentPerformanceSummary: 'Изпратен тестов отчет към родител: Антоан Тест се справя стабилно.',
+    parentFeedbackRating: 5,
+    parentFeedbackComment: 'Благодаря за обратната връзка. Моля следващия път да има още упражнения на паркиране.',
+    parentFeedbackSubmittedAt: '2026-04-04T13:00:00.000Z',
+    studentFeedbackRating: 5,
+    studentFeedbackComment: 'Урокът беше ясен и полезен, искам още практика по паркиране.',
+    studentFeedbackSubmittedAt: '2026-04-04T12:00:00.000Z',
+    revisionHistory: [],
   },
 ];
 
@@ -287,18 +154,203 @@ const getEvaluationStatusInfo = (status: EvaluationStatus) => {
   }
 };
 
+const LESSON_STATUS_OPTIONS: Array<{ value: LessonStatus; label: string }> = [
+  { value: 'scheduled', label: 'Планирани' },
+  { value: 'in-progress', label: 'В ход' },
+  { value: 'completed', label: 'Завършени' },
+  { value: 'canceled', label: 'Отменени' },
+  { value: 'no-show', label: 'Неявявания' },
+  { value: 'late', label: 'Закъснели' },
+];
+
+const QUICK_FILTER_LABELS: Record<string, string> = {
+  today: 'Днес',
+  completed: 'Завършени',
+  late: 'Закъснели',
+  'no-show': 'Неявявания',
+  canceled: 'Отменени',
+  unpaid: 'Без плащане',
+  'needs-evaluation': 'Чака оценка',
+  'needs-attention': 'Проблемни',
+};
+
+function calculateLessonDurationMinutes(startTime: string, endTime: string) {
+  const [startHours = 0, startMinutes = 0] = startTime
+    .split(':')
+    .map(Number);
+  const [endHours = 0, endMinutes = 0] = endTime.split(':').map(Number);
+
+  return endHours * 60 + endMinutes - (startHours * 60 + startMinutes);
+}
+
+function toBackendLessonStatus(status: LessonStatus) {
+  if (status === 'in-progress') return 'IN_PROGRESS' as const;
+  if (status === 'completed') return 'COMPLETED' as const;
+  if (status === 'canceled') return 'CANCELED' as const;
+  if (status === 'no-show') return 'NO_SHOW' as const;
+  if (status === 'late') return 'LATE' as const;
+  return 'SCHEDULED' as const;
+}
+
+function toBackendPaymentStatus(status: PaymentStatus) {
+  if (status === 'paid') return 'PAID' as const;
+  if (status === 'overdue') return 'OVERDUE' as const;
+  if (status === 'not-required') return 'NOT_REQUIRED' as const;
+  return 'PENDING' as const;
+}
+
+function getUniqueSortedValues(values: string[]) {
+  return Array.from(
+    new Set(values.map((value) => value.trim()).filter(Boolean)),
+  ).sort((left, right) => left.localeCompare(right, 'bg'));
+}
+
+function parseLessonDate(dateValue: string) {
+  const parsedDate = new Date(dateValue);
+
+  return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
+}
+
+function formatLessonTimestamp(timestamp?: string) {
+  if (!timestamp) {
+    return '—';
+  }
+
+  const parsedDate = new Date(timestamp);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return timestamp;
+  }
+
+  return parsedDate.toLocaleString('bg-BG', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function isLessonInDateFilter(
+  lessonDate: string,
+  dateFilter: LessonDateFilter,
+  todayDate: Date,
+) {
+  if (dateFilter === 'all') {
+    return true;
+  }
+
+  const parsedLessonDate = parseLessonDate(lessonDate);
+
+  if (!parsedLessonDate) {
+    return false;
+  }
+
+  if (dateFilter === 'today') {
+    return lessonDate === todayDate.toISOString().slice(0, 10);
+  }
+
+  const rangeStart = new Date(todayDate);
+  rangeStart.setHours(0, 0, 0, 0);
+
+  if (dateFilter === 'week') {
+    const mondayShift = (rangeStart.getDay() + 6) % 7;
+    rangeStart.setDate(rangeStart.getDate() - mondayShift);
+
+    const weekEnd = new Date(rangeStart);
+    weekEnd.setDate(rangeStart.getDate() + 6);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    return parsedLessonDate >= rangeStart && parsedLessonDate <= weekEnd;
+  }
+
+  return (
+    parsedLessonDate.getFullYear() === todayDate.getFullYear() &&
+    parsedLessonDate.getMonth() === todayDate.getMonth()
+  );
+}
+
+function matchesQuickFilter(
+  lesson: PracticalLesson,
+  filter: string,
+  todayDate: string,
+) {
+  if (filter === 'today') {
+    return lesson.date === todayDate;
+  }
+
+  if (filter === 'completed') {
+    return lesson.status === 'completed';
+  }
+
+  if (filter === 'late') {
+    return lesson.status === 'late';
+  }
+
+  if (filter === 'no-show') {
+    return lesson.status === 'no-show';
+  }
+
+  if (filter === 'canceled') {
+    return lesson.status === 'canceled';
+  }
+
+  if (filter === 'unpaid') {
+    return (
+      lesson.paymentStatus === 'pending' || lesson.paymentStatus === 'overdue'
+    );
+  }
+
+  if (filter === 'needs-evaluation') {
+    return lesson.evaluationStatus === 'pending';
+  }
+
+  if (filter === 'needs-attention') {
+    return (
+      lesson.status === 'no-show' ||
+      lesson.status === 'late' ||
+      lesson.paymentStatus === 'pending' ||
+      lesson.paymentStatus === 'overdue'
+    );
+  }
+
+  return true;
+}
+
 export function PracticalLessonsPage() {
+  const { session } = useAuthSession();
   const navigate = useNavigate();
+  const isStudentPortalUser = Boolean(
+    session?.user.roleKeys.includes('student'),
+  );
+  const isParentPortalUser = Boolean(
+    session?.user.roleKeys.includes('parent'),
+  );
+  const canManagePracticalLessons = Boolean(
+    session?.user.roleKeys.includes('owner') ||
+      session?.user.permissionKeys.includes('scheduling.manage'),
+  );
   const [searchValue, setSearchValue] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
+  const [dateFilter, setDateFilter] = useState<LessonDateFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | LessonStatus>('all');
+  const [instructorFilter, setInstructorFilter] = useState('all');
+  const [vehicleFilter, setVehicleFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [lessons, setLessons] = useState<PracticalLesson[]>(MOCK_LESSONS);
+  const [students, setStudents] = useState<StudentOperationalRecord[]>(
+    studentOperationalRecords,
+  );
+  const [sourceStatus, setSourceStatus] = useState<
+    'loading' | 'backend' | 'fallback'
+  >('loading');
   const [selectedLesson, setSelectedLesson] = useState<PracticalLesson | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEvaluationModalOpen, setIsEvaluationModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [evaluationLesson, setEvaluationLesson] = useState<PracticalLesson | null>(null);
-  const [editingLessonId, setEditingLessonId] = useState<number | null>(null);
+  const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     student: '',
     instructor: '',
@@ -314,13 +366,88 @@ export function PracticalLessonsPage() {
     endLocation: '',
     notes: '',
   });
-  const [actionMenuOpen, setActionMenuOpen] = useState<number | null>(null);
+  const [actionMenuOpen, setActionMenuOpen] = useState<string | null>(null);
   const [quickRating, setQuickRating] = useState<number>(0);
   const [quickComment, setQuickComment] = useState('');
   const [needsFollowUp, setNeedsFollowUp] = useState(false);
+  const [isStudentFeedbackModalOpen, setIsStudentFeedbackModalOpen] =
+    useState(false);
+  const [feedbackLesson, setFeedbackLesson] =
+    useState<PracticalLesson | null>(null);
+  const [studentFeedbackRating, setStudentFeedbackRating] = useState(0);
+  const [studentFeedbackComment, setStudentFeedbackComment] = useState('');
+  const [studentFeedbackError, setStudentFeedbackError] = useState<
+    string | null
+  >(null);
+  const [isSubmittingStudentFeedback, setIsSubmittingStudentFeedback] =
+    useState(false);
+  const [isParentFeedbackModalOpen, setIsParentFeedbackModalOpen] =
+    useState(false);
+  const [parentFeedbackLesson, setParentFeedbackLesson] =
+    useState<PracticalLesson | null>(null);
+  const [parentFeedbackRating, setParentFeedbackRating] = useState(0);
+  const [parentFeedbackComment, setParentFeedbackComment] = useState('');
+  const [parentFeedbackError, setParentFeedbackError] = useState<
+    string | null
+  >(null);
+  const [isSubmittingParentFeedback, setIsSubmittingParentFeedback] =
+    useState(false);
+  const [createForm, setCreateForm] = useState({
+    studentId: MOCK_LESSONS[0]?.studentId ?? '',
+    studentName: MOCK_LESSONS[0]?.student ?? 'Антоан Тест',
+    instructor: MOCK_LESSONS[0]?.instructor ?? 'Георги Петров',
+    vehicle: `${MOCK_LESSONS[0]?.vehicle ?? 'Toyota Corolla'} · ${MOCK_LESSONS[0]?.vehicleReg ?? 'CA 1234 AB'}`,
+    category: MOCK_LESSONS[0]?.category ?? 'B',
+    date: new Date().toISOString().slice(0, 10),
+    time: '09:00',
+    endTime: '10:30',
+    route: 'Градско каране',
+    startLocation: 'Автошкола Mind on Road',
+    endLocation: 'Автошкола Mind on Road',
+    notes: '',
+  });
+  const [isSavingLesson, setIsSavingLesson] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([fetchPracticalLessonRecords(), fetchStudentOperations()])
+      .then(([records, studentRows]) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setLessons(records);
+        setStudents(studentRows);
+        if (studentRows[0]) {
+          setCreateForm((current) => ({
+            ...current,
+            studentId: studentRows[0].id,
+            studentName: studentRows[0].name,
+            instructor: studentRows[0].instructor || current.instructor,
+            category: studentRows[0].category || current.category,
+          }));
+        }
+        setSourceStatus('backend');
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setLessons(MOCK_LESSONS);
+        setStudents(studentOperationalRecords);
+        setSourceStatus('fallback');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Calculate summary statistics
-  const today = '2026-03-24';
+  const today = new Date().toISOString().slice(0, 10);
   const todayLessons = lessons.filter(l => l.date === today);
   const completedLessons = lessons.filter(l => l.status === 'completed');
   const lateLessons = lessons.filter(l => l.status === 'late');
@@ -328,6 +455,69 @@ export function PracticalLessonsPage() {
   const canceledLessons = lessons.filter(l => l.status === 'canceled');
   const unpaidLessons = lessons.filter(l => l.paymentStatus === 'pending' || l.paymentStatus === 'overdue');
   const needsEvaluation = lessons.filter(l => l.evaluationStatus === 'pending');
+
+  const instructorOptions = useMemo(
+    () => getUniqueSortedValues(lessons.map((lesson) => lesson.instructor)),
+    [lessons],
+  );
+
+  const vehicleOptions = useMemo(
+    () =>
+      getUniqueSortedValues(
+        lessons.map((lesson) =>
+          lesson.vehicleReg
+            ? `${lesson.vehicle} · ${lesson.vehicleReg}`
+            : lesson.vehicle,
+        ),
+      ),
+    [lessons],
+  );
+
+  const categoryOptions = useMemo(
+    () => getUniqueSortedValues(lessons.map((lesson) => lesson.category)),
+    [lessons],
+  );
+
+  const filteredLessons = useMemo(() => {
+    const todayDate = new Date();
+    const todayIsoDate = todayDate.toISOString().slice(0, 10);
+    const normalizedSearch = searchValue.trim().toLowerCase();
+
+    return lessons.filter((lesson) => {
+      const lessonVehicle = lesson.vehicleReg
+        ? `${lesson.vehicle} · ${lesson.vehicleReg}`
+        : lesson.vehicle;
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        lesson.student.toLowerCase().includes(normalizedSearch) ||
+        lesson.instructor.toLowerCase().includes(normalizedSearch) ||
+        lessonVehicle.toLowerCase().includes(normalizedSearch) ||
+        lesson.category.toLowerCase().includes(normalizedSearch) ||
+        lesson.studentPhone.toLowerCase().includes(normalizedSearch);
+
+      return (
+        matchesSearch &&
+        isLessonInDateFilter(lesson.date, dateFilter, todayDate) &&
+        (statusFilter === 'all' || lesson.status === statusFilter) &&
+        (instructorFilter === 'all' ||
+          lesson.instructor === instructorFilter) &&
+        (vehicleFilter === 'all' || lessonVehicle === vehicleFilter) &&
+        (categoryFilter === 'all' || lesson.category === categoryFilter) &&
+        activeFilters.every((filter) =>
+          matchesQuickFilter(lesson, filter, todayIsoDate),
+        )
+      );
+    });
+  }, [
+    activeFilters,
+    categoryFilter,
+    dateFilter,
+    instructorFilter,
+    lessons,
+    searchValue,
+    statusFilter,
+    vehicleFilter,
+  ]);
 
   const handleRowClick = (lesson: PracticalLesson) => {
     setSelectedLesson(lesson);
@@ -379,61 +569,52 @@ export function PracticalLessonsPage() {
     }));
   };
 
-  const handleSaveEditedLesson = () => {
+  const applyPersistedLesson = (updatedLesson: PracticalLesson) => {
+    setLessons((current) =>
+      current.map((lesson) =>
+        lesson.id === updatedLesson.id ? updatedLesson : lesson,
+      ),
+    );
+    setSelectedLesson((current) =>
+      current && current.id === updatedLesson.id ? updatedLesson : current,
+    );
+  };
+
+  const handleSaveEditedLesson = async () => {
     if (editingLessonId === null) {
       return;
     }
 
-    setLessons((current) =>
-      current.map((lesson) =>
-        lesson.id === editingLessonId
-          ? {
-              ...lesson,
-              student: editForm.student,
-              instructor: editForm.instructor,
-              vehicle: editForm.vehicle,
-              category: editForm.category,
-              date: editForm.date,
-              time: editForm.time,
-              endTime: editForm.endTime,
-              status: editForm.status,
-              paymentStatus: editForm.paymentStatus,
-              route: editForm.route || undefined,
-              startLocation: editForm.startLocation || undefined,
-              endLocation: editForm.endLocation || undefined,
-              notes: editForm.notes || undefined,
-            }
-          : lesson,
-      ),
+    const updatedLesson = await updatePracticalLessonRecord(
+      editingLessonId,
+      {
+        studentName: editForm.student,
+        instructorName: editForm.instructor,
+        vehicleLabel: editForm.vehicle,
+        categoryCode: editForm.category,
+        lessonDate: editForm.date,
+        startTimeLabel: editForm.time,
+        endTimeLabel: editForm.endTime,
+        durationMinutes: Math.max(
+          30,
+          calculateLessonDurationMinutes(editForm.time, editForm.endTime),
+        ),
+        status: toBackendLessonStatus(editForm.status),
+        paymentStatus: toBackendPaymentStatus(editForm.paymentStatus),
+        routeLabel: editForm.route || null,
+        startLocation: editForm.startLocation || null,
+        endLocation: editForm.endLocation || null,
+        notes: editForm.notes || null,
+      },
+      session?.csrfToken ?? '',
     );
 
-    if (selectedLesson?.id === editingLessonId) {
-      setSelectedLesson((current) =>
-        current
-          ? {
-              ...current,
-              student: editForm.student,
-              instructor: editForm.instructor,
-              vehicle: editForm.vehicle,
-              category: editForm.category,
-              date: editForm.date,
-              time: editForm.time,
-              endTime: editForm.endTime,
-              status: editForm.status,
-              paymentStatus: editForm.paymentStatus,
-              route: editForm.route || undefined,
-              startLocation: editForm.startLocation || undefined,
-              endLocation: editForm.endLocation || undefined,
-              notes: editForm.notes || undefined,
-            }
-          : current,
-      );
-    }
+    applyPersistedLesson(updatedLesson);
 
     handleCloseEditLesson();
   };
 
-  const handleSubmitEvaluation = () => {
+  const handleSubmitEvaluation = async () => {
     if (!evaluationLesson) {
       return;
     }
@@ -443,86 +624,148 @@ export function PracticalLessonsPage() {
         ? `Изпратен отчет: оценка ${quickRating}/5 · ${quickComment.trim()}`
         : `Изпратен отчет: оценка ${quickRating}/5 · Урокът е приключен успешно с отбелязани ключови наблюдения.`;
 
-    setLessons((current) =>
-      current.map((lesson) =>
-        lesson.id === evaluationLesson.id
-          ? {
-              ...lesson,
-              rating: quickRating,
-              evaluationStatus: 'completed',
-              notes: quickComment.trim().length > 0 ? quickComment.trim() : lesson.notes,
-              parentNotificationSent: true,
-              parentPerformanceSummary: generatedParentSummary,
-              updatedBy: 'Администратор',
-              updatedAt: new Date().toLocaleString('bg-BG'),
-            }
-          : lesson,
-      ),
+    const updatedLesson = await updatePracticalLessonRecord(
+      evaluationLesson.id,
+      {
+        rating: quickRating,
+        evaluationStatus: 'COMPLETED',
+        notes:
+          quickComment.trim().length > 0
+            ? quickComment.trim()
+            : evaluationLesson.notes ?? null,
+        parentNotificationSent: true,
+        parentPerformanceSummary: generatedParentSummary,
+      },
+      session?.csrfToken ?? '',
     );
 
-    setSelectedLesson((current) =>
-      current && current.id === evaluationLesson.id
-        ? {
-            ...current,
-            rating: quickRating,
-            evaluationStatus: 'completed',
-            notes: quickComment.trim().length > 0 ? quickComment.trim() : current.notes,
-            parentNotificationSent: true,
-            parentPerformanceSummary: generatedParentSummary,
-            updatedBy: 'Администратор',
-            updatedAt: new Date().toLocaleString('bg-BG'),
-          }
-        : current,
-    );
+    applyPersistedLesson(updatedLesson);
 
-    // In production, this would save to backend
-    console.log('Submitting evaluation:', {
-      lessonId: evaluationLesson?.id,
-      rating: quickRating,
-      comment: quickComment,
-      needsFollowUp
-    });
     setIsEvaluationModalOpen(false);
     setQuickRating(0);
     setQuickComment('');
     setNeedsFollowUp(false);
   };
 
-  const handleSendParentPerformanceReport = (lessonId: number) => {
+  const handleSendParentPerformanceReport = async (lessonId: string) => {
     const sentAt = new Date().toLocaleString('bg-BG');
+    const targetLesson = lessons.find((lesson) => lesson.id === lessonId);
 
-    setLessons((current) =>
-      current.map((lesson) =>
-        lesson.id === lessonId
-          ? {
-              ...lesson,
-              parentNotificationSent: true,
-              parentPerformanceSummary:
-                lesson.parentPerformanceSummary ??
-                `Изпратен отчет към родител на ${sentAt}: ${lesson.notes || 'Урокът е отчетен без критични забележки.'}`,
-              updatedBy: 'Администратор',
-              updatedAt: sentAt,
-            }
-          : lesson,
-      ),
+    const updatedLesson = await updatePracticalLessonRecord(
+      lessonId,
+      {
+        parentNotificationSent: true,
+        parentPerformanceSummary:
+          targetLesson?.parentPerformanceSummary ??
+          `Изпратен отчет към родител на ${sentAt}: ${targetLesson?.notes || 'Урокът е отчетен без критични забележки.'}`,
+      },
+      session?.csrfToken ?? '',
     );
 
-    setSelectedLesson((current) =>
-      current && current.id === lessonId
-        ? {
-            ...current,
-            parentNotificationSent: true,
-            parentPerformanceSummary:
-              current.parentPerformanceSummary ??
-              `Изпратен отчет към родител на ${sentAt}: ${current.notes || 'Урокът е отчетен без критични забележки.'}`,
-            updatedBy: 'Администратор',
-            updatedAt: sentAt,
-          }
-        : current,
-    );
+    applyPersistedLesson(updatedLesson);
   };
 
-  const toggleActionMenu = (e: React.MouseEvent, lessonId: number) => {
+  const handleOpenStudentFeedback = (lesson: PracticalLesson) => {
+    setFeedbackLesson(lesson);
+    setStudentFeedbackRating(lesson.studentFeedbackRating || 0);
+    setStudentFeedbackComment(lesson.studentFeedbackComment || '');
+    setStudentFeedbackError(null);
+    setIsStudentFeedbackModalOpen(true);
+  };
+
+  const handleSubmitStudentFeedback = async () => {
+    if (!feedbackLesson || isSubmittingStudentFeedback) {
+      return;
+    }
+
+    if (studentFeedbackRating === 0) {
+      setStudentFeedbackError('Избери оценка от 1 до 5.');
+      return;
+    }
+
+    if (studentFeedbackComment.trim().length < 2) {
+      setStudentFeedbackError('Добави кратък коментар за урока.');
+      return;
+    }
+
+    setIsSubmittingStudentFeedback(true);
+    setStudentFeedbackError(null);
+
+    try {
+      const updatedLesson = await submitPracticalLessonStudentFeedback(
+        feedbackLesson.id,
+        {
+          studentFeedbackRating,
+          studentFeedbackComment: studentFeedbackComment.trim(),
+        },
+        session?.csrfToken ?? '',
+      );
+
+      applyPersistedLesson(updatedLesson);
+      setIsStudentFeedbackModalOpen(false);
+      setFeedbackLesson(null);
+    } catch (error) {
+      setStudentFeedbackError(
+        error instanceof Error
+          ? error.message
+          : 'Обратната връзка не беше записана.',
+      );
+    } finally {
+      setIsSubmittingStudentFeedback(false);
+    }
+  };
+
+  const handleOpenParentFeedback = (lesson: PracticalLesson) => {
+    setParentFeedbackLesson(lesson);
+    setParentFeedbackRating(lesson.parentFeedbackRating || 0);
+    setParentFeedbackComment(lesson.parentFeedbackComment || '');
+    setParentFeedbackError(null);
+    setIsParentFeedbackModalOpen(true);
+  };
+
+  const handleSubmitParentFeedback = async () => {
+    if (!parentFeedbackLesson || isSubmittingParentFeedback) {
+      return;
+    }
+
+    if (parentFeedbackRating === 0) {
+      setParentFeedbackError('Избери оценка от 1 до 5.');
+      return;
+    }
+
+    if (parentFeedbackComment.trim().length < 2) {
+      setParentFeedbackError('Добави кратък коментар като родител.');
+      return;
+    }
+
+    setIsSubmittingParentFeedback(true);
+    setParentFeedbackError(null);
+
+    try {
+      const updatedLesson = await submitPracticalLessonParentFeedback(
+        parentFeedbackLesson.id,
+        {
+          parentFeedbackRating,
+          parentFeedbackComment: parentFeedbackComment.trim(),
+        },
+        session?.csrfToken ?? '',
+      );
+
+      applyPersistedLesson(updatedLesson);
+      setIsParentFeedbackModalOpen(false);
+      setParentFeedbackLesson(null);
+    } catch (error) {
+      setParentFeedbackError(
+        error instanceof Error
+          ? error.message
+          : 'Родителската обратна връзка не беше записана.',
+      );
+    } finally {
+      setIsSubmittingParentFeedback(false);
+    }
+  };
+
+  const toggleActionMenu = (e: React.MouseEvent, lessonId: string) => {
     e.stopPropagation();
     setActionMenuOpen(actionMenuOpen === lessonId ? null : lessonId);
   };
@@ -540,6 +783,107 @@ export function PracticalLessonsPage() {
   const clearAllFilters = () => {
     setActiveFilters([]);
     setSearchValue('');
+    setDateFilter('all');
+    setStatusFilter('all');
+    setInstructorFilter('all');
+    setVehicleFilter('all');
+    setCategoryFilter('all');
+  };
+
+  const handleCreatePracticalLesson = async () => {
+    if (isSavingLesson) {
+      return;
+    }
+
+    const selectedStudent =
+      students.find((student) => student.id === createForm.studentId) ??
+      students[0];
+
+    if (!selectedStudent) {
+      setCreateError('Няма наличен курсист за създаване на час.');
+      return;
+    }
+
+    setIsSavingLesson(true);
+    setCreateError(null);
+
+    try {
+      const createdLesson = await createPracticalLessonRecord(
+        {
+          studentId: selectedStudent.id,
+          studentName: selectedStudent.name,
+          instructorName:
+            createForm.instructor.trim() ||
+            selectedStudent.instructor ||
+            'Няма зададен инструктор',
+          vehicleLabel:
+            createForm.vehicle.trim() || 'Toyota Corolla · CA 1234 AB',
+          categoryCode: createForm.category.trim() || selectedStudent.category,
+          lessonDate: createForm.date,
+          startTimeLabel: createForm.time,
+          endTimeLabel: createForm.endTime,
+          durationMinutes: Math.max(
+            30,
+            calculateLessonDurationMinutes(
+              createForm.time,
+              createForm.endTime,
+            ),
+          ),
+          status: 'SCHEDULED',
+          paymentStatus: 'PAID',
+          evaluationStatus: 'PENDING',
+          routeLabel: createForm.route.trim() || null,
+          startLocation: createForm.startLocation.trim() || null,
+          endLocation: createForm.endLocation.trim() || null,
+          notes: createForm.notes.trim() || null,
+          kmDriven: null,
+          rating: null,
+          parentNotificationSent: false,
+          parentPerformanceSummary: null,
+        },
+        session?.csrfToken ?? '',
+      );
+
+      setLessons((current) => [createdLesson, ...current]);
+      setCreateForm((current) => ({
+        ...current,
+        notes: '',
+      }));
+      setIsCreateModalOpen(false);
+      setSourceStatus('backend');
+    } catch (error) {
+      setCreateError(
+        error instanceof Error
+          ? error.message
+          : 'Практическият час не беше създаден.',
+      );
+    } finally {
+      setIsSavingLesson(false);
+    }
+  };
+
+  const handleDeleteLesson = async (lessonId: string) => {
+    try {
+      await deletePracticalLessonRecord(lessonId, session?.csrfToken ?? '');
+
+      setLessons((current) =>
+        current.filter((lesson) => lesson.id !== lessonId),
+      );
+      setSelectedLesson((current) =>
+        current?.id === lessonId ? null : current,
+      );
+      setActionMenuOpen(null);
+      setIsDrawerOpen((current) =>
+        selectedLesson?.id === lessonId ? false : current,
+      );
+      setSourceStatus('backend');
+    } catch (error) {
+      setCreateError(
+        error instanceof Error
+          ? error.message
+          : 'Часът не беше изтрит от базата.',
+      );
+    }
   };
 
   return (
@@ -547,7 +891,13 @@ export function PracticalLessonsPage() {
       {/* Page Header */}
       <PageHeader
         title="Практически часове"
-        description="Управление на практическо обучение и контрол на часове"
+        description={`Управление на практическо обучение и контрол на часове · ${
+          sourceStatus === 'backend'
+            ? 'PostgreSQL + Redis'
+            : sourceStatus === 'fallback'
+              ? 'Fallback данни'
+              : 'Зареждане...'
+        }`}
         breadcrumbs={[
           { label: 'Начало', onClick: () => navigate('/') },
           { label: 'Практика' }
@@ -564,22 +914,26 @@ export function PracticalLessonsPage() {
             <Button
               variant="secondary"
               icon={<CalendarIcon size={18} />}
+              onClick={() => navigate('/schedule')}
             >
               Календар
             </Button>
             <Button
               variant="secondary"
               icon={<Download size={18} />}
+              onClick={() => exportPracticalLessonsCsv(filteredLessons)}
             >
               Експорт
             </Button>
-            <Button
-              variant="primary"
-              icon={<Plus size={18} />}
-              onClick={() => setIsCreateModalOpen(true)}
-            >
-              Нов час
-            </Button>
+            {canManagePracticalLessons && (
+              <Button
+                variant="primary"
+                icon={<Plus size={18} />}
+                onClick={() => setIsCreateModalOpen(true)}
+              >
+                Нов час
+              </Button>
+            )}
           </div>
         }
       />
@@ -810,6 +1164,10 @@ export function PracticalLessonsPage() {
 
             {/* Date Filter */}
             <select
+              value={dateFilter}
+              onChange={(event) =>
+                setDateFilter(event.target.value as LessonDateFilter)
+              }
               className="px-4 py-2.5 rounded-lg outline-none cursor-pointer transition-all min-w-[160px]"
               style={{
                 background: 'var(--bg-primary)',
@@ -817,15 +1175,18 @@ export function PracticalLessonsPage() {
                 border: '1px solid rgba(255, 255, 255, 0.06)',
               }}
             >
-              <option>Всички дати</option>
-              <option>Днес</option>
-              <option>Тази седмица</option>
-              <option>Този месец</option>
-              <option>Персонализиран период</option>
+              <option value="all">Всички дати</option>
+              <option value="today">Днес</option>
+              <option value="week">Тази седмица</option>
+              <option value="month">Този месец</option>
             </select>
 
             {/* Status Filter */}
             <select
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value as 'all' | LessonStatus)
+              }
               className="px-4 py-2.5 rounded-lg outline-none cursor-pointer transition-all min-w-[160px]"
               style={{
                 background: 'var(--bg-primary)',
@@ -833,17 +1194,18 @@ export function PracticalLessonsPage() {
                 border: '1px solid rgba(255, 255, 255, 0.06)',
               }}
             >
-              <option>Всички статуси</option>
-              <option>Планирани</option>
-              <option>В ход</option>
-              <option>Завършени</option>
-              <option>Отменени</option>
-              <option>Неявявания</option>
-              <option>Закъснели</option>
+              <option value="all">Всички статуси</option>
+              {LESSON_STATUS_OPTIONS.map((statusOption) => (
+                <option key={statusOption.value} value={statusOption.value}>
+                  {statusOption.label}
+                </option>
+              ))}
             </select>
 
             {/* Instructor Filter */}
             <select
+              value={instructorFilter}
+              onChange={(event) => setInstructorFilter(event.target.value)}
               className="px-4 py-2.5 rounded-lg outline-none cursor-pointer transition-all min-w-[180px]"
               style={{
                 background: 'var(--bg-primary)',
@@ -851,14 +1213,18 @@ export function PracticalLessonsPage() {
                 border: '1px solid rgba(255, 255, 255, 0.06)',
               }}
             >
-              <option>Всички инструктори</option>
-              <option>Георги Димитров</option>
-              <option>Мария Георгиева</option>
-              <option>Стоян Кирилов</option>
+              <option value="all">Всички инструктори</option>
+              {instructorOptions.map((instructorOption) => (
+                <option key={instructorOption} value={instructorOption}>
+                  {instructorOption}
+                </option>
+              ))}
             </select>
 
             {/* Vehicle Filter */}
             <select
+              value={vehicleFilter}
+              onChange={(event) => setVehicleFilter(event.target.value)}
               className="px-4 py-2.5 rounded-lg outline-none cursor-pointer transition-all min-w-[160px]"
               style={{
                 background: 'var(--bg-primary)',
@@ -866,14 +1232,18 @@ export function PracticalLessonsPage() {
                 border: '1px solid rgba(255, 255, 255, 0.06)',
               }}
             >
-              <option>Всички автомобили</option>
-              <option>VW Golf (СА 1234 ВВ)</option>
-              <option>Opel Astra (СА 5678 АА)</option>
-              <option>Renault Clio (СА 9012 СС)</option>
+              <option value="all">Всички автомобили</option>
+              {vehicleOptions.map((vehicleOption) => (
+                <option key={vehicleOption} value={vehicleOption}>
+                  {vehicleOption}
+                </option>
+              ))}
             </select>
 
             {/* Category Filter */}
             <select
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
               className="px-4 py-2.5 rounded-lg outline-none cursor-pointer transition-all min-w-[140px]"
               style={{
                 background: 'var(--bg-primary)',
@@ -881,15 +1251,21 @@ export function PracticalLessonsPage() {
                 border: '1px solid rgba(255, 255, 255, 0.06)',
               }}
             >
-              <option>Всички категории</option>
-              <option>Категория A</option>
-              <option>Категория B</option>
-              <option>Категория C</option>
+              <option value="all">Всички категории</option>
+              {categoryOptions.map((categoryOption) => (
+                <option key={categoryOption} value={categoryOption}>
+                  Категория {categoryOption}
+                </option>
+              ))}
             </select>
 
             {/* More Filters Button */}
-            <Button variant="secondary" icon={<Filter size={16} />}>
-              Филтри
+            <Button
+              variant="secondary"
+              icon={<Filter size={16} />}
+              onClick={clearAllFilters}
+            >
+              Изчисти
             </Button>
           </div>
 
@@ -911,7 +1287,7 @@ export function PracticalLessonsPage() {
                     fontSize: '0.875rem',
                   }}
                 >
-                  {filter}
+                  {QUICK_FILTER_LABELS[filter] ?? filter}
                   <X size={14} />
                 </button>
               ))}
@@ -995,7 +1371,7 @@ export function PracticalLessonsPage() {
                 </tr>
               </thead>
               <tbody>
-                {lessons.map((lesson) => {
+                {filteredLessons.map((lesson) => {
                   const statusInfo = getStatusInfo(lesson.status);
                   const paymentInfo = getPaymentStatusInfo(lesson.paymentStatus);
                   const evaluationInfo = getEvaluationStatusInfo(lesson.evaluationStatus);
@@ -1112,7 +1488,9 @@ export function PracticalLessonsPage() {
                           <Badge variant={evaluationInfo.color}>
                             {evaluationInfo.label}
                           </Badge>
-                          {lesson.status === 'completed' && lesson.evaluationStatus === 'pending' && (
+                          {canManagePracticalLessons &&
+                            lesson.status === 'completed' &&
+                            lesson.evaluationStatus === 'pending' && (
                             <button
                               onClick={(e) => handleQuickEvaluation(e, lesson)}
                               className="p-1.5 rounded-lg transition-all hover:bg-white/[0.08]"
@@ -1152,16 +1530,23 @@ export function PracticalLessonsPage() {
                                   Преглед
                                 </span>
                               </button>
-                              <button
-                                onClick={(e) => handleOpenEditLesson(lesson, e)}
-                                className="w-full flex items-center gap-3 px-4 py-2.5 transition-all hover:bg-white/[0.05]"
-                              >
-                                <Edit2 size={16} style={{ color: 'var(--text-tertiary)' }} />
-                                <span style={{ color: 'var(--text-primary)', fontSize: '0.9375rem' }}>
-                                  Редактиране
-                                </span>
-                              </button>
-                              {lesson.status === 'completed' && lesson.evaluationStatus === 'pending' && (
+                              {canManagePracticalLessons && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenEditLesson(lesson, e);
+                                  }}
+                                  className="w-full flex items-center gap-3 px-4 py-2.5 transition-all hover:bg-white/[0.05]"
+                                >
+                                  <Edit2 size={16} style={{ color: 'var(--text-tertiary)' }} />
+                                  <span style={{ color: 'var(--text-primary)', fontSize: '0.9375rem' }}>
+                                    Редактиране
+                                  </span>
+                                </button>
+                              )}
+                              {canManagePracticalLessons &&
+                                lesson.status === 'completed' &&
+                                lesson.evaluationStatus === 'pending' && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -1175,19 +1560,26 @@ export function PracticalLessonsPage() {
                                   </span>
                                 </button>
                               )}
-                              <div
-                                className="my-2"
-                                style={{ height: '1px', background: 'rgba(255, 255, 255, 0.06)' }}
-                              />
-                              <button
-                                onClick={(e) => handleOpenEditLesson(lesson, e)}
-                                className="w-full flex items-center gap-3 px-4 py-2.5 transition-all hover:bg-white/[0.05]"
-                              >
-                                <Trash2 size={16} style={{ color: '#ef4444' }} />
-                                <span style={{ color: '#ef4444', fontSize: '0.9375rem' }}>
-                                  Изтриване
-                                </span>
-                              </button>
+                              {canManagePracticalLessons && (
+                                <>
+                                  <div
+                                    className="my-2"
+                                    style={{ height: '1px', background: 'rgba(255, 255, 255, 0.06)' }}
+                                  />
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      void handleDeleteLesson(lesson.id);
+                                    }}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 transition-all hover:bg-white/[0.05]"
+                                  >
+                                    <Trash2 size={16} style={{ color: '#ef4444' }} />
+                                    <span style={{ color: '#ef4444', fontSize: '0.9375rem' }}>
+                                      Изтриване
+                                    </span>
+                                  </button>
+                                </>
+                              )}
                             </div>
                           )}
                         </div>
@@ -1195,6 +1587,17 @@ export function PracticalLessonsPage() {
                     </tr>
                   );
                 })}
+                {filteredLessons.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={10}
+                      className="px-6 py-10 text-center"
+                      style={{ color: 'var(--text-tertiary)' }}
+                    >
+                      Няма намерени практически часове по избраните филтри.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -1544,6 +1947,182 @@ export function PracticalLessonsPage() {
                 </div>
               )}
 
+              <div>
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <h3
+                    className="font-medium"
+                    style={{ color: 'var(--text-primary)', fontSize: '1rem' }}
+                  >
+                    Обратна връзка от курсиста
+                  </h3>
+                  {isStudentPortalUser && selectedLesson.status === 'completed' && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<StarOff size={16} />}
+                      onClick={() => handleOpenStudentFeedback(selectedLesson)}
+                    >
+                      {selectedLesson.studentFeedbackRating
+                        ? 'Обнови обратна връзка'
+                        : 'Дай обратна връзка'}
+                    </Button>
+                  )}
+                </div>
+                <div
+                  className="rounded-xl p-4"
+                  style={{ background: 'var(--bg-primary)' }}
+                >
+                  {selectedLesson.studentFeedbackRating ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((ratingValue) => (
+                            <div
+                              key={ratingValue}
+                              className="w-5 h-5 rounded"
+                              style={{
+                                background:
+                                  ratingValue <=
+                                  selectedLesson.studentFeedbackRating!
+                                    ? 'rgba(34, 197, 94, 0.95)'
+                                    : 'rgba(255, 255, 255, 0.1)',
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <span
+                          className="font-medium"
+                          style={{
+                            color: 'var(--text-primary)',
+                            fontSize: '0.9375rem',
+                          }}
+                        >
+                          {selectedLesson.studentFeedbackRating} от 5
+                        </span>
+                      </div>
+                      <p
+                        style={{
+                          color: 'var(--text-secondary)',
+                          fontSize: '0.9375rem',
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        {selectedLesson.studentFeedbackComment}
+                      </p>
+                      <p
+                        style={{
+                          color: 'var(--text-tertiary)',
+                          fontSize: '0.8125rem',
+                        }}
+                      >
+                        Подадена на{' '}
+                        {formatLessonTimestamp(
+                          selectedLesson.studentFeedbackSubmittedAt,
+                        )}
+                      </p>
+                    </div>
+                  ) : (
+                    <p
+                      style={{
+                        color: 'var(--text-tertiary)',
+                        fontSize: '0.9375rem',
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      Все още няма въведена обратна връзка от курсиста за този урок.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <h3
+                    className="font-medium"
+                    style={{ color: 'var(--text-primary)', fontSize: '1rem' }}
+                  >
+                    Обратна връзка от родител
+                  </h3>
+                  {isParentPortalUser && selectedLesson.status === 'completed' && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      icon={<Send size={16} />}
+                      onClick={() => handleOpenParentFeedback(selectedLesson)}
+                    >
+                      {selectedLesson.parentFeedbackRating
+                        ? 'Обнови родителски коментар'
+                        : 'Дай родителски коментар'}
+                    </Button>
+                  )}
+                </div>
+                <div
+                  className="rounded-xl p-4"
+                  style={{ background: 'var(--bg-primary)' }}
+                >
+                  {selectedLesson.parentFeedbackRating ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex gap-1">
+                          {[1, 2, 3, 4, 5].map((ratingValue) => (
+                            <div
+                              key={ratingValue}
+                              className="w-5 h-5 rounded"
+                              style={{
+                                background:
+                                  ratingValue <=
+                                  selectedLesson.parentFeedbackRating!
+                                    ? 'var(--accent-primary)'
+                                    : 'rgba(255, 255, 255, 0.1)',
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <span
+                          className="font-medium"
+                          style={{
+                            color: 'var(--text-primary)',
+                            fontSize: '0.9375rem',
+                          }}
+                        >
+                          {selectedLesson.parentFeedbackRating} от 5
+                        </span>
+                      </div>
+                      <p
+                        style={{
+                          color: 'var(--text-secondary)',
+                          fontSize: '0.9375rem',
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        {selectedLesson.parentFeedbackComment}
+                      </p>
+                      <p
+                        style={{
+                          color: 'var(--text-tertiary)',
+                          fontSize: '0.8125rem',
+                        }}
+                      >
+                        Подадена на{' '}
+                        {formatLessonTimestamp(
+                          selectedLesson.parentFeedbackSubmittedAt,
+                        )}
+                      </p>
+                    </div>
+                  ) : (
+                    <p
+                      style={{
+                        color: 'var(--text-tertiary)',
+                        fontSize: '0.9375rem',
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      Все още няма въведена родителска обратна връзка за този урок.
+                    </p>
+                  )}
+                </div>
+              </div>
+
               {/* Notes */}
               {selectedLesson.notes && (
                 <div>
@@ -1578,6 +2157,36 @@ export function PracticalLessonsPage() {
                 >
                   <div className="space-y-4">
                     {/* Latest Activity */}
+                    {selectedLesson.revisionHistory.map((revision) => (
+                      <div key={revision.id} className="flex gap-3">
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                          style={{ background: 'rgba(59, 130, 246, 0.1)' }}
+                        >
+                          <Settings size={14} style={{ color: '#60a5fa' }} />
+                        </div>
+                        <div className="flex-1">
+                          <p
+                            style={{
+                              color: 'var(--text-primary)',
+                              fontSize: '0.9375rem',
+                              marginBottom: '2px',
+                            }}
+                          >
+                            {revision.changeSummary}
+                          </p>
+                          <p
+                            style={{
+                              color: 'var(--text-tertiary)',
+                              fontSize: '0.8125rem',
+                            }}
+                          >
+                            {revision.actorName} • {formatLessonTimestamp(revision.changedAt)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+
                     {selectedLesson.status === 'completed' && selectedLesson.rating && (
                       <div className="flex gap-3">
                         <div
@@ -1591,7 +2200,7 @@ export function PracticalLessonsPage() {
                             Добавена оценка
                           </p>
                           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8125rem' }}>
-                            {selectedLesson.updatedBy} • {selectedLesson.updatedAt}
+                            {selectedLesson.updatedBy} • {formatLessonTimestamp(selectedLesson.updatedAt)}
                           </p>
                         </div>
                       </div>
@@ -1611,7 +2220,7 @@ export function PracticalLessonsPage() {
                             Часът завършен
                           </p>
                           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8125rem' }}>
-                            {selectedLesson.updatedBy} • {selectedLesson.updatedAt}
+                            {selectedLesson.updatedBy} • {formatLessonTimestamp(selectedLesson.updatedAt)}
                           </p>
                         </div>
                       </div>
@@ -1631,7 +2240,7 @@ export function PracticalLessonsPage() {
                             Маркиран като неявяване
                           </p>
                           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8125rem' }}>
-                            {selectedLesson.updatedBy} • {selectedLesson.updatedAt}
+                            {selectedLesson.updatedBy} • {formatLessonTimestamp(selectedLesson.updatedAt)}
                           </p>
                         </div>
                       </div>
@@ -1651,7 +2260,7 @@ export function PracticalLessonsPage() {
                             Маркиран като закъснял
                           </p>
                           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8125rem' }}>
-                            {selectedLesson.updatedBy} • {selectedLesson.updatedAt}
+                            {selectedLesson.updatedBy} • {formatLessonTimestamp(selectedLesson.updatedAt)}
                           </p>
                         </div>
                       </div>
@@ -1671,7 +2280,7 @@ export function PracticalLessonsPage() {
                             Часът отменен
                           </p>
                           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8125rem' }}>
-                            {selectedLesson.updatedBy} • {selectedLesson.updatedAt}
+                            {selectedLesson.updatedBy} • {formatLessonTimestamp(selectedLesson.updatedAt)}
                           </p>
                         </div>
                       </div>
@@ -1691,7 +2300,7 @@ export function PracticalLessonsPage() {
                             Часът стартиран
                           </p>
                           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8125rem' }}>
-                            {selectedLesson.updatedBy} • {selectedLesson.updatedAt}
+                            {selectedLesson.updatedBy} • {formatLessonTimestamp(selectedLesson.updatedAt)}
                           </p>
                         </div>
                       </div>
@@ -1714,7 +2323,7 @@ export function PracticalLessonsPage() {
                             {selectedLesson.parentPerformanceSummary || 'Изпратен е кратък отчет за представянето след урока.'}
                           </p>
                           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8125rem' }}>
-                            Система • {selectedLesson.updatedAt}
+                            Система • {formatLessonTimestamp(selectedLesson.updatedAt)}
                           </p>
                         </div>
                       </div>
@@ -1734,7 +2343,7 @@ export function PracticalLessonsPage() {
                             Плащане потвърдено
                           </p>
                           <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8125rem' }}>
-                            Система • {selectedLesson.createdAt}
+                            Система • {formatLessonTimestamp(selectedLesson.createdAt)}
                           </p>
                         </div>
                       </div>
@@ -1753,7 +2362,7 @@ export function PracticalLessonsPage() {
                           Часът създаден
                         </p>
                         <p style={{ color: 'var(--text-tertiary)', fontSize: '0.8125rem' }}>
-                          {selectedLesson.createdBy} • {selectedLesson.createdAt}
+                          {selectedLesson.createdBy} • {formatLessonTimestamp(selectedLesson.createdAt)}
                         </p>
                       </div>
                     </div>
@@ -1794,7 +2403,7 @@ export function PracticalLessonsPage() {
                       Създаден на
                     </span>
                     <span style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
-                      {selectedLesson.createdAt || '—'}
+                      {formatLessonTimestamp(selectedLesson.createdAt)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -1802,7 +2411,7 @@ export function PracticalLessonsPage() {
                       Обновен на
                     </span>
                     <span style={{ color: 'var(--text-secondary)', fontSize: '0.9375rem' }}>
-                      {selectedLesson.updatedAt || '—'}
+                      {formatLessonTimestamp(selectedLesson.updatedAt)}
                     </span>
                   </div>
                   {selectedLesson.parentNotificationSent && (
@@ -1821,7 +2430,8 @@ export function PracticalLessonsPage() {
 
               {/* Actions */}
               <div className="flex gap-3 pt-4">
-                {selectedLesson.evaluationStatus === 'pending' && (
+                {canManagePracticalLessons &&
+                  selectedLesson.evaluationStatus === 'pending' && (
                   <Button
                     variant="primary"
                     icon={<ClipboardCheck size={18} />}
@@ -1834,24 +2444,47 @@ export function PracticalLessonsPage() {
                     Добави оценка
                   </Button>
                 )}
-                {selectedLesson.status === 'completed' && (
+                {canManagePracticalLessons &&
+                  selectedLesson.status === 'completed' && (
                   <Button
                     variant={selectedLesson.parentNotificationSent ? 'secondary' : 'primary'}
                     icon={<Send size={18} />}
                     fullWidth
-                    onClick={() => handleSendParentPerformanceReport(selectedLesson.id)}
+                    onClick={() => void handleSendParentPerformanceReport(selectedLesson.id)}
                   >
                     {selectedLesson.parentNotificationSent ? 'Изпрати отново към родител' : 'Изпрати отчет към родител'}
                   </Button>
                 )}
-                <Button
-                  variant="secondary"
-                  icon={<Edit2 size={18} />}
-                  fullWidth
-                  onClick={() => selectedLesson && handleOpenEditLesson(selectedLesson)}
-                >
-                  {'Редактиране'}
-                </Button>
+                {canManagePracticalLessons && (
+                  <Button
+                    variant="secondary"
+                    icon={<Edit2 size={18} />}
+                    fullWidth
+                    onClick={() => selectedLesson && handleOpenEditLesson(selectedLesson)}
+                  >
+                    {'Редактиране'}
+                  </Button>
+                )}
+                {isStudentPortalUser && selectedLesson.status === 'completed' && (
+                  <Button
+                    variant="primary"
+                    icon={<StarOff size={18} />}
+                    fullWidth
+                    onClick={() => handleOpenStudentFeedback(selectedLesson)}
+                  >
+                    {'Моята обратна връзка'}
+                  </Button>
+                )}
+                {isParentPortalUser && selectedLesson.status === 'completed' && (
+                  <Button
+                    variant="primary"
+                    icon={<Send size={18} />}
+                    fullWidth
+                    onClick={() => handleOpenParentFeedback(selectedLesson)}
+                  >
+                    {'Родителски коментар'}
+                  </Button>
+                )}
                 <Button variant="secondary" icon={<FileText size={18} />}>
                   Протокол
                 </Button>
@@ -1985,8 +2618,279 @@ export function PracticalLessonsPage() {
               <Button variant="secondary" onClick={handleCloseEditLesson}>
                 {'\u041e\u0442\u043a\u0430\u0437'}
               </Button>
-              <Button variant="primary" onClick={handleSaveEditedLesson}>
+              <Button
+                variant="primary"
+                onClick={() => void handleSaveEditedLesson()}
+              >
                 {'\u0417\u0430\u043f\u0430\u0437\u0438 \u043f\u0440\u043e\u043c\u0435\u043d\u0438\u0442\u0435'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {isStudentFeedbackModalOpen && feedbackLesson && (
+        <Modal
+          isOpen={isStudentFeedbackModalOpen}
+          onClose={() => {
+            setIsStudentFeedbackModalOpen(false);
+            setStudentFeedbackError(null);
+          }}
+          title="Обратна връзка за урока"
+          maxWidth="lg"
+        >
+          <div className="p-6 space-y-6">
+            <div
+              className="rounded-xl p-4"
+              style={{ background: 'var(--bg-primary)' }}
+            >
+              <p
+                style={{
+                  color: 'var(--text-primary)',
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                }}
+              >
+                {feedbackLesson.student}
+              </p>
+              <p
+                style={{
+                  color: 'var(--text-tertiary)',
+                  fontSize: '0.875rem',
+                  marginTop: '0.25rem',
+                }}
+              >
+                {formatLessonTimestamp(`${feedbackLesson.date}T${feedbackLesson.time}:00.000Z`)} ·{' '}
+                {feedbackLesson.route || 'Практически час'}
+              </p>
+            </div>
+
+            <div>
+              <label
+                className="block mb-3"
+                style={{
+                  color: 'var(--text-primary)',
+                  fontSize: '0.9375rem',
+                  fontWeight: 500,
+                }}
+              >
+                Твоята оценка
+              </label>
+              <div className="flex gap-3">
+                {[1, 2, 3, 4, 5].map((ratingValue) => (
+                  <button
+                    key={ratingValue}
+                    type="button"
+                    onClick={() => setStudentFeedbackRating(ratingValue)}
+                    className="flex-1 rounded-xl py-4 transition-all hover:scale-105"
+                    style={{
+                      background:
+                        studentFeedbackRating >= ratingValue
+                          ? 'rgba(34, 197, 94, 0.95)'
+                          : 'rgba(255, 255, 255, 0.05)',
+                      border:
+                        studentFeedbackRating >= ratingValue
+                          ? '2px solid rgba(34, 197, 94, 0.95)'
+                          : '2px solid rgba(255, 255, 255, 0.1)',
+                    }}
+                  >
+                    <div
+                      className="text-xl font-semibold"
+                      style={{
+                        color:
+                          studentFeedbackRating >= ratingValue
+                            ? '#fff'
+                            : 'var(--text-tertiary)',
+                      }}
+                    >
+                      {ratingValue}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Textarea
+              label="Коментар от курсиста"
+              value={studentFeedbackComment}
+              onChange={setStudentFeedbackComment}
+              rows={4}
+              placeholder="Напиши кое беше полезно, кое те затрудни и какво искаш да упражниш следващия път."
+            />
+
+            {studentFeedbackError && (
+              <div
+                className="rounded-xl px-4 py-3"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.18)',
+                  color: '#ef4444',
+                  fontSize: '0.9rem',
+                }}
+              >
+                {studentFeedbackError}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setIsStudentFeedbackModalOpen(false);
+                  setStudentFeedbackError(null);
+                }}
+                fullWidth
+              >
+                Отказ
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => void handleSubmitStudentFeedback()}
+                disabled={
+                  isSubmittingStudentFeedback ||
+                  studentFeedbackRating === 0 ||
+                  studentFeedbackComment.trim().length < 2
+                }
+                fullWidth
+              >
+                {isSubmittingStudentFeedback
+                  ? 'Записване...'
+                  : 'Запази обратна връзка'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {isParentFeedbackModalOpen && parentFeedbackLesson && (
+        <Modal
+          isOpen={isParentFeedbackModalOpen}
+          onClose={() => {
+            setIsParentFeedbackModalOpen(false);
+            setParentFeedbackError(null);
+          }}
+          title="Родителска обратна връзка"
+          maxWidth="lg"
+        >
+          <div className="p-6 space-y-6">
+            <div
+              className="rounded-xl p-4"
+              style={{ background: 'var(--bg-primary)' }}
+            >
+              <p
+                style={{
+                  color: 'var(--text-primary)',
+                  fontSize: '1rem',
+                  fontWeight: 600,
+                }}
+              >
+                {parentFeedbackLesson.student}
+              </p>
+              <p
+                style={{
+                  color: 'var(--text-tertiary)',
+                  fontSize: '0.875rem',
+                  marginTop: '0.25rem',
+                }}
+              >
+                {formatLessonTimestamp(
+                  `${parentFeedbackLesson.date}T${parentFeedbackLesson.time}:00.000Z`,
+                )}{' '}
+                · {parentFeedbackLesson.route || 'Практически час'}
+              </p>
+            </div>
+
+            <div>
+              <label
+                className="block mb-3"
+                style={{
+                  color: 'var(--text-primary)',
+                  fontSize: '0.9375rem',
+                  fontWeight: 500,
+                }}
+              >
+                Оценка от родител
+              </label>
+              <div className="flex gap-3">
+                {[1, 2, 3, 4, 5].map((ratingValue) => (
+                  <button
+                    key={ratingValue}
+                    type="button"
+                    onClick={() => setParentFeedbackRating(ratingValue)}
+                    className="flex-1 rounded-xl py-4 transition-all hover:scale-105"
+                    style={{
+                      background:
+                        parentFeedbackRating >= ratingValue
+                          ? 'var(--accent-primary)'
+                          : 'rgba(255, 255, 255, 0.05)',
+                      border:
+                        parentFeedbackRating >= ratingValue
+                          ? '2px solid var(--accent-primary)'
+                          : '2px solid rgba(255, 255, 255, 0.1)',
+                    }}
+                  >
+                    <div
+                      className="text-xl font-semibold"
+                      style={{
+                        color:
+                          parentFeedbackRating >= ratingValue
+                            ? '#fff'
+                            : 'var(--text-tertiary)',
+                      }}
+                    >
+                      {ratingValue}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Textarea
+              label="Коментар към инструктора и школата"
+              value={parentFeedbackComment}
+              onChange={setParentFeedbackComment}
+              rows={4}
+              placeholder="Напишете кратка обратна връзка за напредъка, комуникацията и следващите нужни упражнения."
+            />
+
+            {parentFeedbackError && (
+              <div
+                className="rounded-xl px-4 py-3"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  border: '1px solid rgba(239, 68, 68, 0.18)',
+                  color: '#ef4444',
+                  fontSize: '0.9rem',
+                }}
+              >
+                {parentFeedbackError}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setIsParentFeedbackModalOpen(false);
+                  setParentFeedbackError(null);
+                }}
+                fullWidth
+              >
+                Отказ
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => void handleSubmitParentFeedback()}
+                disabled={
+                  isSubmittingParentFeedback ||
+                  parentFeedbackRating === 0 ||
+                  parentFeedbackComment.trim().length < 2
+                }
+                fullWidth
+              >
+                {isSubmittingParentFeedback
+                  ? 'Записване...'
+                  : 'Запази родителски коментар'}
               </Button>
             </div>
           </div>
@@ -2132,7 +3036,7 @@ export function PracticalLessonsPage() {
               </Button>
               <Button
                 variant="primary"
-                onClick={handleSubmitEvaluation}
+                onClick={() => void handleSubmitEvaluation()}
                 disabled={quickRating === 0}
                 fullWidth
               >
@@ -2147,25 +3051,219 @@ export function PracticalLessonsPage() {
       {isCreateModalOpen && (
         <Modal
           isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
+          onClose={() => {
+            setIsCreateModalOpen(false);
+            setCreateError(null);
+          }}
           title="Нов практически час"
           maxWidth="2xl"
         >
           <div className="space-y-6 p-6">
             <div
-              className="rounded-xl p-12 text-center"
+              className="rounded-2xl p-4"
               style={{ background: 'var(--bg-primary)' }}
             >
-              <p style={{ color: 'var(--text-tertiary)' }}>
-                Форма за създаване на нов час ще бъде добавена
+              <p
+                style={{
+                  color: 'var(--text-primary)',
+                  fontSize: '0.95rem',
+                  fontWeight: 600,
+                }}
+              >
+                Създай нов практически час към реален курсист от базата
+              </p>
+              <p
+                style={{
+                  color: 'var(--text-tertiary)',
+                  fontSize: '0.875rem',
+                  marginTop: '0.35rem',
+                }}
+              >
+                Записът се създава директно в PostgreSQL и остава след refresh.
               </p>
             </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <label
+                  style={{
+                    color: 'var(--text-secondary)',
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  Курсист
+                </label>
+                <select
+                  value={createForm.studentId}
+                  onChange={(event) => {
+                    const selectedStudent = students.find(
+                      (student) => student.id === event.target.value,
+                    );
+
+                    setCreateForm((current) => ({
+                      ...current,
+                      studentId: event.target.value,
+                      studentName:
+                        selectedStudent?.name ?? current.studentName,
+                      instructor:
+                        selectedStudent?.instructor || current.instructor,
+                      category:
+                        selectedStudent?.category || current.category,
+                    }));
+                  }}
+                  className="w-full h-12 rounded-xl px-4 text-sm outline-none"
+                  style={{
+                    background: 'var(--bg-primary)',
+                    color: 'var(--text-primary)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                  }}
+                >
+                  {students.map((student) => (
+                    <option key={student.id} value={student.id}>
+                      {student.name} · {student.category}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <Input
+                label="Инструктор"
+                value={createForm.instructor}
+                onChange={(value) =>
+                  setCreateForm((current) => ({
+                    ...current,
+                    instructor: value,
+                  }))
+                }
+                placeholder="Име на инструктор"
+              />
+              <Input
+                label="Автомобил"
+                value={createForm.vehicle}
+                onChange={(value) =>
+                  setCreateForm((current) => ({
+                    ...current,
+                    vehicle: value,
+                  }))
+                }
+                placeholder="Toyota Corolla · CA 1234 AB"
+              />
+              <Input
+                label="Категория"
+                value={createForm.category}
+                onChange={(value) =>
+                  setCreateForm((current) => ({
+                    ...current,
+                    category: value,
+                  }))
+                }
+                placeholder="B"
+              />
+              <Input
+                label="Дата"
+                type="date"
+                value={createForm.date}
+                onChange={(value) =>
+                  setCreateForm((current) => ({
+                    ...current,
+                    date: value,
+                  }))
+                }
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Начален час"
+                  type="time"
+                  value={createForm.time}
+                  onChange={(value) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      time: value,
+                    }))
+                  }
+                />
+                <Input
+                  label="Краен час"
+                  type="time"
+                  value={createForm.endTime}
+                  onChange={(value) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      endTime: value,
+                    }))
+                  }
+                />
+              </div>
+              <Input
+                label="Маршрут"
+                value={createForm.route}
+                onChange={(value) =>
+                  setCreateForm((current) => ({
+                    ...current,
+                    route: value,
+                  }))
+                }
+                placeholder="Градско каране"
+              />
+              <Input
+                label="Начална точка"
+                value={createForm.startLocation}
+                onChange={(value) =>
+                  setCreateForm((current) => ({
+                    ...current,
+                    startLocation: value,
+                  }))
+                }
+                placeholder="Автошкола Mind on Road"
+              />
+              <Input
+                label="Крайна точка"
+                value={createForm.endLocation}
+                onChange={(value) =>
+                  setCreateForm((current) => ({
+                    ...current,
+                    endLocation: value,
+                  }))
+                }
+                placeholder="Автошкола Mind on Road"
+              />
+            </div>
+
+            <Textarea
+              label="Бележки"
+              value={createForm.notes}
+              onChange={(value) =>
+                setCreateForm((current) => ({
+                  ...current,
+                  notes: value,
+                }))
+              }
+              placeholder="Добави вътрешни бележки за урока"
+              rows={4}
+            />
+
+            {createError ? (
+              <p style={{ color: 'var(--status-error)', fontSize: '0.9rem' }}>
+                {createError}
+              </p>
+            ) : null}
+
             <div className="flex gap-3 justify-end">
-              <Button variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setIsCreateModalOpen(false);
+                  setCreateError(null);
+                }}
+              >
                 Отказ
               </Button>
-              <Button variant="primary">
-                Създай час
+              <Button
+                variant="primary"
+                onClick={() => void handleCreatePracticalLesson()}
+                disabled={isSavingLesson || !createForm.studentId}
+              >
+                {isSavingLesson ? 'Създавам...' : 'Създай час'}
               </Button>
             </div>
           </div>
@@ -2173,4 +3271,39 @@ export function PracticalLessonsPage() {
       )}
     </div>
   );
+}
+
+function exportPracticalLessonsCsv(lessons: PracticalLesson[]) {
+  const rows = [
+    'date;time;endTime;student;instructor;vehicle;category;status;paymentStatus;evaluationStatus;route;notes',
+    ...lessons.map((lesson) =>
+      [
+        lesson.date,
+        lesson.time,
+        lesson.endTime,
+        lesson.student,
+        lesson.instructor,
+        lesson.vehicle,
+        lesson.category,
+        lesson.status,
+        lesson.paymentStatus,
+        lesson.evaluationStatus,
+        lesson.route ?? '',
+        lesson.notes ?? '',
+      ]
+        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+        .join(';'),
+    ),
+  ];
+  const blob = new Blob([`\uFEFF${rows.join('\n')}`], {
+    type: 'text/csv;charset=utf-8',
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = 'practical_lessons_export.csv';
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
 }

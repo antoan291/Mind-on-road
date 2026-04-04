@@ -17,6 +17,8 @@ export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
     tenantSlug: string;
     email: string;
   }): Promise<LoginIdentityRecord | null> {
+    const normalizedIdentifier = params.email.trim();
+
     const membership = await this.prisma.tenantMembership.findFirst({
       where: {
         status: TenantMembershipStatus.ACTIVE,
@@ -24,7 +26,14 @@ export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
           slug: params.tenantSlug
         },
         user: {
-          email: params.email,
+          OR: [
+            {
+              email: normalizedIdentifier
+            },
+            {
+              phone: normalizedIdentifier
+            }
+          ],
           status: UserStatus.ACTIVE
         }
       },

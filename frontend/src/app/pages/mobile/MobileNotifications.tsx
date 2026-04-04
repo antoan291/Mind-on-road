@@ -1,122 +1,104 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  Bell, CheckCircle, AlertCircle, Calendar, Clock,
-  User, Car, DollarSign, FileText, X, Check
+  AlertCircle,
+  Bell,
+  Check,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  FileText,
+  User,
+  X,
 } from 'lucide-react';
+import {
+  fetchNotificationRecords,
+  type NotificationRecordView,
+} from '../../services/notificationsApi';
+
+type MobileOperationalNotification = {
+  id: string;
+  title: string;
+  message: string;
+  time: string;
+  read: boolean;
+  icon: typeof Bell;
+  color: string;
+};
 
 export function MobileNotifications() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [notifications, setNotifications] = useState<
+    MobileOperationalNotification[]
+  >([]);
 
-  const notifications = [
-    {
-      id: 1,
-      type: 'lesson-reminder',
-      title: 'Час след 30 минути',
-      message: 'Петър Георгиев - Градско шофиране в 14:00',
-      time: 'Преди 5 мин',
-      read: false,
-      icon: Calendar,
-      color: 'var(--primary-accent)',
-    },
-    {
-      id: 2,
-      type: 'payment',
-      title: 'Получено плащане',
-      message: 'Елена Димитрова внесе 500 лв за практически часове',
-      time: 'Преди 15 мин',
-      read: false,
-      icon: DollarSign,
-      color: 'var(--status-success)',
-    },
-    {
-      id: 3,
-      type: 'alert',
-      title: 'Инструктор с плътен график',
-      message: 'Георги Петров има 3 часа подред без почивка днес',
-      time: 'Преди 30 мин',
-      read: false,
-      icon: AlertCircle,
-      color: 'var(--status-warning)',
-    },
-    {
-      id: 4,
-      type: 'new-student',
-      title: 'Нова заявка за записване',
-      message: 'Иван Петков подаде заявка за категория B',
-      time: 'Преди 1 час',
-      read: false,
-      icon: User,
-      color: 'var(--ai-accent)',
-    },
-    {
-      id: 5,
-      type: 'theory',
-      title: 'Теория започва скоро',
-      message: 'Правила за движение в кръстовища - 18:00 в Зала 1',
-      time: 'Преди 1 час',
-      read: true,
-      icon: Bell,
-      color: 'var(--primary-accent)',
-    },
-    {
-      id: 6,
-      type: 'document',
-      title: 'Качен документ',
-      message: 'София Николова качи медицинско свидетелство',
-      time: 'Преди 2 часа',
-      read: true,
-      icon: FileText,
-      color: 'var(--status-info)',
-    },
-    {
-      id: 7,
-      type: 'lesson-completed',
-      title: 'Час завършен',
-      message: 'Мартин Иванов завърши час "Магистрала" с Георги Петров',
-      time: 'Преди 3 часа',
-      read: true,
-      icon: CheckCircle,
-      color: 'var(--status-success)',
-    },
-    {
-      id: 8,
-      type: 'vehicle',
-      title: 'Технически преглед',
-      message: 'Toyota Corolla - СА 1234 АВ изисква преглед след 7 дни',
-      time: 'Преди 5 часа',
-      read: true,
-      icon: Car,
-      color: 'var(--status-warning)',
-    },
-  ];
+  useEffect(() => {
+    let isMounted = true;
 
-  const filteredNotifications = filter === 'unread' 
-    ? notifications.filter(n => !n.read)
-    : notifications;
+    fetchNotificationRecords()
+      .then((records) => {
+        if (!isMounted) {
+          return;
+        }
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+        setNotifications(buildBackendMobileNotifications(records));
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setNotifications([]);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const filteredNotifications = useMemo(
+    () =>
+      filter === 'unread'
+        ? notifications.filter((notification) => !notification.read)
+        : notifications,
+    [notifications, filter],
+  );
+
+  const unreadCount = useMemo(
+    () => notifications.filter((notification) => !notification.read).length,
+    [notifications],
+  );
 
   const handleMarkAllRead = () => {
-    // Mark all as read logic
+    setNotifications((current) =>
+      current.map((notification) => ({ ...notification, read: true })),
+    );
   };
 
-  const handleMarkRead = (id: number) => {
-    // Mark single as read logic
+  const handleMarkRead = (id: string) => {
+    setNotifications((current) =>
+      current.map((notification) =>
+        notification.id === id ? { ...notification, read: true } : notification,
+      ),
+    );
   };
 
-  const handleDelete = (id: number) => {
-    // Delete notification logic
+  const handleDelete = (id: string) => {
+    setNotifications((current) =>
+      current.filter((notification) => notification.id !== id),
+    );
   };
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-page)' }}>
-      {/* Header */}
       <div className="p-4">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+            <h1
+              className="text-xl font-semibold mb-1"
+              style={{ color: 'var(--text-primary)' }}
+            >
               Известия
             </h1>
             <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
@@ -134,13 +116,13 @@ export function MobileNotifications() {
           )}
         </div>
 
-        {/* Filter */}
         <div className="flex gap-2 mb-4">
           <button
             onClick={() => setFilter('all')}
             className="flex-1 h-10 rounded-lg text-sm font-medium transition-all"
             style={{
-              background: filter === 'all' ? 'var(--primary-accent)' : 'var(--bg-card)',
+              background:
+                filter === 'all' ? 'var(--primary-accent)' : 'var(--bg-card)',
               color: filter === 'all' ? '#ffffff' : 'var(--text-secondary)',
             }}
           >
@@ -150,7 +132,8 @@ export function MobileNotifications() {
             onClick={() => setFilter('unread')}
             className="flex-1 h-10 rounded-lg text-sm font-medium transition-all"
             style={{
-              background: filter === 'unread' ? 'var(--primary-accent)' : 'var(--bg-card)',
+              background:
+                filter === 'unread' ? 'var(--primary-accent)' : 'var(--bg-card)',
               color: filter === 'unread' ? '#ffffff' : 'var(--text-secondary)',
             }}
           >
@@ -159,7 +142,6 @@ export function MobileNotifications() {
         </div>
       </div>
 
-      {/* Notifications List */}
       <div className="px-4 pb-4 space-y-2">
         {filteredNotifications.length === 0 ? (
           <div className="py-12 text-center">
@@ -193,37 +175,43 @@ function NotificationCard({
   onMarkRead,
   onDelete,
 }: {
-  notification: any;
+  notification: MobileOperationalNotification;
   onMarkRead: () => void;
   onDelete: () => void;
 }) {
   const [showActions, setShowActions] = useState(false);
+  const Icon = notification.icon;
 
   return (
     <div
       className="relative overflow-hidden rounded-xl transition-all"
       style={{
-        background: notification.read ? 'var(--bg-card)' : 'rgba(99, 102, 241, 0.05)',
-        border: notification.read ? 'none' : '1px solid rgba(99, 102, 241, 0.1)',
+        background: notification.read
+          ? 'var(--bg-card)'
+          : 'rgba(99, 102, 241, 0.05)',
+        border: notification.read
+          ? 'none'
+          : '1px solid rgba(99, 102, 241, 0.1)',
       }}
     >
       <button
-        onClick={() => setShowActions(!showActions)}
+        onClick={() => setShowActions((current) => !current)}
         className="w-full p-4 text-left"
       >
         <div className="flex items-start gap-3">
-          {/* Icon */}
           <div
             className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
             style={{ background: `${notification.color}15` }}
           >
-            <notification.icon size={18} style={{ color: notification.color }} />
+            <Icon size={18} style={{ color: notification.color }} />
           </div>
 
-          {/* Content */}
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2 mb-1">
-              <div className="font-medium" style={{ color: 'var(--text-primary)' }}>
+              <div
+                className="font-medium"
+                style={{ color: 'var(--text-primary)' }}
+              >
                 {notification.title}
               </div>
               {!notification.read && (
@@ -236,7 +224,10 @@ function NotificationCard({
             <p className="text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
               {notification.message}
             </p>
-            <div className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+            <div
+              className="flex items-center gap-2 text-xs"
+              style={{ color: 'var(--text-tertiary)' }}
+            >
               <Clock size={12} />
               {notification.time}
             </div>
@@ -244,16 +235,12 @@ function NotificationCard({
         </div>
       </button>
 
-      {/* Actions */}
       {showActions && (
-        <div
-          className="flex border-t"
-          style={{ borderColor: 'var(--ghost-border)' }}
-        >
+        <div className="flex border-t" style={{ borderColor: 'var(--ghost-border)' }}>
           {!notification.read && (
             <button
-              onClick={(e) => {
-                e.stopPropagation();
+              onClick={(event) => {
+                event.stopPropagation();
                 onMarkRead();
                 setShowActions(false);
               }}
@@ -265,12 +252,13 @@ function NotificationCard({
             </button>
           )}
           <button
-            onClick={(e) => {
-              e.stopPropagation();
+            onClick={(event) => {
+              event.stopPropagation();
               onDelete();
+              setShowActions(false);
             }}
             className="flex-1 h-11 flex items-center justify-center gap-2 text-sm font-medium transition-all active:bg-opacity-50"
-            style={{ 
+            style={{
               color: 'var(--status-error)',
               borderLeft: '1px solid var(--ghost-border)',
             }}
@@ -282,4 +270,50 @@ function NotificationCard({
       )}
     </div>
   );
+}
+
+function buildBackendMobileNotifications(
+  records: NotificationRecordView[],
+): MobileOperationalNotification[] {
+  return records.map((notification) => ({
+    id: notification.id,
+    title: notification.title,
+    message: notification.message,
+    time: notification.eventTimeLabel,
+    read: notification.deliveryStatus !== 'PENDING',
+    icon: resolveNotificationIcon(notification),
+    color: resolveNotificationColor(notification.severity),
+  }));
+}
+
+function resolveNotificationIcon(notification: NotificationRecordView) {
+  switch (notification.kind) {
+    case 'PAYMENT_REMINDER':
+      return DollarSign;
+    case 'PARENT_LESSON_REPORT':
+      return User;
+    case 'ARRIVAL_REMINDER':
+      return Clock;
+    case 'PRACTICE_INACTIVITY':
+      return AlertCircle;
+    case 'CATEGORY_B_HOUR_MILESTONE':
+      return FileText;
+    default:
+      return CheckCircle;
+  }
+}
+
+function resolveNotificationColor(
+  severity: NotificationRecordView['severity'],
+) {
+  switch (severity) {
+    case 'error':
+      return 'var(--status-error)';
+    case 'warning':
+      return 'var(--status-warning)';
+    case 'success':
+      return 'var(--status-success)';
+    default:
+      return 'var(--primary-accent)';
+  }
 }

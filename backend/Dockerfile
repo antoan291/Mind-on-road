@@ -6,6 +6,9 @@ COPY package.json ./
 RUN npm install
 
 COPY tsconfig.json tsconfig.build.json ./
+COPY prisma ./prisma
+RUN npm run prisma:generate
+
 COPY src ./src
 
 RUN npm run build

@@ -53,12 +53,16 @@ export function Input({
             ${icon ? 'pl-10' : ''}
             text-sm transition-all
             disabled:opacity-50 disabled:cursor-not-allowed
-            focus:outline-none
+            focus:outline-none focus:ring-2 focus:ring-sky-500/20
           `}
           style={{
-            background: 'var(--bg-panel)',
+            background: 'rgba(15, 23, 42, 0.22)',
             color: 'var(--text-primary)',
-            border: error ? '1px solid var(--status-error)' : '1px solid transparent',
+            border: error
+              ? '1px solid var(--status-error)'
+              : '1px solid rgba(148, 163, 184, 0.32)',
+            boxShadow:
+              'inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 24px rgba(15, 23, 42, 0.08)',
           }}
         />
       </div>
@@ -106,11 +110,15 @@ export function Textarea({
         placeholder={placeholder}
         rows={rows}
         disabled={disabled}
-        className="w-full rounded-xl px-4 py-3 text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none resize-none"
+        className="w-full rounded-xl px-4 py-3 text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-sky-500/20 resize-none"
         style={{
-          background: 'var(--bg-panel)',
+          background: 'rgba(15, 23, 42, 0.22)',
           color: 'var(--text-primary)',
-          border: error ? '1px solid var(--status-error)' : '1px solid transparent',
+          border: error
+            ? '1px solid var(--status-error)'
+            : '1px solid rgba(148, 163, 184, 0.32)',
+          boxShadow:
+            'inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 24px rgba(15, 23, 42, 0.08)',
         }}
       />
       {error && (
@@ -157,13 +165,19 @@ export function Select({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="w-full h-11 rounded-xl px-4 text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none appearance-none bg-no-repeat bg-right pr-10"
+        className="w-full h-11 rounded-xl px-4 text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-sky-500/20 appearance-none bg-no-repeat bg-right pr-10"
         style={{
-          background: 'var(--bg-panel)',
+          backgroundColor: 'rgba(15, 23, 42, 0.22)',
           color: 'var(--text-primary)',
-          border: error ? '1px solid var(--status-error)' : '1px solid transparent',
+          border: error
+            ? '1px solid var(--status-error)'
+            : '1px solid rgba(148, 163, 184, 0.32)',
           backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
           backgroundPosition: 'right 1rem center',
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: '12px 8px',
+          boxShadow:
+            'inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 24px rgba(15, 23, 42, 0.08)',
         }}
       >
         {placeholder && (

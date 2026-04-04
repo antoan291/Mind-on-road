@@ -8,16 +8,16 @@
   UserCircle2,
   Users,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../../components/ui-system/Button';
 import { FilterBar } from '../../components/ui-system/FilterBar';
 import { PageHeader } from '../../components/ui-system/PageHeader';
 import { StatusBadge } from '../../components/ui-system/StatusBadge';
 import {
   buildCandidatePacketPdfContent,
-  candidatePackets as initialCandidatePackets,
   type CandidatePacket,
 } from '../../content/studentOperations';
+import { fetchStudentOperations } from '../../services/studentsApi';
 import { InfoLine, MetricCard, MetricGrid, PageSection, Panel } from './secondaryShared';
 
 const categoryOptions = ['A', 'B', 'C', 'D'];
@@ -35,14 +35,59 @@ function downloadPacketPdf(packet: CandidatePacket) {
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = packet.pdfTemplate;
+  document.body.appendChild(anchor);
   anchor.click();
+  anchor.remove();
   URL.revokeObjectURL(url);
 }
 
 export function CandidatePacketsPage() {
-  const [packets, setPackets] = useState<CandidatePacket[]>(initialCandidatePackets);
+  const [packets, setPackets] = useState<CandidatePacket[]>([]);
   const [searchValue, setSearchValue] = useState('');
-  const [selectedPacketId, setSelectedPacketId] = useState(initialCandidatePackets[0]?.id ?? '');
+  const [selectedPacketId, setSelectedPacketId] = useState('');
+  const [sourceStatus, setSourceStatus] = useState<'loading' | 'backend' | 'fallback'>('loading');
+  const [sendStatusMessage, setSendStatusMessage] = useState(
+    'Избери кандидат и натисни изпращане. PDF файлът ще се свали локално и ще се отвори Viber чат към телефона от системата.',
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchStudentOperations()
+      .then((records) => {
+        if (!isMounted) {
+          return;
+        }
+
+        const backendPackets: CandidatePacket[] = records.map((student) => ({
+          id: String(student.id),
+          candidateName: student.name,
+          phone: student.phone,
+          category: student.category,
+          location: 'София - Младост',
+          pdfTemplate: toPdfTemplate(student.category, 'София - Младост'),
+          status: 'ready',
+          sentAt: '—',
+        }));
+
+        setPackets(backendPackets);
+        setSelectedPacketId(backendPackets[0]?.id ?? '');
+        setSourceStatus('backend');
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setPackets([]);
+        setSelectedPacketId('');
+        setSourceStatus('fallback');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filteredPackets = useMemo(() => {
     const query = searchValue.trim().toLowerCase();
@@ -88,6 +133,10 @@ export function CandidatePacketsPage() {
     };
 
     downloadPacketPdf(nextPacket);
+    openViberChat(selectedPacket.phone);
+    setSendStatusMessage(
+      `PDF пакетът за ${selectedPacket.candidateName} е подготвен. Ако Viber е инсталиран, чатът към ${selectedPacket.phone} ще се отвори автоматично. За реално server-side изпращане е нужен Viber Bot/Business token и receiver id.`,
+    );
     updatePacket(selectedPacket.id, nextPacket);
   };
 
@@ -95,7 +144,13 @@ export function CandidatePacketsPage() {
     <div>
       <PageHeader
         title="Кандидати"
-        description="По-чист operational екран: избираш кандидат, задаваш категория и локация, виждаш PDF пакета и го изпращаш."
+        description={`По-чист operational екран: избираш кандидат, задаваш категория и локация, виждаш PDF пакета и го изпращаш. ${
+          sourceStatus === 'backend'
+            ? 'Кандидатите са заредени от PostgreSQL.'
+            : sourceStatus === 'fallback'
+              ? 'Backend данните не са достъпни в момента.'
+              : 'Зареждане...'
+        }`}
         breadcrumbs={[{ label: 'Начало' }, { label: 'Кандидати' }]}
         actions={
           <Button variant="primary" icon={<Send size={18} />} onClick={handleSendPacket}>
@@ -194,6 +249,17 @@ export function CandidatePacketsPage() {
           <Panel title="PDF пакет за изпращане" subtitle="Дясната зона е работният preview: настройваш категория и локация, виждаш шаблона и изпращаш без да ровиш в таблица.">
             {selectedPacket && (
               <div className="space-y-6">
+                <div
+                  className="rounded-3xl p-4 text-sm leading-6"
+                  style={{
+                    background: 'rgba(99, 102, 241, 0.08)',
+                    border: '1px solid rgba(99, 102, 241, 0.2)',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  {sendStatusMessage}
+                </div>
+
                 <div
                   className="rounded-[28px] p-6"
                   style={{
@@ -342,4 +408,13 @@ export function CandidatePacketsPage() {
       </PageSection>
     </div>
   );
+}
+
+function openViberChat(phone: string) {
+  const digitsOnly = phone.replace(/[^\d+]/g, '');
+  const normalizedPhone = digitsOnly.startsWith('0')
+    ? `+359${digitsOnly.slice(1)}`
+    : digitsOnly;
+
+  window.open(`viber://chat?number=${encodeURIComponent(normalizedPhone)}`, '_blank');
 }

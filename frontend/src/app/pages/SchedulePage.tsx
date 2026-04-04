@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { 
-  PageHeader, Badge, Button 
+  PageHeader, Badge, Button, Modal
 } from '../components/shared';
 import { 
   ChevronLeft, ChevronRight, Calendar as CalendarIcon,
@@ -9,6 +9,21 @@ import {
   XCircle, CreditCard, Users, Filter, X, Edit, Trash2,
   Calendar, DollarSign, FileText, UserCheck, UserX, MapPin
 } from 'lucide-react';
+import type { StudentOperationalRecord } from '../content/studentOperations';
+import { fetchInstructorRows } from '../services/instructorsApi';
+import {
+  createPracticalLessonRecord,
+  deletePracticalLessonRecord,
+  fetchPracticalLessonRecords,
+  updatePracticalLessonRecord,
+} from '../services/practicalLessonsApi';
+import {
+  fetchStudentOperations,
+} from '../services/studentsApi';
+import { useAuthSession } from '../services/authSession';
+import {
+  fetchVehicleRows,
+} from '../services/vehiclesApi';
 
 type LessonStatus = 'scheduled' | 'confirmed' | 'completed' | 'late' | 'canceled' | 'no-show' | 'payment-missing';
 type BlockType = 'lesson' | 'rest';
@@ -26,14 +41,14 @@ type Vehicle = {
 };
 
 type ScheduleBlock = {
-  id: number;
+  id: string;
   type: BlockType;
   instructorId: number;
   startTime: string; // HH:mm format
   endTime: string;
   // Lesson fields
   studentName?: string;
-  studentId?: number;
+  studentId?: string;
   vehicleId?: number;
   category?: string;
   status?: LessonStatus;
@@ -41,20 +56,6 @@ type ScheduleBlock = {
   // Rest block fields
   note?: string;
 };
-
-const INSTRUCTORS: Instructor[] = [
-  { id: 1, name: 'Иван Петров', color: '#6366F1' },
-  { id: 2, name: 'Мария Георгиева', color: '#A78BFA' },
-  { id: 3, name: 'Георги Димитров', color: '#22c55e' },
-  { id: 4, name: 'Елена Иванова', color: '#fb923c' },
-];
-
-const VEHICLES: Vehicle[] = [
-  { id: 1, plate: 'СВ 1234 АВ', model: 'VW Golf' },
-  { id: 2, plate: 'СВ 5678 СД', model: 'Skoda Octavia' },
-  { id: 3, plate: 'СВ 9012 ЕФ', model: 'Toyota Corolla' },
-  { id: 4, plate: 'СВ 3456 ГХ', model: 'Renault Clio' },
-];
 
 // Generate time slots from 08:00 to 24:00 (every 30 minutes)
 const generateTimeSlots = () => {
@@ -67,143 +68,6 @@ const generateTimeSlots = () => {
 };
 
 const TIME_SLOTS = generateTimeSlots();
-
-// Mock schedule data
-const MOCK_SCHEDULE: ScheduleBlock[] = [
-  {
-    id: 1,
-    type: 'lesson',
-    instructorId: 1,
-    startTime: '09:00',
-    endTime: '10:30',
-    studentName: 'Мария Иванова',
-    studentId: 1,
-    vehicleId: 1,
-    category: 'B',
-    status: 'confirmed',
-    paymentStatus: 'paid',
-  },
-  {
-    id: 2,
-    type: 'rest',
-    instructorId: 1,
-    startTime: '10:30',
-    endTime: '11:00',
-    note: 'Почивка',
-  },
-  {
-    id: 3,
-    type: 'lesson',
-    instructorId: 1,
-    startTime: '11:00',
-    endTime: '12:30',
-    studentName: 'Георги Димитров',
-    studentId: 2,
-    vehicleId: 1,
-    category: 'B',
-    status: 'scheduled',
-    paymentStatus: 'paid',
-  },
-  {
-    id: 4,
-    type: 'lesson',
-    instructorId: 1,
-    startTime: '14:00',
-    endTime: '15:30',
-    studentName: 'Елена Стоянова',
-    studentId: 3,
-    vehicleId: 1,
-    category: 'B',
-    status: 'completed',
-    paymentStatus: 'paid',
-  },
-  {
-    id: 5,
-    type: 'lesson',
-    instructorId: 2,
-    startTime: '08:00',
-    endTime: '09:30',
-    studentName: 'Иван Петров',
-    studentId: 4,
-    vehicleId: 2,
-    category: 'B',
-    status: 'completed',
-    paymentStatus: 'paid',
-  },
-  {
-    id: 6,
-    type: 'lesson',
-    instructorId: 2,
-    startTime: '10:00',
-    endTime: '11:30',
-    studentName: 'Александра Георгиева',
-    studentId: 5,
-    vehicleId: 2,
-    category: 'B',
-    status: 'confirmed',
-    paymentStatus: 'pending',
-  },
-  {
-    id: 7,
-    type: 'lesson',
-    instructorId: 2,
-    startTime: '13:00',
-    endTime: '14:30',
-    studentName: 'Николай Василев',
-    studentId: 6,
-    vehicleId: 2,
-    category: 'B',
-    status: 'late',
-    paymentStatus: 'paid',
-  },
-  {
-    id: 8,
-    type: 'rest',
-    instructorId: 2,
-    startTime: '15:00',
-    endTime: '15:30',
-    note: 'Обяд',
-  },
-  {
-    id: 9,
-    type: 'lesson',
-    instructorId: 3,
-    startTime: '09:00',
-    endTime: '10:30',
-    studentName: 'Петър Стоянов',
-    studentId: 7,
-    vehicleId: 3,
-    category: 'B',
-    status: 'no-show',
-    paymentStatus: 'paid',
-  },
-  {
-    id: 10,
-    type: 'lesson',
-    instructorId: 3,
-    startTime: '11:00',
-    endTime: '12:30',
-    studentName: 'Диана Петрова',
-    studentId: 8,
-    vehicleId: 3,
-    category: 'B',
-    status: 'confirmed',
-    paymentStatus: 'missing',
-  },
-  {
-    id: 11,
-    type: 'lesson',
-    instructorId: 4,
-    startTime: '08:00',
-    endTime: '09:30',
-    studentName: 'Стефан Георгиев',
-    studentId: 9,
-    vehicleId: 4,
-    category: 'B',
-    status: 'canceled',
-    paymentStatus: 'paid',
-  },
-];
 
 const getStatusInfo = (status: LessonStatus) => {
   switch (status) {
@@ -224,15 +88,168 @@ const getStatusInfo = (status: LessonStatus) => {
   }
 };
 
+function mapVehicleRowsToScheduleVehicles(
+  vehicleRows: Array<{ vehicle: string }>,
+): Vehicle[] {
+  return vehicleRows.map((vehicleRow, index) => {
+    const [model = vehicleRow.vehicle, plate = ''] = vehicleRow.vehicle
+      .split('·')
+      .map((part) => part.trim());
+
+    return {
+      id: index + 1,
+      model,
+      plate,
+    };
+  });
+}
+
+function formatVehicleLabel(vehicle?: Vehicle) {
+  if (!vehicle) {
+    return 'Учебен автомобил';
+  }
+
+  return vehicle.plate ? `${vehicle.model} · ${vehicle.plate}` : vehicle.model;
+}
+
+function resolveVehicleIdByLabel(vehicles: Vehicle[], vehicleLabel: string) {
+  return (
+    vehicles.find((vehicle) => formatVehicleLabel(vehicle) === vehicleLabel)?.id ??
+    vehicles[0]?.id ??
+    1
+  );
+}
+
+function calculateScheduleDurationMinutes(startTime: string, endTime: string) {
+  const [startHours = 0, startMinutes = 0] = startTime
+    .split(':')
+    .map(Number);
+  const [endHours = 0, endMinutes = 0] = endTime.split(':').map(Number);
+
+  return endHours * 60 + endMinutes - (startHours * 60 + startMinutes);
+}
+
 export function SchedulePage() {
+  const { session } = useAuthSession();
   const navigate = useNavigate();
-  const [selectedDate, setSelectedDate] = useState(new Date('2024-03-24'));
-  const [selectedInstructors, setSelectedInstructors] = useState<number[]>(INSTRUCTORS.map(i => i.id));
-  const [schedule, setSchedule] = useState<ScheduleBlock[]>(MOCK_SCHEDULE);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [selectedInstructors, setSelectedInstructors] = useState<number[]>([]);
+  const [schedule, setSchedule] = useState<ScheduleBlock[]>([]);
+  const [students, setStudents] = useState<StudentOperationalRecord[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<ScheduleBlock | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isNewLessonModalOpen, setIsNewLessonModalOpen] = useState(false);
   const [isNewRestModalOpen, setIsNewRestModalOpen] = useState(false);
+  const [newLessonDraft, setNewLessonDraft] = useState({
+    instructorId: 0,
+    vehicleId: 0,
+    studentId: '',
+    studentName: '',
+    startTime: '09:00',
+    endTime: '10:30',
+    category: 'B',
+  });
+  const [newRestDraft, setNewRestDraft] = useState({
+    instructorId: 0,
+    startTime: '12:00',
+    endTime: '12:30',
+    note: 'Почивка',
+  });
+  const [actionMessage, setActionMessage] = useState(
+    'Графикът е зареден от PostgreSQL, а новите локални промени се отразяват веднага в колоните на инструкторите.',
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([
+      fetchInstructorRows(),
+      fetchPracticalLessonRecords(),
+      fetchStudentOperations(),
+      fetchVehicleRows(),
+    ])
+      .then(([instructorRows, lessonRows, studentRows, vehicleRows]) => {
+        if (!isMounted) {
+          return;
+        }
+
+        const mappedInstructors =
+          instructorRows.map((row, index) => ({
+            id: row.id,
+            name: row.name,
+            color: ['#6366F1', '#A78BFA', '#22c55e', '#fb923c'][index % 4],
+          }));
+
+        const mappedVehicles = mapVehicleRowsToScheduleVehicles(vehicleRows);
+
+        setInstructors(mappedInstructors);
+        setVehicles(mappedVehicles);
+        setSelectedInstructors(mappedInstructors.map((item) => item.id));
+        setNewLessonDraft((current) => ({
+          ...current,
+          instructorId: mappedInstructors[0]?.id ?? 1,
+          vehicleId: mappedVehicles[0]?.id ?? current.vehicleId,
+          studentId: studentRows[0]?.id ?? current.studentId,
+          studentName: studentRows[0]?.name ?? current.studentName,
+          category: studentRows[0]?.category ?? current.category,
+        }));
+        setNewRestDraft((current) => ({
+          ...current,
+          instructorId: mappedInstructors[0]?.id ?? 1,
+        }));
+
+        const mappedSchedule = lessonRows.map((lesson) => ({
+          id: lesson.id,
+          type: 'lesson' as const,
+          instructorId:
+            mappedInstructors.find((item) => item.name === lesson.instructor)?.id ??
+            mappedInstructors[0]?.id ??
+            1,
+          startTime: lesson.time,
+          endTime: lesson.endTime,
+          studentName: lesson.student,
+          studentId: lesson.studentId,
+          vehicleId: resolveVehicleIdByLabel(mappedVehicles, lesson.vehicle),
+          category: lesson.category,
+          status:
+            lesson.status === 'in-progress'
+              ? 'confirmed'
+              : lesson.status === 'no-show'
+                ? 'no-show'
+                : lesson.status,
+          paymentStatus:
+            lesson.paymentStatus === 'not-required'
+              ? 'paid'
+              : lesson.paymentStatus === 'overdue'
+                ? 'missing'
+                : lesson.paymentStatus,
+        }));
+
+        setStudents(studentRows);
+        setSchedule(mappedSchedule);
+      })
+      .catch((error) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setInstructors([]);
+        setVehicles([]);
+        setSelectedInstructors([]);
+        setSchedule([]);
+        setActionMessage(
+          error instanceof Error
+            ? `Неуспешно зареждане на графика: ${error.message}`
+            : 'Неуспешно зареждане на графика от базата.',
+        );
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('bg-BG', {
@@ -256,7 +273,7 @@ export function SchedulePage() {
   };
 
   const goToToday = () => {
-    setSelectedDate(new Date('2024-03-24')); // Using mock "today"
+    setSelectedDate(new Date());
   };
 
   const toggleInstructor = (instructorId: number) => {
@@ -271,7 +288,7 @@ export function SchedulePage() {
   };
 
   const getVehicle = (vehicleId?: number) => {
-    return VEHICLES.find(v => v.id === vehicleId);
+    return vehicles.find(v => v.id === vehicleId);
   };
 
   const getBlocksForInstructor = (instructorId: number) => {
@@ -298,7 +315,217 @@ export function SchedulePage() {
     return (offsetMinutes / 60) * 80;
   };
 
-  const visibleInstructors = INSTRUCTORS.filter(i => selectedInstructors.includes(i.id));
+  const visibleInstructors = instructors.filter(i => selectedInstructors.includes(i.id));
+
+  const handleDeleteSelectedBlock = async () => {
+    if (!selectedBlock) {
+      return;
+    }
+
+    if (selectedBlock.type === 'lesson') {
+      try {
+        await deletePracticalLessonRecord(
+          selectedBlock.id,
+          session?.csrfToken ?? '',
+        );
+      } catch (error) {
+        setActionMessage(
+          error instanceof Error
+            ? `Неуспешно изтриване на часа: ${error.message}`
+            : 'Неуспешно изтриване на часа от базата.',
+        );
+        return;
+      }
+    }
+
+    setSchedule((current) =>
+      current.filter((block) => block.id !== selectedBlock.id),
+    );
+    setActionMessage(
+      selectedBlock.type === 'rest'
+        ? 'Почивката е премахната от текущия график.'
+        : `Часът на ${selectedBlock.studentName ?? 'курсиста'} е изтрит от PostgreSQL.`,
+    );
+    setSelectedBlock(null);
+    setIsDrawerOpen(false);
+  };
+
+  const handleCancelSelectedLesson = async () => {
+    if (!selectedBlock || selectedBlock.type !== 'lesson') {
+      return;
+    }
+
+    try {
+      const updatedLesson = await updatePracticalLessonRecord(
+        selectedBlock.id,
+        { status: 'CANCELED' },
+        session?.csrfToken ?? '',
+      );
+
+      setSchedule((current) =>
+        current.map((block) =>
+          block.id === selectedBlock.id
+            ? { ...block, status: updatedLesson.status }
+            : block,
+        ),
+      );
+      setSelectedBlock((current) =>
+        current ? { ...current, status: updatedLesson.status } : current,
+      );
+      setActionMessage(
+        `Часът на ${selectedBlock.studentName ?? 'курсиста'} е отменен и записан в PostgreSQL.`,
+      );
+    } catch (error) {
+      setActionMessage(
+        error instanceof Error
+          ? `Неуспешна отмяна на часа: ${error.message}`
+          : 'Неуспешна отмяна на часа в базата.',
+      );
+    }
+  };
+
+  const handleCreatePracticalLesson = async () => {
+    const selectedStudent =
+      students.find((student) => student.id === newLessonDraft.studentId) ??
+      students.find((student) => student.name === newLessonDraft.studentName);
+    const selectedInstructor = instructors.find(
+      (item) => item.id === newLessonDraft.instructorId,
+    );
+    const selectedVehicle =
+      vehicles.find((vehicle) => vehicle.id === newLessonDraft.vehicleId) ??
+      vehicles[0];
+
+    if (!selectedStudent || !selectedInstructor || !selectedVehicle) {
+      setActionMessage(
+        'Избери валиден курсист, инструктор и автомобил преди да създадеш час.',
+      );
+      return;
+    }
+
+    try {
+      const createdLesson = await createPracticalLessonRecord(
+        {
+          studentId: selectedStudent.id,
+          studentName: selectedStudent.name,
+          instructorName: selectedInstructor.name,
+          vehicleLabel: formatVehicleLabel(selectedVehicle),
+          categoryCode: newLessonDraft.category || selectedStudent.category,
+          lessonDate: selectedDate.toISOString().slice(0, 10),
+          startTimeLabel: newLessonDraft.startTime,
+          endTimeLabel: newLessonDraft.endTime,
+          durationMinutes: Math.max(
+            30,
+            calculateScheduleDurationMinutes(
+              newLessonDraft.startTime,
+              newLessonDraft.endTime,
+            ),
+          ),
+          status: 'SCHEDULED',
+          paymentStatus: 'PAID',
+          evaluationStatus: 'PENDING',
+          routeLabel: null,
+          startLocation: 'Автошкола Mind on Road',
+          endLocation: 'Автошкола Mind on Road',
+          notes: null,
+          kmDriven: null,
+          rating: null,
+          parentNotificationSent: false,
+          parentPerformanceSummary: null,
+        },
+        session?.csrfToken ?? '',
+      );
+
+      setSchedule((current) => [
+        ...current,
+        {
+          id: createdLesson.id,
+          type: 'lesson',
+          instructorId: selectedInstructor.id,
+          startTime: createdLesson.time,
+          endTime: createdLesson.endTime,
+          studentName: createdLesson.student,
+          studentId: createdLesson.studentId,
+          vehicleId: selectedVehicle.id,
+          category: createdLesson.category,
+          status:
+            createdLesson.status === 'in-progress'
+              ? 'confirmed'
+              : createdLesson.status,
+          paymentStatus:
+            createdLesson.paymentStatus === 'overdue'
+              ? 'missing'
+              : createdLesson.paymentStatus === 'not-required'
+                ? 'paid'
+                : createdLesson.paymentStatus,
+        },
+      ]);
+      setActionMessage(
+        `Добавен е нов час за ${createdLesson.student} при ${createdLesson.instructor} и е записан в PostgreSQL.`,
+      );
+      setIsNewLessonModalOpen(false);
+    } catch (error) {
+      setActionMessage(
+        error instanceof Error
+          ? `Неуспешно създаване на час: ${error.message}`
+          : 'Неуспешно създаване на час в базата.',
+      );
+    }
+  };
+
+  const handleToggleSelectedLessonStatus = async () => {
+    if (!selectedBlock || selectedBlock.type !== 'lesson') {
+      return;
+    }
+
+    const nextStatus: LessonStatus =
+      selectedBlock.status === 'completed' ? 'scheduled' : 'completed';
+
+    try {
+      const updatedLesson = await updatePracticalLessonRecord(
+        selectedBlock.id,
+        {
+          status: nextStatus === 'completed' ? 'COMPLETED' : 'SCHEDULED',
+        },
+        session?.csrfToken ?? '',
+      );
+
+      setSchedule((current) =>
+        current.map((block) =>
+          block.id === selectedBlock.id
+            ? {
+                ...block,
+                status:
+                  updatedLesson.status === 'in-progress'
+                    ? 'confirmed'
+                    : updatedLesson.status,
+              }
+            : block,
+        ),
+      );
+      setSelectedBlock((current) =>
+        current
+          ? {
+              ...current,
+              status:
+                updatedLesson.status === 'in-progress'
+                  ? 'confirmed'
+                  : updatedLesson.status,
+            }
+          : current,
+      );
+      setActionMessage(
+        nextStatus === 'completed'
+          ? `Часът на ${selectedBlock.studentName ?? 'курсиста'} е маркиран като завършен и записан в PostgreSQL.`
+          : `Часът на ${selectedBlock.studentName ?? 'курсиста'} е върнат в статус "Планиран" и записан в PostgreSQL.`,
+      );
+    } catch (error) {
+      setActionMessage(
+        error instanceof Error
+          ? `Неуспешен запис на статуса: ${error.message}`
+          : 'Неуспешен запис на статуса в базата.',
+      );
+    }
+  };
 
   // Calculate daily statistics
   const totalLessons = schedule.filter(b => b.type === 'lesson').length;
@@ -323,12 +550,14 @@ export function SchedulePage() {
             <Button
               variant="secondary"
               icon={<Plus size={18} />}
+              onClick={() => setIsNewLessonModalOpen(true)}
             >
               Нов час
             </Button>
             <Button
               variant="secondary"
               icon={<Coffee size={18} />}
+              onClick={() => setIsNewRestModalOpen(true)}
             >
               Почивка
             </Button>
@@ -387,7 +616,7 @@ export function SchedulePage() {
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {INSTRUCTORS.map((instructor) => {
+              {instructors.map((instructor) => {
                 const isSelected = selectedInstructors.includes(instructor.id);
                 return (
                   <button
@@ -413,6 +642,19 @@ export function SchedulePage() {
               })}
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="px-6 lg:px-8 pb-4">
+        <div
+          className="rounded-xl p-4 text-sm"
+          style={{
+            background: 'var(--bg-card)',
+            color: 'var(--text-secondary)',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+          }}
+        >
+          {actionMessage}
         </div>
       </div>
 
@@ -786,10 +1028,10 @@ export function SchedulePage() {
                     <div className="flex items-center gap-3 p-4 rounded-lg" style={{ background: 'var(--bg-primary)' }}>
                       <div
                         className="w-3 h-3 rounded-full"
-                        style={{ background: INSTRUCTORS.find(i => i.id === selectedBlock.instructorId)?.color }}
+                        style={{ background: instructors.find(i => i.id === selectedBlock.instructorId)?.color }}
                       />
                       <span style={{ color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 500 }}>
-                        {INSTRUCTORS.find(i => i.id === selectedBlock.instructorId)?.name}
+                        {instructors.find(i => i.id === selectedBlock.instructorId)?.name}
                       </span>
                     </div>
                   </div>
@@ -826,6 +1068,27 @@ export function SchedulePage() {
                       variant="secondary"
                       icon={<Edit size={18} />}
                       fullWidth
+                      onClick={() => {
+                        setSchedule((current) =>
+                          current.map((block) =>
+                            block.id === selectedBlock.id
+                              ? {
+                                  ...block,
+                                  note: `${block.note ?? 'Почивка'} · редактирано`,
+                                }
+                              : block,
+                          ),
+                        );
+                        setSelectedBlock((current) =>
+                          current
+                            ? {
+                                ...current,
+                                note: `${current.note ?? 'Почивка'} · редактирано`,
+                              }
+                            : current,
+                        );
+                        setActionMessage('Почивката е редактирана в текущия график.');
+                      }}
                     >
                       Редактирай
                     </Button>
@@ -833,6 +1096,7 @@ export function SchedulePage() {
                       variant="secondary"
                       icon={<Trash2 size={18} />}
                       fullWidth
+                      onClick={handleDeleteSelectedBlock}
                     >
                       Изтрий почивката
                     </Button>
@@ -872,10 +1136,10 @@ export function SchedulePage() {
                     <div className="flex items-center gap-3 p-4 rounded-lg" style={{ background: 'var(--bg-primary)' }}>
                       <div
                         className="w-3 h-3 rounded-full"
-                        style={{ background: INSTRUCTORS.find(i => i.id === selectedBlock.instructorId)?.color }}
+                        style={{ background: instructors.find(i => i.id === selectedBlock.instructorId)?.color }}
                       />
                       <span style={{ color: 'var(--text-primary)', fontSize: '1rem', fontWeight: 500 }}>
-                        {INSTRUCTORS.find(i => i.id === selectedBlock.instructorId)?.name}
+                        {instructors.find(i => i.id === selectedBlock.instructorId)?.name}
                       </span>
                     </div>
                   </div>
@@ -1023,8 +1287,11 @@ export function SchedulePage() {
                       variant="primary"
                       icon={<Edit size={18} />}
                       fullWidth
+                      onClick={() => void handleToggleSelectedLessonStatus()}
                     >
-                      Редактирай часа
+                      {selectedBlock.status === 'completed'
+                        ? 'Върни часа като планиран'
+                        : 'Маркирай часа като завършен'}
                     </Button>
                     
                     {selectedBlock.status !== 'completed' && selectedBlock.status !== 'canceled' && (
@@ -1033,6 +1300,7 @@ export function SchedulePage() {
                           variant="secondary"
                           icon={<UserCheck size={18} />}
                           fullWidth
+                          onClick={() => void handleToggleSelectedLessonStatus()}
                         >
                           Завърши
                         </Button>
@@ -1040,6 +1308,7 @@ export function SchedulePage() {
                           variant="secondary"
                           icon={<UserX size={18} />}
                           fullWidth
+                          onClick={() => void handleCancelSelectedLesson()}
                         >
                           Отмени
                         </Button>
@@ -1050,6 +1319,7 @@ export function SchedulePage() {
                       variant="secondary"
                       icon={<Trash2 size={18} />}
                       fullWidth
+                      onClick={() => void handleDeleteSelectedBlock()}
                     >
                       Изтрий часа
                     </Button>
@@ -1060,6 +1330,247 @@ export function SchedulePage() {
           </div>
         </>
       )}
+
+      <Modal
+        isOpen={isNewLessonModalOpen}
+        onClose={() => setIsNewLessonModalOpen(false)}
+        title="Нов час"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setIsNewLessonModalOpen(false)}
+            >
+              Отказ
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => void handleCreatePracticalLesson()}
+            >
+              Добави час
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <select
+            value={newLessonDraft.instructorId}
+            onChange={(event) =>
+              setNewLessonDraft((current) => ({
+                ...current,
+                instructorId: Number(event.target.value),
+              }))
+            }
+            className="h-11 rounded-xl px-4 text-sm outline-none"
+            style={{
+              background: 'var(--bg-panel)',
+              color: 'var(--text-primary)',
+            }}
+          >
+            {instructors.map((instructor) => (
+              <option key={instructor.id} value={instructor.id}>
+                {instructor.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={newLessonDraft.studentId}
+            onChange={(event) =>
+              setNewLessonDraft((current) => {
+                const selectedStudent = students.find(
+                  (student) => student.id === event.target.value,
+                );
+
+                return {
+                  ...current,
+                  studentId: event.target.value,
+                  studentName:
+                    selectedStudent?.name ?? current.studentName,
+                  category:
+                    selectedStudent?.category ?? current.category,
+                };
+              })
+            }
+            className="h-11 rounded-xl px-4 text-sm outline-none"
+            style={{
+              background: 'var(--bg-panel)',
+              color: 'var(--text-primary)',
+            }}
+          >
+            {students.length > 0 ? (
+              students.map((student) => (
+                <option key={student.id} value={student.id}>
+                  {student.name} · {student.category}
+                </option>
+              ))
+            ) : (
+              <option value={newLessonDraft.studentId}>
+                {newLessonDraft.studentName}
+              </option>
+            )}
+          </select>
+          <select
+            value={newLessonDraft.vehicleId}
+            onChange={(event) =>
+              setNewLessonDraft((current) => ({
+                ...current,
+                vehicleId: Number(event.target.value),
+              }))
+            }
+            className="h-11 rounded-xl px-4 text-sm outline-none"
+            style={{
+              background: 'var(--bg-panel)',
+              color: 'var(--text-primary)',
+            }}
+          >
+            {vehicles.map((vehicle) => (
+              <option key={vehicle.id} value={vehicle.id}>
+                {formatVehicleLabel(vehicle)}
+              </option>
+            ))}
+          </select>
+          <input
+            type="time"
+            value={newLessonDraft.startTime}
+            onChange={(event) =>
+              setNewLessonDraft((current) => ({
+                ...current,
+                startTime: event.target.value,
+              }))
+            }
+            className="h-11 rounded-xl px-4 text-sm outline-none"
+            style={{
+              background: 'var(--bg-panel)',
+              color: 'var(--text-primary)',
+            }}
+          />
+          <input
+            type="time"
+            value={newLessonDraft.endTime}
+            onChange={(event) =>
+              setNewLessonDraft((current) => ({
+                ...current,
+                endTime: event.target.value,
+              }))
+            }
+            className="h-11 rounded-xl px-4 text-sm outline-none"
+            style={{
+              background: 'var(--bg-panel)',
+              color: 'var(--text-primary)',
+            }}
+          />
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isNewRestModalOpen}
+        onClose={() => setIsNewRestModalOpen(false)}
+        title="Нова почивка"
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => setIsNewRestModalOpen(false)}
+            >
+              Отказ
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setSchedule((current) => [
+                  ...current,
+                  {
+                    id: String(Date.now()),
+                    type: 'rest',
+                    instructorId: newRestDraft.instructorId,
+                    startTime: newRestDraft.startTime,
+                    endTime: newRestDraft.endTime,
+                    note: newRestDraft.note,
+                  },
+                ]);
+                setActionMessage(
+                  `Добавена е почивка "${newRestDraft.note}" за ${
+                    instructors.find(
+                      (item) => item.id === newRestDraft.instructorId,
+                    )?.name ?? 'инструктор'
+                  }.`,
+                );
+                setIsNewRestModalOpen(false);
+              }}
+            >
+              Добави почивка
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <select
+            value={newRestDraft.instructorId}
+            onChange={(event) =>
+              setNewRestDraft((current) => ({
+                ...current,
+                instructorId: Number(event.target.value),
+              }))
+            }
+            className="h-11 rounded-xl px-4 text-sm outline-none"
+            style={{
+              background: 'var(--bg-panel)',
+              color: 'var(--text-primary)',
+            }}
+          >
+            {instructors.map((instructor) => (
+              <option key={instructor.id} value={instructor.id}>
+                {instructor.name}
+              </option>
+            ))}
+          </select>
+          <input
+            placeholder="Бележка"
+            value={newRestDraft.note}
+            onChange={(event) =>
+              setNewRestDraft((current) => ({
+                ...current,
+                note: event.target.value,
+              }))
+            }
+            className="h-11 rounded-xl px-4 text-sm outline-none"
+            style={{
+              background: 'var(--bg-panel)',
+              color: 'var(--text-primary)',
+            }}
+          />
+          <input
+            type="time"
+            value={newRestDraft.startTime}
+            onChange={(event) =>
+              setNewRestDraft((current) => ({
+                ...current,
+                startTime: event.target.value,
+              }))
+            }
+            className="h-11 rounded-xl px-4 text-sm outline-none"
+            style={{
+              background: 'var(--bg-panel)',
+              color: 'var(--text-primary)',
+            }}
+          />
+          <input
+            type="time"
+            value={newRestDraft.endTime}
+            onChange={(event) =>
+              setNewRestDraft((current) => ({
+                ...current,
+                endTime: event.target.value,
+              }))
+            }
+            className="h-11 rounded-xl px-4 text-sm outline-none"
+            style={{
+              background: 'var(--bg-panel)',
+              color: 'var(--text-primary)',
+            }}
+          />
+        </div>
+      </Modal>
     </div>
   );
 }

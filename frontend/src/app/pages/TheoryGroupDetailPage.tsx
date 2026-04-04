@@ -44,6 +44,9 @@ export function TheoryGroupDetailPage() {
   const [expandedLecture, setExpandedLecture] = useState<number | null>(null);
   const [editingAttendance, setEditingAttendance] = useState<number | null>(null);
   const [attendanceData, setAttendanceData] = useState<Record<number, boolean>>({});
+  const [actionMessage, setActionMessage] = useState(
+    'Групата е заредена в тестов режим само с Антоан Тест.',
+  );
 
   // Mock data - in real app, fetch based on id
   const group = {
@@ -60,11 +63,13 @@ export function TheoryGroupDetailPage() {
   };
 
   const students: Student[] = [
-    { id: 1, name: 'Петър Георгиев', category: 'B', phone: '+359 888 123 456', email: 'petar@example.com' },
-    { id: 2, name: 'Елена Димитрова', category: 'B', phone: '+359 887 234 567', email: 'elena@example.com' },
-    { id: 3, name: 'Мартин Иванов', category: 'B', phone: '+359 889 345 678', email: 'martin@example.com' },
-    { id: 4, name: 'София Николова', category: 'B', phone: '+359 886 456 789', email: 'sofia@example.com' },
-    { id: 5, name: 'Георги Тодоров', category: 'B', phone: '+359 885 567 890', email: 'georgi@example.com' },
+    {
+      id: 1,
+      name: 'Антоан Тест',
+      category: 'B',
+      phone: '0886612503',
+      email: 'antoan.test@example.com',
+    },
   ];
 
   const lectures: Lecture[] = [
@@ -183,8 +188,10 @@ export function TheoryGroupDetailPage() {
   };
 
   const handleSaveAttendance = () => {
-    console.log('Saving attendance:', attendanceData);
-    // In real app, save to backend
+    const presentCount = Object.values(attendanceData).filter(Boolean).length;
+    setActionMessage(
+      `Присъствието е запазено локално: ${presentCount}/${students.length} присъстващи.`,
+    );
     setEditingAttendance(null);
     setAttendanceData({});
   };
@@ -192,6 +199,7 @@ export function TheoryGroupDetailPage() {
   const handleCancelAttendance = () => {
     setEditingAttendance(null);
     setAttendanceData({});
+    setActionMessage('Маркирането на присъствие е отказано.');
   };
 
   return (
@@ -217,6 +225,17 @@ export function TheoryGroupDetailPage() {
       />
 
       <div className="p-6 lg:p-8">
+        <div
+          className="rounded-xl p-4 mb-6 text-sm"
+          style={{
+            background: 'var(--bg-card)',
+            color: 'var(--text-secondary)',
+            border: '1px solid var(--ghost-border)',
+          }}
+        >
+          {actionMessage}
+        </div>
+
         {/* Group Info Card */}
         <div className="rounded-xl p-6 mb-6" style={{ background: 'var(--bg-card)' }}>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -528,7 +547,11 @@ export function TheoryGroupDetailPage() {
                                       <Button
                                         variant="ghost"
                                         icon={<Mail size={16} />}
-                                        onClick={() => console.log('Send notification')}
+                                        onClick={() =>
+                                          setActionMessage(
+                                            `Известието за ${student.name} е маркирано като изпратено в UI режим.`,
+                                          )
+                                        }
                                       >
                                         Изпрати известие
                                       </Button>

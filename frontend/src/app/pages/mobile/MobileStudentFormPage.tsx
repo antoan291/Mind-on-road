@@ -102,7 +102,7 @@ export function MobileStudentFormPage() {
             <InputField
               label="Телефон"
               type="tel"
-              placeholder="+359 888 123 456"
+              placeholder="0886612503"
               value={formData.phone}
               onChange={(value) => setFormData({ ...formData, phone: value })}
               icon={<Phone size={18} />}
@@ -292,7 +292,7 @@ export function MobileStudentFormPage() {
             <InputField
               label="Телефон на родител"
               type="tel"
-              placeholder="+359 888 123 456"
+              placeholder="0886612503"
               value={formData.parentPhone}
               onChange={(value) => setFormData({ ...formData, parentPhone: value })}
               icon={<Phone size={18} />}

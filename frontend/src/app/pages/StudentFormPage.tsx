@@ -1,15 +1,26 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { PageHeader } from '../components/ui-system/PageHeader';
 import { Button } from '../components/ui-system/Button';
 import { InputField, SelectField, TextareaField } from '../components/ui-system/FormField';
 import { Alert } from '../components/ui-system/Alert';
 import { User, Mail, Phone, MapPin, Calendar, Car, BookOpen, FileText } from 'lucide-react';
+import { useAuthSession } from '../services/authSession';
+import {
+  createStudentRecord,
+  fetchStudentOperationalDetail,
+  StudentMutationPayload,
+  updateStudentRecord,
+} from '../services/studentsApi';
 
 export function StudentFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = !!id;
+  const isBackendStudentId = Boolean(
+    id && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
+  );
+  const { session } = useAuthSession();
 
   const [formData, setFormData] = useState({
     // Personal Information
@@ -45,6 +56,7 @@ export function StudentFormPage() {
     
     // Lessons & Payments
     paidLessons: '',
+    completedHours: '0',
     lessonPackage: '',
     
     // Notes
@@ -52,13 +64,108 @@ export function StudentFormPage() {
   });
 
   const [showSuccess, setShowSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (!isEdit || !id) {
+      return;
+    }
+
+    if (!isBackendStudentId) {
+      setSubmitError(
+        'Този курсист е със стар локален идентификатор. Отвори курсиста от обновения списък, за да заредиш реалния PostgreSQL запис.',
+      );
+      return;
+    }
+
+    let isMounted = true;
+
+    fetchStudentOperationalDetail(id)
+      .then((record) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setFormData((current) => ({
+          ...current,
+          firstName: record.firstName ?? record.name.split(' ')[0] ?? '',
+          lastName: record.lastName ?? record.name.split(' ').slice(1).join(' '),
+          email: record.email,
+          phone: record.phone,
+          address: record.address ?? '',
+          birthDate: record.birthDate ?? '',
+          idNumber: record.nationalId,
+          educationLevel: mapEducationLevelToFormValue(record.educationLevel),
+          category: record.category,
+          studentType:
+            record.trainingMode === 'licensed-manual-hours'
+              ? 'licensed-manual-hours'
+              : 'standard',
+          previousLicenseCategory: record.previousLicenseCategory,
+          instructor: record.instructor,
+          theoryGroup: record.groupNumber,
+          startDate: record.trainingStartDate || record.startDate,
+          expectedArrivalDate: record.expectedArrivalDate,
+          groupNumber: record.groupNumber,
+          recordMode: record.recordMode || 'electronic',
+          extraHours: String(record.extraHours ?? 0),
+          failedExamAttempts: String(record.failedExamAttempts ?? 0),
+          courseOutcome: mapCourseOutcomeToFormValue(record.courseOutcome),
+          parentName: record.parentName ?? '',
+          parentPhone: record.parentPhone ?? '',
+          parentEmail: record.parentEmail ?? '',
+          parentFeedbackEnabled: record.parentFeedbackEnabled ? 'enabled' : 'disabled',
+          paidLessons: String(record.maxTrainingHours - (record.extraHours ?? 0)),
+          completedHours: String(record.used ?? 0),
+          lessonPackage: String(record.maxTrainingHours - (record.extraHours ?? 0)),
+          notes: '',
+        }));
+      })
+      .catch((error) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setSubmitError(
+          error instanceof Error
+            ? error.message
+            : 'Неуспешно зареждане на курсиста.',
+        );
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id, isBackendStudentId, isEdit]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setShowSuccess(true);
-    setTimeout(() => {
-      navigate('/students');
-    }, 2000);
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    try {
+      const payload = toStudentMutationPayload(formData);
+
+      if (isEdit && isBackendStudentId && id && session?.csrfToken) {
+        await updateStudentRecord(id, payload, session.csrfToken);
+      } else if (!isEdit && session?.csrfToken) {
+        await createStudentRecord(payload, session.csrfToken);
+      }
+
+      setShowSuccess(true);
+      setTimeout(() => {
+        navigate('/students');
+      }, 1200);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : 'Неуспешно запазване на курсиста.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -81,6 +188,16 @@ export function StudentFormPage() {
               type="success"
               title={isEdit ? 'Промените са запазени' : 'Курсистът е добавен'}
               message={isEdit ? 'Информацията беше успешно актуализирана.' : 'Новият курсист е добавен в системата.'}
+            />
+          </div>
+        )}
+
+        {submitError && (
+          <div className="mb-6">
+            <Alert
+              type="error"
+              title="Неуспешно запазване"
+              message={submitError}
             />
           </div>
         )}
@@ -123,7 +240,7 @@ export function StudentFormPage() {
             <InputField
               label="Телефон"
               type="tel"
-              placeholder="+359 888 123 456"
+              placeholder="0886612503"
               value={formData.phone}
               onChange={(value) => setFormData({ ...formData, phone: value })}
               icon={<Phone size={18} />}
@@ -190,12 +307,12 @@ export function StudentFormPage() {
               onChange={(value) => setFormData({ ...formData, category: value })}
               options={[
                 { value: '', label: 'Изберете категория...' },
-                { value: 'a', label: 'Категория A' },
-                { value: 'a1', label: 'Категория A1' },
-                { value: 'a2', label: 'Категория A2' },
-                { value: 'b', label: 'Категория B' },
-                { value: 'c', label: 'Категория C' },
-                { value: 'd', label: 'Категория D' },
+                { value: 'A', label: 'Категория A' },
+                { value: 'A1', label: 'Категория A1' },
+                { value: 'A2', label: 'Категория A2' },
+                { value: 'B', label: 'Категория B' },
+                { value: 'C', label: 'Категория C' },
+                { value: 'D', label: 'Категория D' },
               ]}
               icon={<Car size={18} />}
               required
@@ -220,10 +337,10 @@ export function StudentFormPage() {
               onChange={(value) => setFormData({ ...formData, instructor: value })}
               options={[
                 { value: '', label: 'Изберете инструктор...' },
-                { value: '1', label: 'Георги Петров' },
-                { value: '2', label: 'Иван Димитров' },
-                { value: '3', label: 'Стоян Василев' },
-                { value: '4', label: 'Мария Петкова' },
+                { value: 'Георги Петров', label: 'Георги Петров' },
+                { value: 'Иван Димитров', label: 'Иван Димитров' },
+                { value: 'Стоян Василев', label: 'Стоян Василев' },
+                { value: 'Мария Петкова', label: 'Мария Петкова' },
               ]}
               icon={<User size={18} />}
               required
@@ -235,10 +352,10 @@ export function StudentFormPage() {
               onChange={(value) => setFormData({ ...formData, theoryGroup: value })}
               options={[
                 { value: '', label: 'Изберете група...' },
-                { value: '1', label: 'Група 1 - Понеделник и Сряда 18:00' },
-                { value: '2', label: 'Група 2 - Вторник и Четвъртък 18:00' },
-                { value: '3', label: 'Група 3 - Събота 10:00' },
-                { value: '4', label: 'Група 4 - Неделя 10:00' },
+                { value: '315003', label: 'Група 315003 - Понеделник и Сряда 18:00' },
+                { value: '315004', label: 'Група 315004 - Вторник и Четвъртък 18:00' },
+                { value: '224110', label: 'Група 224110 - Събота 10:00' },
+                { value: '315010', label: 'Група 315010 - Неделя 10:00' },
               ]}
               icon={<BookOpen size={18} />}
               required
@@ -393,7 +510,7 @@ export function StudentFormPage() {
             <InputField
               label="Телефон на родител"
               type="tel"
-              placeholder="+359 888 123 456"
+              placeholder="0886612503"
               value={formData.parentPhone}
               onChange={(value) => setFormData({ ...formData, parentPhone: value })}
               icon={<Phone size={18} />}
@@ -446,8 +563,13 @@ export function StudentFormPage() {
           <Button
             type="submit"
             variant="primary"
+            disabled={isSubmitting}
           >
-            {isEdit ? 'Запази промени' : 'Добави курсист'}
+            {isSubmitting
+              ? 'Запазване...'
+              : isEdit
+                ? 'Запази промени'
+                : 'Добави курсист'}
           </Button>
           
           <Button
@@ -461,4 +583,204 @@ export function StudentFormPage() {
       </form>
     </div>
   );
+}
+
+function toStudentMutationPayload(
+  formData: ReturnType<typeof useStudentFormInitialState>,
+): StudentMutationPayload {
+  const studentStatus = mapFormCourseOutcomeToStudentStatus(formData.courseOutcome);
+  const enrollmentStatus = mapFormCourseOutcomeToEnrollmentStatus(
+    formData.courseOutcome,
+    Number(formData.failedExamAttempts || 0),
+  );
+  const packageHours = Number(
+    formData.paidLessons || formData.lessonPackage || 0,
+  );
+  const additionalHours = Number(formData.extraHours || 0);
+  const completedHours = Math.min(
+    Number(formData.completedHours || 0),
+    packageHours + additionalHours,
+  );
+
+  return {
+    firstName: formData.firstName,
+    lastName: formData.lastName,
+    phone: formData.phone,
+    email: formData.email || null,
+    nationalId: formData.idNumber || null,
+    birthDate: normalizeFormDate(formData.birthDate),
+    address: formData.address || null,
+    educationLevel: mapEducationLevelToBackendLabel(formData.educationLevel),
+    parentName: formData.parentName || null,
+    parentPhone: formData.parentPhone || null,
+    parentEmail: formData.parentEmail || null,
+    parentContactStatus:
+      formData.parentFeedbackEnabled === 'enabled' ? 'ENABLED' : 'DISABLED',
+    status: studentStatus,
+    enrollment: {
+      categoryCode: (formData.category || 'B').toUpperCase(),
+      status: enrollmentStatus,
+      trainingMode:
+        formData.studentType === 'licensed-manual-hours'
+          ? 'LICENSED_MANUAL_HOURS'
+          : 'STANDARD_PACKAGE',
+      registerMode:
+        formData.recordMode === 'paper'
+          ? 'PAPER'
+          : formData.recordMode === 'hybrid'
+            ? 'HYBRID'
+            : 'ELECTRONIC',
+      theoryGroupNumber: formData.groupNumber || formData.theoryGroup || null,
+      assignedInstructorName: formData.instructor || null,
+      enrollmentDate:
+        normalizeFormDate(formData.startDate) ??
+        new Date().toISOString().slice(0, 10),
+      expectedArrivalDate: normalizeFormDate(formData.expectedArrivalDate),
+      previousLicenseCategory: formData.previousLicenseCategory || null,
+      packageHours,
+      additionalHours,
+      completedHours,
+      failedExamAttempts: Number(formData.failedExamAttempts || 0),
+      lastPracticeAt:
+        completedHours > 0 ? new Date().toISOString() : null,
+      notes: formData.notes || null,
+    },
+  };
+}
+
+function useStudentFormInitialState() {
+  return {
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    birthDate: '',
+    idNumber: '',
+    educationLevel: '',
+    category: '',
+    studentType: '',
+    previousLicenseCategory: '',
+    instructor: '',
+    theoryGroup: '',
+    startDate: '',
+    expectedArrivalDate: '',
+    groupNumber: '',
+    recordMode: '',
+    insuranceStatus: '',
+    extraHours: '',
+    failedExamAttempts: '',
+    courseOutcome: '',
+    parentName: '',
+    parentPhone: '',
+    parentEmail: '',
+    parentFeedbackEnabled: '',
+    paidLessons: '',
+    completedHours: '0',
+    lessonPackage: '',
+    notes: '',
+  };
+}
+
+function normalizeFormDate(value: string) {
+  const trimmedValue = value.trim();
+
+  if (!trimmedValue) {
+    return null;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmedValue)) {
+    return trimmedValue;
+  }
+
+  const dateMatch = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(trimmedValue);
+
+  if (!dateMatch) {
+    return null;
+  }
+
+  return `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`;
+}
+
+function mapEducationLevelToBackendLabel(value: string) {
+  if (value === 'basic') {
+    return 'Основно';
+  }
+
+  if (value === 'secondary') {
+    return 'Средно';
+  }
+
+  if (value === 'college') {
+    return 'Полувисше / колеж';
+  }
+
+  if (value === 'higher') {
+    return 'Висше';
+  }
+
+  return value || null;
+}
+
+function mapEducationLevelToFormValue(value?: string | null) {
+  if (value === 'Основно') {
+    return 'basic';
+  }
+
+  if (value === 'Средно') {
+    return 'secondary';
+  }
+
+  if (value === 'Полувисше / колеж') {
+    return 'college';
+  }
+
+  if (value === 'Висше') {
+    return 'higher';
+  }
+
+  return value ?? '';
+}
+
+function mapCourseOutcomeToFormValue(value?: string) {
+  if (value === 'withdrawn') {
+    return 'withdrawn';
+  }
+
+  if (value === 'completed' || value === 'passed') {
+    return 'completed';
+  }
+
+  return 'active';
+}
+
+function mapFormCourseOutcomeToStudentStatus(value: string) {
+  if (value === 'completed') {
+    return 'COMPLETED';
+  }
+
+  if (value === 'withdrawn' || value === 'transferred') {
+    return 'WITHDRAWN';
+  }
+
+  return 'ACTIVE';
+}
+
+function mapFormCourseOutcomeToEnrollmentStatus(
+  value: string,
+  failedExamAttempts: number,
+) {
+  if (value === 'completed') {
+    return 'PASSED';
+  }
+
+  if (value === 'withdrawn' || value === 'transferred') {
+    return 'WITHDRAWN';
+  }
+
+  if (failedExamAttempts > 0) {
+    return 'FAILED_EXAM';
+  }
+
+  return 'ACTIVE';
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import { PageHeader } from "../components/ui-system/PageHeader";
 import { Button } from "../components/ui-system/Button";
@@ -30,18 +30,107 @@ import {
 } from "lucide-react";
 import {
   determinatorSessions,
-  getStudentOperationalRecord,
+  type StudentOperationalRecord,
 } from "../content/studentOperations";
+import { fetchStudentOperationalDetail } from "../services/studentsApi";
 
 export function StudentDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const studentId = Number(id) || 1;
-  const studentRecord = getStudentOperationalRecord(studentId);
+  const routeStudentId = id ?? "";
+  const [studentRecord, setStudentRecord] =
+    useState<StudentOperationalRecord | null>(null);
+  const [studentSourceStatus, setStudentSourceStatus] = useState<
+    "loading" | "backend" | "invalid" | "fallback"
+  >("loading");
   const [activeTab, setActiveTab] = useState("overview");
   const [parentReportStatus, setParentReportStatus] = useState(
-    studentRecord.latestParentFeedbackStatus,
+    "Няма изпратен отчет",
   );
+
+  useEffect(() => {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      routeStudentId,
+    )) {
+      setStudentRecord(null);
+      setParentReportStatus("Няма изпратен отчет");
+      setStudentSourceStatus("invalid");
+      return;
+    }
+
+    let isMounted = true;
+    setStudentSourceStatus("loading");
+
+    fetchStudentOperationalDetail(routeStudentId)
+      .then((record) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setStudentRecord(record);
+        setParentReportStatus(record.latestParentFeedbackStatus);
+        setStudentSourceStatus("backend");
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setStudentRecord(null);
+        setParentReportStatus("Няма изпратен отчет");
+        setStudentSourceStatus("fallback");
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [routeStudentId]);
+
+  if (!studentRecord) {
+    const isLoading = studentSourceStatus === "loading";
+
+    return (
+      <div>
+        <PageHeader
+          title={isLoading ? "Зареждане на курсист" : "Курсистът не е намерен"}
+          description={
+            isLoading
+              ? "Зареждане на профила от PostgreSQL."
+              : "Отвори курсиста от обновения списък, за да използваш реален backend UUID запис."
+          }
+          breadcrumbs={[
+            { label: "Начало", onClick: () => navigate("/") },
+            { label: "Курсисти", onClick: () => navigate("/students") },
+            { label: isLoading ? "Зареждане" : "Невалиден запис" },
+          ]}
+        />
+
+        <div className="p-6 lg:p-8">
+          <div
+            className="rounded-3xl p-6"
+            style={{
+              background: "var(--bg-card)",
+              border: "1px solid var(--ghost-border)",
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <TriangleAlert
+                size={22}
+                style={{ color: "var(--status-warning)" }}
+              />
+              <p style={{ color: "var(--text-secondary)" }}>
+                {isLoading
+                  ? "Моля, изчакай..."
+                  : studentSourceStatus === "fallback"
+                    ? "Неуспешно зареждане на курсиста от базата."
+                    : "Невалиден стар локален идентификатор."}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Mock data - in real app, fetch based on id
   const student = {
@@ -49,8 +138,8 @@ export function StudentDetailPage() {
     name: studentRecord.name,
     email: studentRecord.email,
     phone: studentRecord.phone,
-    address: "гр. София, ул. Витоша 15, ап. 7",
-    birthDate: "15.05.1995",
+    address: studentRecord.address ?? "гр. София, ул. Витоша 15, ап. 7",
+    birthDate: studentRecord.birthDate ?? "15.05.1995",
     idNumber: studentRecord.nationalId,
     educationLevel: studentRecord.educationLevel,
     category: studentRecord.category,
@@ -85,9 +174,9 @@ export function StudentDetailPage() {
     theoryCompleted: studentRecord.theoryCompleted,
     theoryAttendance: 10,
     theoryTotal: 12,
-    parentName: "Иван Георгиев",
-    parentPhone: "+359 887 654 321",
-    parentEmail: "ivan.georgiev@example.com",
+    parentName: studentRecord.parentName || "Няма въведен родител",
+    parentPhone: studentRecord.parentPhone || "Няма въведен телефон",
+    parentEmail: studentRecord.parentEmail || "Няма въведен email",
     studentTypeLabel: studentRecord.studentTypeLabel,
     hoursEntryPolicy: studentRecord.hoursEntryPolicy,
     hasPreviousLicense: studentRecord.hasPreviousLicense,
@@ -315,7 +404,13 @@ export function StudentDetailPage() {
     <div>
       <PageHeader
         title={student.name}
-        description={`Категория ${student.category} • ${student.instructor}`}
+        description={`Категория ${student.category} • ${student.instructor} • ${
+          studentSourceStatus === "backend"
+            ? "Данни от PostgreSQL"
+            : studentSourceStatus === "fallback"
+              ? "Fallback към локални данни"
+              : "Локални mock данни"
+        }`}
         breadcrumbs={[
           { label: "Начало", onClick: () => navigate("/") },
           { label: "Курсисти", onClick: () => navigate("/students") },

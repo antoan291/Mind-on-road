@@ -1,5 +1,5 @@
 ﻿import { Activity, Gauge, Hash, Plus, ShieldCheck, Timer, User } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '../../components/ui-system/Button';
 import { PageHeader } from '../../components/ui-system/PageHeader';
 import {
@@ -8,7 +8,14 @@ import {
   determinatorSessions as initialSessions,
   studentOperationalRecords,
   type DeterminatorSession,
+  type StudentOperationalRecord,
 } from '../../content/studentOperations';
+import { useAuthSession } from '../../services/authSession';
+import {
+  createDeterminatorSession,
+  fetchDeterminatorSessions,
+} from '../../services/determinatorApi';
+import { fetchStudentOperations } from '../../services/studentsApi';
 import {
   DataTableLayout,
   InfoLine,
@@ -19,6 +26,10 @@ import {
 } from './secondaryShared';
 
 export function DeterminatorPage() {
+  const { session } = useAuthSession();
+  const [students, setStudents] = useState<StudentOperationalRecord[]>(
+    studentOperationalRecords,
+  );
   const [sessions, setSessions] = useState<DeterminatorSession[]>(initialSessions);
   const [selectedStudentId, setSelectedStudentId] = useState(String(studentOperationalRecords[0]?.id ?? 1));
   const [formData, setFormData] = useState({
@@ -31,12 +42,49 @@ export function DeterminatorPage() {
     overallResult: '',
     instructorNote: '',
   });
+  const [sourceStatus, setSourceStatus] = useState<'loading' | 'backend' | 'fallback'>('loading');
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([fetchStudentOperations(), fetchDeterminatorSessions()])
+      .then(([nextStudents, nextSessions]) => {
+        if (!isMounted) {
+          return;
+        }
+
+        const mappedSessions: DeterminatorSession[] = nextSessions.map((protocol) => ({
+          ...protocol,
+          measuredAt: new Date(protocol.measuredAt).toLocaleString('bg-BG'),
+        }));
+
+        setStudents(nextStudents);
+        setSessions(mappedSessions);
+        setSelectedStudentId(String(nextStudents[0]?.id ?? studentOperationalRecords[0]?.id ?? 1));
+        setSourceStatus('backend');
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setStudents(studentOperationalRecords);
+        setSessions(initialSessions);
+        setSelectedStudentId(String(studentOperationalRecords[0]?.id ?? 1));
+        setSourceStatus('fallback');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const selectedStudent = useMemo(
     () =>
-      studentOperationalRecords.find((student) => String(student.id) === selectedStudentId) ??
-      studentOperationalRecords[0],
-    [selectedStudentId],
+      students.find((student) => String(student.id) === selectedStudentId) ??
+      students[0],
+    [selectedStudentId, students],
   );
 
   const selectedStudentSessions = useMemo(
@@ -67,37 +115,71 @@ export function DeterminatorPage() {
       )
     : 0;
 
-  const handleAddSession = () => {
+  const handleAddSession = async () => {
     if (!selectedStudent) return;
+    setSubmitError(null);
+    const shouldPersistToBackend =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        String(selectedStudent.id),
+      ) && Boolean(session?.csrfToken);
 
-    const nextSession: DeterminatorSession = {
-      id: `det-${Date.now()}`,
-      studentId: selectedStudent.id,
-      studentName: selectedStudent.name,
-      registrationNumber: selectedStudent.groupNumber || `REG-${selectedStudent.id}`,
-      measuredAt: new Date().toLocaleString('bg-BG'),
-      autoTempoCorrectReactions: Number(formData.autoTempoCorrectReactions) || 0,
+    const payload = {
+      studentId: String(selectedStudent.id),
+      registrationNumber:
+        selectedStudent.groupNumber || `REG-${selectedStudent.id}`,
+      autoTempoCorrectReactions:
+        Number(formData.autoTempoCorrectReactions) || 0,
       autoTempoWrongReactions: Number(formData.autoTempoWrongReactions) || 0,
-      autoTempoSuccessCoefficient: autoTempoCoefficient,
-      forcedTempoCorrectReactions: Number(formData.forcedTempoCorrectReactions) || 0,
-      forcedTempoDelayedReactions: Number(formData.forcedTempoDelayedReactions) || 0,
+      forcedTempoCorrectReactions:
+        Number(formData.forcedTempoCorrectReactions) || 0,
+      forcedTempoDelayedReactions:
+        Number(formData.forcedTempoDelayedReactions) || 0,
       forcedTempoWrongResults: Number(formData.forcedTempoWrongResults) || 0,
-      forcedTempoMissedStimuli: Number(formData.forcedTempoMissedStimuli) || 0,
-      forcedTempoSuccessCoefficient: forcedTempoCoefficient,
-      overallResult:
-        formData.overallResult.trim() ||
-        `Автотемп ${autoTempoCoefficient.toFixed(3)} · Наложен темп ${forcedTempoCoefficient.toFixed(3)}.`,
-      instructorNote:
-        formData.instructorNote.trim() ||
-        'Измерването е записано по показателите от детерминатора.',
+      forcedTempoMissedStimuli:
+        Number(formData.forcedTempoMissedStimuli) || 0,
+      overallResult: formData.overallResult.trim() || null,
+      instructorNote: formData.instructorNote.trim() || null,
     };
 
-    setSessions((current) => [nextSession, ...current]);
-    setFormData((current) => ({
-      ...current,
-      overallResult: '',
-      instructorNote: '',
-    }));
+    try {
+      const savedSession =
+        shouldPersistToBackend && session?.csrfToken
+          ? await createDeterminatorSession(payload, session.csrfToken)
+          : {
+              id: `det-${Date.now()}`,
+              ...payload,
+              studentName: selectedStudent.name,
+              measuredAt: new Date().toISOString(),
+              autoTempoSuccessCoefficient: autoTempoCoefficient,
+              forcedTempoSuccessCoefficient: forcedTempoCoefficient,
+              overallResult:
+                payload.overallResult ??
+                `Автотемп ${autoTempoCoefficient.toFixed(3)} · Наложен темп ${forcedTempoCoefficient.toFixed(3)}.`,
+              instructorNote:
+                payload.instructorNote ??
+                'Измерването е записано по показателите от детерминатора.',
+            };
+
+      setSessions((current) => [
+        {
+          ...savedSession,
+          measuredAt: new Date(savedSession.measuredAt).toLocaleString('bg-BG'),
+        },
+        ...current,
+      ]);
+      setFormData((current) => ({
+        ...current,
+        overallResult: '',
+        instructorNote: '',
+      }));
+      setSourceStatus(shouldPersistToBackend ? 'backend' : 'fallback');
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : 'Неуспешен запис на детерминатор протокол.',
+      );
+    }
   };
 
   return (
@@ -146,6 +228,27 @@ export function DeterminatorPage() {
             subtitle="Въведи имената и регистрационния номер чрез избран курсист, после попълни двете секции от уреда."
           >
             <div className="space-y-5">
+              <div className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
+                {sourceStatus === 'loading'
+                  ? 'Зареждане...'
+                  : sourceStatus === 'backend'
+                    ? 'Данни от PostgreSQL'
+                    : 'Fallback към локални mock данни'}
+              </div>
+
+              {submitError && (
+                <div
+                  className="rounded-2xl px-4 py-3 text-sm"
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    color: 'var(--status-error)',
+                    border: '1px solid rgba(239, 68, 68, 0.18)',
+                  }}
+                >
+                  {submitError}
+                </div>
+              )}
+
               <div
                 className="rounded-3xl p-4"
                 style={{
@@ -169,7 +272,7 @@ export function DeterminatorPage() {
                     border: '1px solid var(--ghost-border)',
                   }}
                 >
-                  {studentOperationalRecords.map((student) => (
+                  {students.map((student) => (
                     <option key={student.id} value={String(student.id)}>
                       {student.name}
                     </option>

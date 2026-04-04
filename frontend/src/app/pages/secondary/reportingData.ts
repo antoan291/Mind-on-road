@@ -1,4 +1,10 @@
-﻿export type DashboardTransactionType = 'income' | 'expense' | 'friend-vat-expense';
+﻿import type { ExpenseRecordView } from '../../services/expensesApi';
+import type { PaymentRecordView } from '../../services/paymentsApi';
+
+export type DashboardTransactionType =
+  | 'income'
+  | 'expense'
+  | 'friend-vat-expense';
 export type DashboardPaymentMethod = 'cash' | 'bank' | 'card' | 'pos';
 export type DashboardEntryStatus = 'success' | 'warning' | 'error';
 
@@ -22,131 +28,110 @@ export type DashboardReportEntry = {
 
 export const reportEntries: DashboardReportEntry[] = [
   {
-    id: 'entry-1',
-    title: 'Шофьорски курс - B',
+    id: 'entry-antoan-payment',
+    title: 'Шофьорски курс - B · Антоан Тест',
     type: 'income',
     category: 'Курсисти',
-    amount: 250,
-    date: '2026-02-05',
-    source: 'Седмичен отчет',
-    paymentMethod: 'cash',
+    amount: 1200,
+    date: '2026-04-04',
+    source: 'PostgreSQL плащания',
+    paymentMethod: 'bank',
     status: 'success',
-    documentReference: 'ф7981',
-    counterparty: 'Михаил Катеринов Минчев',
-    note: 'Доплащане по курс',
+    documentReference: 'PAY-AT-001',
+    counterparty: 'Антоан Тест',
+    note: 'Единствен тестов курсист за локална проверка на отчетите.',
     currency: 'BGN'
   },
   {
-    id: 'entry-2',
-    title: 'Такса теория',
-    type: 'income',
-    category: 'Такси',
-    amount: 16.36,
-    date: '2026-01-30',
-    source: 'Седмичен отчет',
-    paymentMethod: 'card',
-    status: 'success',
-    documentReference: '',
-    counterparty: 'Даниел Веселинов Иванов',
-    note: 'Такси',
-    currency: 'EUR'
-  },
-  {
-    id: 'entry-3',
-    title: 'Гориво',
-    type: 'expense',
-    category: 'Поддръжка',
-    amount: 17,
-    date: '2026-01-30',
-    source: 'Седмичен отчет',
-    paymentMethod: 'bank',
-    status: 'warning',
-    documentReference: '',
-    counterparty: 'Панчо',
-    note: 'Гориво',
-    currency: 'EUR'
-  },
-  {
-    id: 'entry-4',
-    title: 'Пратка Еконт',
-    type: 'expense',
-    category: 'Оперативни разходи',
-    amount: 40,
-    date: '2026-01-30',
-    source: 'Седмичен отчет',
-    paymentMethod: 'bank',
-    status: 'warning',
-    documentReference: '',
-    counterparty: 'Ники',
-    note: 'Пратка Еконт',
-    currency: 'EUR'
-  },
-  {
-    id: 'entry-5',
-    title: 'II-ра практика ДАИ',
-    type: 'income',
-    category: 'Изпитни такси',
-    amount: 171.28,
-    date: '2026-02-12',
-    source: 'Седмичен отчет',
-    paymentMethod: 'pos',
-    status: 'success',
-    documentReference: '',
-    counterparty: 'Даниел Асенов Кирилов',
-    note: 'II-ра практика ДАИ',
-    currency: 'EUR'
-  },
-  {
-    id: 'entry-6',
-    title: 'Банков превод към университет',
-    type: 'expense',
-    category: 'Такси и трансфери',
-    amount: 64,
-    date: '2026-02-25',
-    source: 'Седмичен отчет',
-    paymentMethod: 'bank',
-    status: 'warning',
-    documentReference: '',
-    counterparty: 'Технически университет',
-    note: 'Банково плащане към университет',
-    currency: 'BGN'
-  },
-  {
-    id: 'entry-7',
-    title: 'Фактура гориво от приятел',
+    id: 'entry-friend-vat-001',
+    title: 'Фактура гориво от приятел · тест',
     type: 'friend-vat-expense',
     category: 'ДДС от приятели',
     amount: 240,
-    date: '2026-03-20',
+    date: '2026-04-04',
     source: 'Приятелски документ',
     paymentMethod: 'bank',
     status: 'success',
-    documentReference: 'FR-VAT-0320',
+    documentReference: 'FR-VAT-AT-001',
     counterparty: 'Партньор доставчик',
     note: 'Не е реален разход в касата, използва се само за ДДС калкулация.',
     currency: 'BGN',
     vatAmount: 40,
-    affectsOperationalExpense: false
-  },
-  {
-    id: 'entry-8',
-    title: 'Сервизен документ от партньор',
-    type: 'friend-vat-expense',
-    category: 'ДДС от приятели',
-    amount: 180,
-    date: '2026-03-28',
-    source: 'Приятелски документ',
-    paymentMethod: 'bank',
-    status: 'success',
-    documentReference: 'FR-VAT-0328',
-    counterparty: 'Автосервиз партньор',
-    note: 'Отчетен само за ДДС, без да увеличава реалните разходи.',
-    currency: 'BGN',
-    vatAmount: 30,
     affectsOperationalExpense: false
   }
 ];
 
 export function formatDashboardMoney(amount: number) {
   return amount.toLocaleString('bg-BG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' лв';
+}
+
+export function buildReportEntriesFromFinanceRecords(
+  payments: PaymentRecordView[],
+  expenses: ExpenseRecordView[],
+): DashboardReportEntry[] {
+  const paymentEntries: DashboardReportEntry[] = payments.map((payment) => ({
+    id: String(payment.id),
+    title: `${payment.paymentReason || 'Плащане'} · ${payment.student}`,
+    type: 'income',
+    category: payment.category || 'Курсисти',
+    amount: payment.paidAmount,
+    date: payment.date,
+    source: 'PostgreSQL плащания',
+    paymentMethod: normalizePaymentMethod(payment.paymentMethod),
+    status: normalizeIncomeStatus(payment.paymentStatus),
+    documentReference: payment.paymentNumber,
+    counterparty: payment.student,
+    note: payment.notes || '',
+    currency: 'BGN',
+    affectsOperationalExpense: true,
+  }));
+
+  const expenseEntries: DashboardReportEntry[] = expenses.map((expense) => ({
+    id: expense.id,
+    title: expense.title,
+    type: expense.type,
+    category: expense.category,
+    amount: expense.amount,
+    date: expense.date,
+    source: expense.source,
+    paymentMethod: normalizePaymentMethod(expense.paymentMethod),
+    status: expense.status,
+    documentReference: '',
+    counterparty: expense.counterparty,
+    note: expense.note,
+    currency: 'BGN',
+    vatAmount: expense.vatAmount,
+    affectsOperationalExpense: expense.affectsOperationalExpense,
+  }));
+
+  return [...paymentEntries, ...expenseEntries].sort((left, right) =>
+    right.date.localeCompare(left.date),
+  );
+}
+
+function normalizePaymentMethod(value: string): DashboardPaymentMethod {
+  if (
+    value === 'cash' ||
+    value === 'bank' ||
+    value === 'card' ||
+    value === 'pos'
+  ) {
+    return value;
+  }
+
+  return 'bank';
+}
+
+function normalizeIncomeStatus(
+  value: PaymentRecordView['paymentStatus'],
+): DashboardEntryStatus {
+  if (value === 'paid') {
+    return 'success';
+  }
+
+  if (value === 'partial' || value === 'pending') {
+    return 'warning';
+  }
+
+  return 'error';
 }

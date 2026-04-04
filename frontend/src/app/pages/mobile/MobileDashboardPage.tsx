@@ -48,7 +48,7 @@ export function MobileDashboardPage() {
           <div className="space-y-3">
             <ScheduleCard
               time="09:00"
-              student="Петър Георгиев"
+              student="Антоан Тест"
               instructor="Георги Петров"
               location="Централна зона"
               status="active"
@@ -56,7 +56,7 @@ export function MobileDashboardPage() {
             />
             <ScheduleCard
               time="10:30"
-              student="Елена Димитрова"
+              student="Антоан Тест"
               instructor="Иван Димитров"
               location="Южна зона"
               status="upcoming"
@@ -64,7 +64,7 @@ export function MobileDashboardPage() {
             />
             <ScheduleCard
               time="12:00"
-              student="Мартин Иванов"
+              student="Антоан Тест"
               instructor="Георги Петров"
               location="Централна зона"
               status="upcoming"

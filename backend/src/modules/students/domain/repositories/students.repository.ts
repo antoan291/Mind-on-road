@@ -1,0 +1,131 @@
+export interface StudentEnrollmentRecord {
+  id: string;
+  categoryCode: string;
+  status: string;
+  trainingMode: string;
+  registerMode: string;
+  theoryGroupNumber: string | null;
+  assignedInstructorName: string | null;
+  enrollmentDate: Date;
+  expectedArrivalDate: Date | null;
+  previousLicenseCategory: string | null;
+  packageHours: number;
+  additionalHours: number;
+  completedHours: number;
+  failedExamAttempts: number;
+  lastPracticeAt: Date | null;
+  notes: string | null;
+}
+
+export interface StudentProfileRecord {
+  id: string;
+  displayName: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string | null;
+  nationalId: string | null;
+  birthDate: Date | null;
+  address: string | null;
+  educationLevel: string | null;
+  parentName: string | null;
+  parentPhone: string | null;
+  parentEmail: string | null;
+  parentContactStatus: string;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+  enrollments: StudentEnrollmentRecord[];
+}
+
+export interface DeterminatorSessionRecord {
+  id: string;
+  studentId: string;
+  studentName: string;
+  registrationNumber: string;
+  measuredAt: Date;
+  autoTempoCorrectReactions: number;
+  autoTempoWrongReactions: number;
+  autoTempoSuccessCoefficient: number;
+  forcedTempoCorrectReactions: number;
+  forcedTempoDelayedReactions: number;
+  forcedTempoWrongResults: number;
+  forcedTempoMissedStimuli: number;
+  forcedTempoSuccessCoefficient: number;
+  overallResult: string;
+  instructorNote: string;
+}
+
+export interface DeterminatorSessionCreateInput {
+  studentId: string;
+  registrationNumber: string;
+  autoTempoCorrectReactions: number;
+  autoTempoWrongReactions: number;
+  forcedTempoCorrectReactions: number;
+  forcedTempoDelayedReactions: number;
+  forcedTempoWrongResults: number;
+  forcedTempoMissedStimuli: number;
+  overallResult: string | null;
+  instructorNote: string | null;
+}
+
+export interface StudentEnrollmentWriteInput {
+  categoryCode: string;
+  status: string;
+  trainingMode: string;
+  registerMode: string;
+  theoryGroupNumber: string | null;
+  assignedInstructorName: string | null;
+  enrollmentDate: Date;
+  expectedArrivalDate: Date | null;
+  previousLicenseCategory: string | null;
+  packageHours: number;
+  additionalHours: number;
+  completedHours: number;
+  failedExamAttempts: number;
+  lastPracticeAt: Date | null;
+  notes: string | null;
+}
+
+export interface StudentWriteInput {
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  phone: string;
+  email: string | null;
+  nationalId: string | null;
+  birthDate: Date | null;
+  address: string | null;
+  educationLevel: string | null;
+  parentName: string | null;
+  parentPhone: string | null;
+  parentEmail: string | null;
+  parentContactStatus: string;
+  status: string;
+  enrollment: StudentEnrollmentWriteInput;
+}
+
+export interface StudentsRepository {
+  listByTenant(params: { tenantId: string }): Promise<StudentProfileRecord[]>;
+  findByTenantAndId(params: {
+    tenantId: string;
+    studentId: string;
+  }): Promise<StudentProfileRecord | null>;
+  createForTenant(params: {
+    tenantId: string;
+    student: StudentWriteInput;
+  }): Promise<StudentProfileRecord>;
+  updateByTenantAndId(params: {
+    tenantId: string;
+    studentId: string;
+    student: StudentWriteInput;
+  }): Promise<StudentProfileRecord | null>;
+  listDeterminatorSessionsByTenant(params: {
+    tenantId: string;
+    studentId?: string;
+  }): Promise<DeterminatorSessionRecord[]>;
+  createDeterminatorSession(params: {
+    tenantId: string;
+    session: DeterminatorSessionCreateInput;
+  }): Promise<DeterminatorSessionRecord | null>;
+}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { PageHeader } from '../components/ui-system/PageHeader';
 import { FilterBar } from '../components/ui-system/FilterBar';
@@ -8,20 +8,34 @@ import { Button } from '../components/ui-system/Button';
 import { 
   Plus, Download, Upload, X, FileText, AlertCircle,
   CheckCircle, Calendar, User, Car, Building, Eye,
-  Image as ImageIcon, XCircle
+  Image as ImageIcon, Play, RefreshCcw, XCircle
 } from 'lucide-react';
-import { mockDocuments } from '../content/mockDb';
+import {
+  createDocumentRecord,
+  fetchDocumentOcrExtractions,
+  fetchDocumentOcrSourceFiles,
+  fetchDocumentRecords,
+  runDocumentOcrExtraction,
+  type DocumentOcrExtractionView,
+  type DocumentRecordView,
+  updateDocumentRecord,
+} from '../services/documentsApi';
+import { useAuthSession } from '../services/authSession';
+import {
+  type StudentOperationalRecord,
+} from '../content/studentOperations';
+import { fetchStudentOperations } from '../services/studentsApi';
 
 type DocumentType = 'student' | 'instructor' | 'vehicle' | 'school';
 type DocumentStatus = 'valid' | 'expiring-soon' | 'expired' | 'missing';
 
-type Document = {
-  id: number;
+type Document = DocumentRecordView & {
+  id: string | number;
   name: string;
   type: DocumentType;
   category: string;
   owner: string;
-  ownerId: number;
+  ownerId: string | number;
   issueDate: string;
   expiryDate: string;
   daysUntilExpiry: number;
@@ -32,15 +46,69 @@ type Document = {
 };
 
 export function DocumentsPage() {
+  const { session } = useAuthSession();
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState('');
   const [activeTab, setActiveTab] = useState<DocumentType>('student');
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadTargetDocument, setUploadTargetDocument] = useState<Document | null>(
+    null,
+  );
+  const [allDocuments, setAllDocuments] = useState<Document[]>(
+    [],
+  );
+  const [ocrExtractions, setOcrExtractions] = useState<
+    DocumentOcrExtractionView[]
+  >([]);
+  const [ocrSourceFiles, setOcrSourceFiles] = useState<string[]>([]);
+  const [selectedOcrSourceFile, setSelectedOcrSourceFile] = useState('');
+  const [ocrRunStatus, setOcrRunStatus] = useState<
+    'idle' | 'running' | 'success' | 'error'
+  >('idle');
+  const [ocrRunMessage, setOcrRunMessage] = useState('');
+  const [students, setStudents] = useState<StudentOperationalRecord[]>([]);
+  const [sourceStatus, setSourceStatus] = useState<
+    'loading' | 'backend' | 'fallback'
+  >('loading');
 
-  const allDocuments: Document[] = mockDocuments as Document[];
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([
+      fetchDocumentRecords(),
+      fetchStudentOperations(),
+      fetchDocumentOcrExtractions(),
+      fetchDocumentOcrSourceFiles(),
+    ])
+      .then(([records, studentRows, extractionRows, sourceFiles]) => {
+        if (!isMounted) return;
+        setAllDocuments(records as Document[]);
+        setStudents(studentRows);
+        setOcrExtractions(extractionRows);
+        setOcrSourceFiles(sourceFiles);
+        setSelectedOcrSourceFile((current) => current || sourceFiles[0] || '');
+        setSourceStatus('backend');
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setAllDocuments([]);
+        setOcrSourceFiles([]);
+        setSourceStatus('fallback');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const filteredDocuments = allDocuments.filter(doc => doc.type === activeTab);
+  const exportedDocuments = filteredDocuments.filter((document) =>
+    [document.name, document.owner, document.category]
+      .join(' ')
+      .toLowerCase()
+      .includes(searchValue.trim().toLowerCase()),
+  );
 
   // Calculate stats for active tab
   const validCount = filteredDocuments.filter(d => d.status === 'valid').length;
@@ -183,6 +251,7 @@ export function DocumentsPage() {
               icon={<Upload size={16} />}
               onClick={(e) => {
                 e.stopPropagation();
+                setUploadTargetDocument(row);
                 setShowUploadModal(true);
               }}
             >
@@ -204,7 +273,7 @@ export function DocumentsPage() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  console.log('Download', row.fileUrl);
+                  downloadDocumentFile(row);
                 }}
                 className="w-9 h-9 rounded-lg flex items-center justify-center transition-all hover:shadow-[var(--glow-indigo)]"
                 style={{ background: 'var(--bg-panel)', color: 'var(--text-secondary)' }}
@@ -223,17 +292,34 @@ export function DocumentsPage() {
     <div>
       <PageHeader
         title="Документи"
-        description="Управление на документи и валидност"
+        description={`Управление на документи и валидност • ${
+          sourceStatus === 'backend'
+            ? 'Данни от PostgreSQL'
+            : sourceStatus === 'fallback'
+              ? 'Fallback към локални тестови данни'
+              : 'Зареждане...'
+        }`}
         breadcrumbs={[
           { label: 'Начало', onClick: () => navigate('/') },
           { label: 'Документи' },
         ]}
         actions={
           <>
-            <Button variant="secondary" icon={<Download size={18} />}>
+            <Button
+              variant="secondary"
+              icon={<Download size={18} />}
+              onClick={() => exportDocumentsCsv(exportedDocuments, activeTab)}
+            >
               Експорт
             </Button>
-            <Button variant="primary" icon={<Upload size={18} />} onClick={() => setShowUploadModal(true)}>
+            <Button
+              variant="primary"
+              icon={<Upload size={18} />}
+              onClick={() => {
+                setUploadTargetDocument(null);
+                setShowUploadModal(true);
+              }}
+            >
               Качи документ
             </Button>
           </>
@@ -302,6 +388,221 @@ export function DocumentsPage() {
           </div>
         )}
 
+        <div
+          className="rounded-2xl p-5 mb-6"
+          style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+          }}
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <div
+                className="text-sm font-semibold uppercase tracking-[0.16em]"
+                style={{ color: 'var(--text-tertiary)' }}
+              >
+                OCR резултати за преглед
+              </div>
+              <h2
+                className="mt-2 text-xl font-semibold"
+                style={{ color: 'var(--text-primary)' }}
+              >
+                Human review преди официално записване
+              </h2>
+              <p
+                className="mt-2 text-sm max-w-3xl"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                Backend чете JSON резултатите от `automation/output` само за
+                преглед. Данните от OCR не се записват автоматично в профил или
+                документ без ръчно потвърждение.
+              </p>
+            </div>
+
+            <div
+              className="rounded-xl px-4 py-3 text-sm font-medium"
+              style={{
+                background: 'var(--bg-panel)',
+                color: 'var(--text-primary)',
+              }}
+            >
+              {ocrExtractions.length} резултата
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-[minmax(240px,1fr)_auto_auto]">
+            <select
+              value={selectedOcrSourceFile}
+              onChange={(event) => {
+                setSelectedOcrSourceFile(event.target.value);
+                setOcrRunStatus('idle');
+                setOcrRunMessage('');
+              }}
+              disabled={ocrSourceFiles.length === 0}
+              className="h-12 rounded-xl px-4 text-sm outline-none"
+              style={{
+                background: 'var(--bg-panel)',
+                border: '1px solid var(--border-color)',
+                color: 'var(--text-primary)',
+              }}
+            >
+              {ocrSourceFiles.length === 0 ? (
+                <option value="">Няма PDF файлове в automation/samples</option>
+              ) : (
+                ocrSourceFiles.map((fileName) => (
+                  <option key={fileName} value={fileName}>
+                    {fileName}
+                  </option>
+                ))
+              )}
+            </select>
+
+            <Button
+              variant="secondary"
+              icon={<RefreshCcw size={16} />}
+              onClick={async () => {
+                const [freshExtractions, freshSourceFiles] = await Promise.all([
+                  fetchDocumentOcrExtractions(),
+                  fetchDocumentOcrSourceFiles(),
+                ]);
+
+                setOcrExtractions(freshExtractions);
+                setOcrSourceFiles(freshSourceFiles);
+                setSelectedOcrSourceFile((current) =>
+                  freshSourceFiles.includes(current)
+                    ? current
+                    : freshSourceFiles[0] || '',
+                );
+                setOcrRunStatus('idle');
+                setOcrRunMessage('OCR списъкът е обновен.');
+              }}
+            >
+              Обнови
+            </Button>
+
+            <Button
+              variant="primary"
+              icon={<Play size={16} />}
+              disabled={!selectedOcrSourceFile || ocrRunStatus === 'running'}
+              onClick={async () => {
+                if (!selectedOcrSourceFile) return;
+
+                setOcrRunStatus('running');
+                setOcrRunMessage(
+                  `Стартира OCR анализ за ${selectedOcrSourceFile}...`,
+                );
+
+                try {
+                  const extractedDocument = await runDocumentOcrExtraction(
+                    selectedOcrSourceFile,
+                    session?.csrfToken ?? '',
+                  );
+                  const refreshedExtractions =
+                    await fetchDocumentOcrExtractions();
+
+                  setOcrExtractions(refreshedExtractions);
+                  setOcrRunStatus('success');
+                  setOcrRunMessage(
+                    `OCR анализът завърши успешно: ${extractedDocument.fileName}`,
+                  );
+                  setSourceStatus('backend');
+                } catch (error) {
+                  setOcrRunStatus('error');
+                  setOcrRunMessage(
+                    error instanceof Error
+                      ? error.message
+                      : 'OCR анализът не успя.',
+                  );
+                }
+              }}
+            >
+              Стартирай OCR
+            </Button>
+          </div>
+
+          {ocrRunMessage && (
+            <p
+              className="mt-3 text-sm"
+              style={{
+                color:
+                  ocrRunStatus === 'error'
+                    ? 'var(--status-error)'
+                    : ocrRunStatus === 'success'
+                      ? 'var(--status-success)'
+                      : 'var(--text-secondary)',
+              }}
+            >
+              {ocrRunMessage}
+            </p>
+          )}
+
+          <div className="mt-5 grid gap-3 lg:grid-cols-3">
+            {ocrExtractions.length === 0 ? (
+              <div
+                className="rounded-xl p-4 text-sm"
+                style={{
+                  background: 'var(--bg-panel)',
+                  color: 'var(--text-secondary)',
+                }}
+              >
+                Няма OCR JSON файлове за преглед в `automation/output`.
+              </div>
+            ) : (
+              ocrExtractions.map((extraction) => (
+                <div
+                  key={extraction.fileName}
+                  className="rounded-xl p-4"
+                  style={{
+                    background: 'var(--bg-panel)',
+                    border: '1px solid var(--border-color)',
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center"
+                      style={{ background: 'var(--bg-card)' }}
+                    >
+                      <ImageIcon
+                        size={18}
+                        style={{ color: 'var(--primary-accent)' }}
+                      />
+                    </div>
+                    <StatusBadge
+                      status={
+                        extraction.manualReviewRequired ? 'warning' : 'success'
+                      }
+                      size="small"
+                    >
+                      {extraction.manualReviewRequired
+                        ? 'Ръчен преглед'
+                        : 'Проверен'}
+                    </StatusBadge>
+                  </div>
+
+                  <div
+                    className="mt-3 font-semibold"
+                    style={{ color: 'var(--text-primary)' }}
+                  >
+                    {extraction.extractedName}
+                  </div>
+                  <div
+                    className="mt-1 text-sm"
+                    style={{ color: 'var(--text-secondary)' }}
+                  >
+                    {extraction.documentName} · {extraction.documentNumber}
+                  </div>
+                  <div
+                    className="mt-3 text-xs break-all"
+                    style={{ color: 'var(--text-tertiary)' }}
+                  >
+                    {extraction.fileName}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
         {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
           <StatCard
@@ -365,13 +666,13 @@ export function DocumentsPage() {
       <div className="p-6 lg:p-8">
         <div className="mb-4">
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-            Показани {filteredDocuments.length} документа
+          Показани {exportedDocuments.length} документа
           </p>
         </div>
 
         <DataTable
           columns={columns}
-          data={filteredDocuments}
+          data={exportedDocuments}
           onRowClick={(row) => row.status !== 'missing' && setSelectedDocument(row)}
         />
       </div>
@@ -381,6 +682,11 @@ export function DocumentsPage() {
         <DocumentDetailModal
           document={selectedDocument}
           onClose={() => setSelectedDocument(null)}
+          onUpdate={() => {
+            setUploadTargetDocument(selectedDocument);
+            setShowUploadModal(true);
+            setSelectedDocument(null);
+          }}
         />
       )}
 
@@ -389,10 +695,84 @@ export function DocumentsPage() {
         <UploadModal
           onClose={() => setShowUploadModal(false)}
           documentType={activeTab}
+          students={students}
+          targetDocument={uploadTargetDocument}
+          onSubmit={async (payload) => {
+            const savedDocument = uploadTargetDocument
+              ? await updateDocumentRecord(
+                  String(uploadTargetDocument.id),
+                  payload,
+                  session?.csrfToken ?? '',
+                )
+              : await createDocumentRecord(payload, session?.csrfToken ?? '');
+
+            setAllDocuments((current) =>
+              uploadTargetDocument
+                ? current.map((document) =>
+                    document.id === savedDocument.id
+                      ? (savedDocument as Document)
+                      : document,
+                  )
+                : [savedDocument as Document, ...current],
+            );
+            setShowUploadModal(false);
+            setUploadTargetDocument(null);
+            setSourceStatus('backend');
+          }}
         />
       )}
     </div>
   );
+}
+
+function downloadDocumentFile(document: Document) {
+  const blob = new Blob(
+    [
+      [
+        `Документ: ${document.name}`,
+        `Собственик: ${document.owner}`,
+        `Категория: ${document.category}`,
+        `Издаден: ${document.issueDate}`,
+        `Валиден до: ${document.expiryDate}`,
+        `Статус: ${document.statusLabel}`,
+        `Бележки: ${document.notes ?? 'Няма'}`,
+      ].join('\n'),
+    ],
+    { type: 'text/plain;charset=utf-8' },
+  );
+  const downloadUrl = URL.createObjectURL(blob);
+  const anchor = globalThis.document.createElement('a');
+  anchor.href = downloadUrl;
+  anchor.download = `${document.name.replace(/\s+/g, '_')}.txt`;
+  anchor.click();
+  URL.revokeObjectURL(downloadUrl);
+}
+
+function exportDocumentsCsv(documents: Document[], activeTab: DocumentType) {
+  const csvRows = [
+    'name,owner,category,issueDate,expiryDate,status',
+    ...documents.map((document) =>
+      [
+        document.name,
+        document.owner,
+        document.category,
+        document.issueDate,
+        document.expiryDate,
+        document.statusLabel,
+      ]
+        .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+        .join(','),
+    ),
+  ];
+  const blob = new Blob([csvRows.join('\n')], {
+    type: 'text/csv;charset=utf-8',
+  });
+  const downloadUrl = URL.createObjectURL(blob);
+  const anchor = globalThis.document.createElement('a');
+  anchor.href = downloadUrl;
+  anchor.download = `documents_${activeTab}.csv`;
+  anchor.click();
+  URL.revokeObjectURL(downloadUrl);
 }
 
 // Stat Card Component
@@ -439,9 +819,11 @@ function StatCard({
 function DocumentDetailModal({
   document,
   onClose,
+  onUpdate,
 }: {
   document: Document;
   onClose: () => void;
+  onUpdate: () => void;
 }) {
   const getStatusColor = (status: DocumentStatus): 'success' | 'warning' | 'error' | 'info' => {
     switch (status) {
@@ -596,10 +978,18 @@ function DocumentDetailModal({
 
             {/* Actions */}
             <div className="flex gap-3">
-              <Button variant="primary" icon={<Download size={18} />}>
+              <Button
+                variant="primary"
+                icon={<Download size={18} />}
+                onClick={() => downloadDocumentFile(document)}
+              >
                 Изтегли документ
               </Button>
-              <Button variant="secondary" icon={<Upload size={18} />}>
+              <Button
+                variant="secondary"
+                icon={<Upload size={18} />}
+                onClick={onUpdate}
+              >
                 Актуализирай
               </Button>
             </div>
@@ -614,11 +1004,104 @@ function DocumentDetailModal({
 function UploadModal({
   onClose,
   documentType,
+  students,
+  targetDocument,
+  onSubmit,
 }: {
   onClose: () => void;
   documentType: DocumentType;
+  students: StudentOperationalRecord[];
+  targetDocument: Document | null;
+  onSubmit: (payload: {
+    studentId?: string | null;
+    name: string;
+    ownerType: 'STUDENT' | 'INSTRUCTOR' | 'VEHICLE' | 'SCHOOL';
+    ownerName: string;
+    ownerRef?: string | null;
+    category: string;
+    documentNo?: string | null;
+    issueDate: string;
+    expiryDate?: string | null;
+    status: 'VALID' | 'EXPIRING_SOON' | 'EXPIRED' | 'MISSING';
+    fileUrl?: string | null;
+    notes?: string | null;
+  }) => Promise<void>;
 }) {
   const [dragActive, setDragActive] = useState(false);
+  const [selectedFileName, setSelectedFileName] = useState(
+    normalizeDocumentFileName(targetDocument?.fileUrl ?? ''),
+  );
+  const [documentName, setDocumentName] = useState(
+    targetDocument?.name ?? 'Лична карта',
+  );
+  const [ownerValue, setOwnerValue] = useState(
+    targetDocument?.ownerId ? String(targetDocument.ownerId) : '',
+  );
+  const [ownerName, setOwnerName] = useState(targetDocument?.owner ?? '');
+  const [issueDate, setIssueDate] = useState(
+    toIsoDateInputValue(targetDocument?.issueDate) ||
+      new Date().toISOString().slice(0, 10),
+  );
+  const [expiryDate, setExpiryDate] = useState(
+    targetDocument?.expiryDate && targetDocument.expiryDate !== 'Без срок'
+      ? toIsoDateInputValue(targetDocument.expiryDate)
+      : '',
+  );
+  const [notes, setNotes] = useState(targetDocument?.notes ?? '');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const resolvedOwnerType = mapDocumentTypeToOwnerType(documentType);
+
+  const handleSaveDocument = async () => {
+    if (isSaving) {
+      return;
+    }
+
+    if (documentType === 'student' && !ownerValue) {
+      setSaveError('Избери курсист собственик на документа.');
+      return;
+    }
+
+    const effectiveOwnerName =
+      documentType === 'student'
+        ? students.find((student) => String(student.id) === ownerValue)?.name ||
+          ownerName ||
+          targetDocument?.owner ||
+          'Курсист'
+        : ownerName.trim() || targetDocument?.owner || 'Mind on Road';
+
+    setSaveError(null);
+    setIsSaving(true);
+
+    try {
+      await onSubmit({
+        studentId: documentType === 'student' ? ownerValue : null,
+        name: documentName.trim() || targetDocument?.name || 'Документ',
+        ownerType: resolvedOwnerType,
+        ownerName: effectiveOwnerName,
+        ownerRef: documentType === 'student' ? ownerValue : effectiveOwnerName,
+        category: targetDocument?.category ?? (documentName.trim() || 'Общи'),
+        documentNo:
+          targetDocument?.id !== undefined
+            ? `DOC-${String(targetDocument.id).slice(0, 8)}`
+            : `DOC-${Date.now().toString().slice(-6)}`,
+        issueDate,
+        expiryDate: expiryDate || null,
+        status: expiryDate ? resolveDocumentStatus(expiryDate) : 'VALID',
+        fileUrl: toDocumentStorageUrl(selectedFileName),
+        notes: notes.trim() || null,
+      });
+    } catch (error) {
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : 'Документът не беше записан в базата.',
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -634,8 +1117,7 @@ function UploadModal({
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    // Handle file upload
-    console.log('Files dropped:', e.dataTransfer.files);
+    setSelectedFileName(e.dataTransfer.files[0]?.name ?? '');
   };
 
   return (
@@ -683,6 +1165,15 @@ function UploadModal({
                 background: dragActive ? 'rgba(99, 102, 241, 0.08)' : 'var(--bg-panel)',
               }}
             >
+              <input
+                id="documents-upload-input"
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                className="hidden"
+                onChange={(event) =>
+                  setSelectedFileName(event.target.files?.[0]?.name ?? '')
+                }
+              />
               <div className="flex flex-col items-center text-center">
                 <Upload 
                   size={48} 
@@ -695,9 +1186,20 @@ function UploadModal({
                 <p className="text-sm mb-4" style={{ color: 'var(--text-tertiary)' }}>
                   Поддържани формати: PDF, JPG, PNG (макс. 10MB)
                 </p>
-                <Button variant="secondary" icon={<Upload size={18} />}>
+                <Button
+                  variant="secondary"
+                  icon={<Upload size={18} />}
+                  onClick={() =>
+                    document.getElementById('documents-upload-input')?.click()
+                  }
+                >
                   Избери файл
                 </Button>
+                {selectedFileName && (
+                  <p className="mt-3 text-sm" style={{ color: 'var(--status-success)' }}>
+                    Избран файл: {selectedFileName}
+                  </p>
+                )}
               </div>
             </div>
 
@@ -708,13 +1210,15 @@ function UploadModal({
                   Тип документ
                 </label>
                 <select
+                  value={documentName}
+                  onChange={(event) => setDocumentName(event.target.value)}
                   className="w-full h-12 rounded-lg px-4 border-none outline-none"
                   style={{
                     background: 'var(--bg-panel)',
                     color: 'var(--text-primary)',
                   }}
                 >
-                  <option>Избери тип документ...</option>
+                  <option value="">Избери тип документ...</option>
                   <option>Лична карта</option>
                   <option>Медицинско свидетелство</option>
                   <option>Психологическо изследване</option>
@@ -723,14 +1227,56 @@ function UploadModal({
                 </select>
               </div>
 
+              {documentType === 'student' ? (
+                <div>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    Курсист
+                  </label>
+                  <select
+                    value={ownerValue}
+                    onChange={(event) => setOwnerValue(event.target.value)}
+                    className="w-full h-12 rounded-lg px-4 border-none outline-none"
+                    style={{
+                      background: 'var(--bg-panel)',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    <option value="">Избери курсист...</option>
+                    {students.map((student) => (
+                      <option key={student.id} value={String(student.id)}>
+                        {student.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                    Собственик
+                  </label>
+                  <input
+                    type="text"
+                    value={ownerName}
+                    onChange={(event) => setOwnerName(event.target.value)}
+                    placeholder="Име на инструктор, автомобил или организация"
+                    className="w-full h-12 rounded-lg px-4 border-none outline-none"
+                    style={{
+                      background: 'var(--bg-panel)',
+                      color: 'var(--text-primary)',
+                    }}
+                  />
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                     Дата на издаване
                   </label>
                   <input
-                    type="text"
-                    placeholder="ДД.ММ.ГГГГ"
+                    type="date"
+                    value={issueDate}
+                    onChange={(event) => setIssueDate(event.target.value)}
                     className="w-full h-12 rounded-lg px-4 border-none outline-none"
                     style={{
                       background: 'var(--bg-panel)',
@@ -744,8 +1290,9 @@ function UploadModal({
                     Валиден до
                   </label>
                   <input
-                    type="text"
-                    placeholder="ДД.ММ.ГГГГ"
+                    type="date"
+                    value={expiryDate}
+                    onChange={(event) => setExpiryDate(event.target.value)}
                     className="w-full h-12 rounded-lg px-4 border-none outline-none"
                     style={{
                       background: 'var(--bg-panel)',
@@ -760,6 +1307,8 @@ function UploadModal({
                   Бележки (по избор)
                 </label>
                 <textarea
+                  value={notes}
+                  onChange={(event) => setNotes(event.target.value)}
                   placeholder="Добавете допълнителна информация..."
                   rows={3}
                   className="w-full rounded-lg px-4 py-3 border-none outline-none resize-none"
@@ -771,10 +1320,21 @@ function UploadModal({
               </div>
             </div>
 
+            {saveError && (
+              <p className="text-sm" style={{ color: 'var(--status-error)' }}>
+                {saveError}
+              </p>
+            )}
+
             {/* Actions */}
             <div className="flex gap-3">
-              <Button variant="primary" icon={<Upload size={18} />}>
-                Качи документ
+              <Button
+                variant="primary"
+                icon={<Upload size={18} />}
+                onClick={() => void handleSaveDocument()}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Записване...' : 'Качи документ'}
               </Button>
               <Button variant="secondary" onClick={onClose}>
                 Отказ
@@ -785,6 +1345,73 @@ function UploadModal({
       </div>
     </>
   );
+}
+
+function mapDocumentTypeToOwnerType(documentType: DocumentType) {
+  if (documentType === 'instructor') {
+    return 'INSTRUCTOR' as const;
+  }
+
+  if (documentType === 'vehicle') {
+    return 'VEHICLE' as const;
+  }
+
+  if (documentType === 'school') {
+    return 'SCHOOL' as const;
+  }
+
+  return 'STUDENT' as const;
+}
+
+function toIsoDateInputValue(dateValue?: string) {
+  if (!dateValue) {
+    return '';
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    return dateValue;
+  }
+
+  const [day = '', month = '', year = ''] = dateValue.split('.');
+
+  if (!day || !month || !year) {
+    return '';
+  }
+
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
+function resolveDocumentStatus(expiryDate: string) {
+  const dayMs = 24 * 60 * 60 * 1000;
+  const remainingDays = Math.ceil(
+    (new Date(`${expiryDate}T00:00:00.000Z`).getTime() -
+      new Date().setHours(0, 0, 0, 0)) /
+      dayMs,
+  );
+
+  if (remainingDays < 0) {
+    return 'EXPIRED' as const;
+  }
+
+  if (remainingDays <= 60) {
+    return 'EXPIRING_SOON' as const;
+  }
+
+  return 'VALID' as const;
+}
+
+function normalizeDocumentFileName(fileUrl: string) {
+  return fileUrl.replace(/^mindonroad-local-upload:\/\//, '');
+}
+
+function toDocumentStorageUrl(fileName: string) {
+  const normalizedFileName = normalizeDocumentFileName(fileName).trim();
+
+  if (!normalizedFileName) {
+    return null;
+  }
+
+  return `mindonroad-local-upload://${normalizedFileName}`;
 }
 
 // Info Row Component

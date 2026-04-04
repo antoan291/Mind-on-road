@@ -2,12 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { Upload } from "lucide-react";
 import { Button, Input, Modal, Select, Textarea } from "../../components/shared";
 
-type QuickActionKey = "newStudent" | "newLesson" | "newDocument" | "registerPayment";
+export type QuickActionKey =
+  | "newStudent"
+  | "newLesson"
+  | "newDocument"
+  | "registerPayment";
 
-type DialogFormState = {
+export type DashboardQuickActionFormState = {
   fullName: string;
   phone: string;
   email: string;
+  parentPhone: string;
   category: string;
   theoryGroup: string;
   notes: string;
@@ -18,6 +23,7 @@ type DialogFormState = {
   lessonDate: string;
   lessonTime: string;
   duration: string;
+  customDurationMinutes: string;
   documentType: string;
   documentNumber: string;
   issueDate: string;
@@ -32,8 +38,17 @@ type DialogFormState = {
 
 type Props = {
   activeAction: QuickActionKey | null;
+  studentOptions: Array<{ value: string; label: string; category: string }>;
+  instructorOptions: Array<{ value: string; label: string }>;
+  vehicleOptions: Array<{ value: string; label: string }>;
+  theoryGroupOptions: Array<{ value: string; label: string }>;
+  isSubmitting: boolean;
+  submitError: string | null;
   onClose: () => void;
-  onConfirm: (action: QuickActionKey) => void;
+  onConfirm: (
+    action: QuickActionKey,
+    formState: DashboardQuickActionFormState,
+  ) => Promise<void> | void;
 };
 
 const selectOptions = {
@@ -42,30 +57,15 @@ const selectOptions = {
     { value: "A", label: "Категория A" },
     { value: "C", label: "Категория C" },
   ],
-  theoryGroup: [
-    { value: "group-monday", label: "Група понеделник 18:00" },
-    { value: "group-wednesday", label: "Група сряда 18:30" },
-    { value: "group-saturday", label: "Група събота 10:00" },
-  ],
   lessonType: [
     { value: "practice", label: "Практика" },
     { value: "theory", label: "Теория" },
     { value: "exam-prep", label: "Подготовка за изпит" },
   ],
-  instructor: [
-    { value: "georgi-petrov", label: "Георги Петров" },
-    { value: "ivan-dimitrov", label: "Иван Димитров" },
-    { value: "maria-nikolova", label: "Мария Николова" },
-  ],
-  vehicle: [
-    { value: "toyota-yaris", label: "Toyota Yaris CA1234AB" },
-    { value: "skoda-fabia", label: "Skoda Fabia B9876CD" },
-    { value: "vw-golf", label: "VW Golf CB4567EF" },
-  ],
   duration: [
-    { value: "60", label: "60 минути" },
+    { value: "50", label: "50 минути" },
     { value: "90", label: "90 минути" },
-    { value: "120", label: "120 минути" },
+    { value: "custom", label: "Ръчно" },
   ],
   documentType: [
     { value: "medical", label: "Медицинско свидетелство" },
@@ -80,42 +80,81 @@ const selectOptions = {
   ],
 } as const;
 
-function createDefaultFormState(): DialogFormState {
+function createDefaultFormState(
+  studentOptions: Props["studentOptions"],
+  instructorOptions: Props["instructorOptions"],
+  vehicleOptions: Props["vehicleOptions"],
+  theoryGroupOptions: Props["theoryGroupOptions"],
+): DashboardQuickActionFormState {
+  const defaultStudent = studentOptions[0];
+
   return {
     fullName: "",
     phone: "",
     email: "",
-    category: "",
-    theoryGroup: "",
+    parentPhone: "",
+    category: defaultStudent?.category ?? "B",
+    theoryGroup: theoryGroupOptions[0]?.value ?? "",
     notes: "",
-    lessonType: "",
-    student: "",
-    instructor: "",
-    vehicle: "",
-    lessonDate: "",
-    lessonTime: "",
-    duration: "",
-    documentType: "",
+    lessonType: "practice",
+    student: defaultStudent?.value ?? "",
+    instructor: instructorOptions[0]?.value ?? "",
+    vehicle: vehicleOptions[0]?.value ?? "",
+    lessonDate: new Date().toISOString().slice(0, 10),
+    lessonTime: "09:00",
+    duration: "90",
+    customDurationMinutes: "50",
+    documentType: "medical",
     documentNumber: "",
-    issueDate: "",
+    issueDate: new Date().toISOString().slice(0, 10),
     expiryDate: "",
     uploadedFileName: "",
     amount: "",
-    paymentMethod: "",
-    paymentDate: "",
+    paymentMethod: "cash",
+    paymentDate: new Date().toISOString().slice(0, 10),
     reference: "",
     paymentNote: "",
   };
 }
 
-export function DashboardQuickActionDialog({ activeAction, onClose, onConfirm }: Props) {
-  const [formState, setFormState] = useState<DialogFormState>(createDefaultFormState);
+export function DashboardQuickActionDialog({
+  activeAction,
+  studentOptions,
+  instructorOptions,
+  vehicleOptions,
+  theoryGroupOptions,
+  isSubmitting,
+  submitError,
+  onClose,
+  onConfirm,
+}: Props) {
+  const [formState, setFormState] = useState<DashboardQuickActionFormState>(
+    createDefaultFormState(
+      studentOptions,
+      instructorOptions,
+      vehicleOptions,
+      theoryGroupOptions,
+    ),
+  );
 
   useEffect(() => {
     if (activeAction) {
-      setFormState(createDefaultFormState());
+      setFormState(
+        createDefaultFormState(
+          studentOptions,
+          instructorOptions,
+          vehicleOptions,
+          theoryGroupOptions,
+        ),
+      );
     }
-  }, [activeAction]);
+  }, [
+    activeAction,
+    instructorOptions,
+    studentOptions,
+    theoryGroupOptions,
+    vehicleOptions,
+  ]);
 
   const dialogMeta = useMemo(() => {
     if (!activeAction) {
@@ -148,23 +187,175 @@ export function DashboardQuickActionDialog({ activeAction, onClose, onConfirm }:
     return map[activeAction];
   }, [activeAction]);
 
-  function updateField<K extends keyof DialogFormState>(field: K, value: DialogFormState[K]) {
-    setFormState((current) => ({ ...current, [field]: value }));
+  function updateField<K extends keyof DashboardQuickActionFormState>(
+    field: K,
+    value: DashboardQuickActionFormState[K],
+  ) {
+    setFormState((current) => {
+      if (field === "student") {
+        const student = studentOptions.find((item) => item.value === value);
+
+        return {
+          ...current,
+          student: value,
+          category: student?.category ?? current.category,
+        };
+      }
+
+      return { ...current, [field]: value };
+    });
   }
 
   function renderFields() {
     if (activeAction === "newStudent") {
       return (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Input label="Име и фамилия" value={formState.fullName} onChange={(value) => updateField("fullName", value)} placeholder="Например: Иван Петров" required />
-          <Input label="Телефон" value={formState.phone} onChange={(value) => updateField("phone", value)} placeholder="+359 888 123 456" type="tel" required />
-          <Input label="Имейл" value={formState.email} onChange={(value) => updateField("email", value)} placeholder="kursist@example.com" type="email" />
-          <Select label="Категория" value={formState.category} onChange={(value) => updateField("category", value)} options={selectOptions.category} placeholder="Изберете категория" required />
-          <Select label="Група по теория" value={formState.theoryGroup} onChange={(value) => updateField("theoryGroup", value)} options={selectOptions.theoryGroup} placeholder="Изберете група" />
-          <div className="md:col-span-2">
-            <Textarea label="Бележка" value={formState.notes} onChange={(value) => updateField("notes", value)} placeholder="Допълнителна информация за администрацията" rows={4} />
+        <div className="space-y-5">
+          <section
+            className="rounded-[24px] border p-5"
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(15, 23, 42, 0.28) 0%, rgba(15, 23, 42, 0.16) 100%)",
+              borderColor: "rgba(148, 163, 184, 0.28)",
+              boxShadow: "0 18px 40px rgba(15, 23, 42, 0.18)",
+            }}
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p
+                  className="text-sm font-semibold uppercase tracking-[0.18em]"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  Основни данни
+                </p>
+                <h3
+                  className="mt-2 text-lg font-semibold"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  Попълни профила на курсиста
+                </h3>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div
+                className="rounded-[20px] border p-4"
+                style={{ borderColor: "rgba(148, 163, 184, 0.22)" }}
+              >
+                <Input
+                  label="Име и фамилия"
+                  value={formState.fullName}
+                  onChange={(value) => updateField("fullName", value)}
+                  placeholder="Например: Иван Петров"
+                  required
+                />
+              </div>
+              <div
+                className="rounded-[20px] border p-4"
+                style={{ borderColor: "rgba(148, 163, 184, 0.22)" }}
+              >
+                <Input
+                  label="Телефон на курсист"
+                  value={formState.phone}
+                  onChange={(value) => updateField("phone", value)}
+                  placeholder="0886612503"
+                  type="tel"
+                  required
+                />
+              </div>
+              <div
+                className="rounded-[20px] border p-4"
+                style={{ borderColor: "rgba(148, 163, 184, 0.22)" }}
+              >
+                <Input
+                  label="Имейл"
+                  value={formState.email}
+                  onChange={(value) => updateField("email", value)}
+                  placeholder="kursist@example.com"
+                  type="email"
+                />
+              </div>
+              <div
+                className="rounded-[20px] border p-4"
+                style={{ borderColor: "rgba(148, 163, 184, 0.22)" }}
+              >
+                <Input
+                  label="Телефон на родител"
+                  value={formState.parentPhone}
+                  onChange={(value) => updateField("parentPhone", value)}
+                  placeholder="По желание"
+                  type="tel"
+                />
+              </div>
+            </div>
+          </section>
+
+          <section
+            className="rounded-[24px] border p-5"
+            style={{
+              background: "rgba(15, 23, 42, 0.14)",
+              borderColor: "rgba(148, 163, 184, 0.28)",
+            }}
+          >
+            <p
+              className="mb-4 text-sm font-semibold uppercase tracking-[0.18em]"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Обучение
+            </p>
+
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              <div
+                className="rounded-[20px] border p-4"
+                style={{ borderColor: "rgba(148, 163, 184, 0.22)" }}
+              >
+                <Select
+                  label="Категория"
+                  value={formState.category}
+                  onChange={(value) => updateField("category", value)}
+                  options={selectOptions.category}
+                  placeholder="Изберете категория"
+                  required
+                />
+              </div>
+              <div
+                className="rounded-[20px] border p-4"
+                style={{ borderColor: "rgba(148, 163, 184, 0.22)" }}
+              >
+                <Select
+                  label="Инструктор"
+                  value={formState.instructor}
+                  onChange={(value) => updateField("instructor", value)}
+                  options={instructorOptions}
+                  placeholder="Изберете инструктор"
+                />
+              </div>
+              <div
+                className="rounded-[20px] border p-4 md:col-span-2"
+                style={{ borderColor: "rgba(148, 163, 184, 0.22)" }}
+              >
+                <Select
+                  label="Група по теория"
+                  value={formState.theoryGroup}
+                  onChange={(value) => updateField("theoryGroup", value)}
+                  options={theoryGroupOptions}
+                  placeholder="Изберете група"
+                />
+              </div>
+              <div
+                className="rounded-[20px] border p-4 md:col-span-2"
+                style={{ borderColor: "rgba(148, 163, 184, 0.22)" }}
+              >
+                <Textarea
+                  label="Бележка"
+                  value={formState.notes}
+                  onChange={(value) => updateField("notes", value)}
+                  placeholder="Допълнителна информация за администрацията"
+                  rows={4}
+                />
+              </div>
+            </div>
+          </section>
           </div>
-        </div>
       );
     }
 
@@ -172,12 +363,30 @@ export function DashboardQuickActionDialog({ activeAction, onClose, onConfirm }:
       return (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Select label="Тип час" value={formState.lessonType} onChange={(value) => updateField("lessonType", value)} options={selectOptions.lessonType} placeholder="Изберете тип час" required />
-          <Input label="Курсист" value={formState.student} onChange={(value) => updateField("student", value)} placeholder="Име на курсиста" required />
-          <Select label="Инструктор" value={formState.instructor} onChange={(value) => updateField("instructor", value)} options={selectOptions.instructor} placeholder="Изберете инструктор" required />
-          <Select label="Автомобил" value={formState.vehicle} onChange={(value) => updateField("vehicle", value)} options={selectOptions.vehicle} placeholder="Изберете автомобил" required />
+          <Select label="Курсист" value={formState.student} onChange={(value) => updateField("student", value)} options={studentOptions} placeholder="Изберете курсист" required />
+          <Select label="Инструктор" value={formState.instructor} onChange={(value) => updateField("instructor", value)} options={instructorOptions} placeholder="Изберете инструктор" required />
+          <Select label="Автомобил" value={formState.vehicle} onChange={(value) => updateField("vehicle", value)} options={vehicleOptions} placeholder="Изберете автомобил" required />
           <Input label="Дата" value={formState.lessonDate} onChange={(value) => updateField("lessonDate", value)} type="date" required />
           <Input label="Час" value={formState.lessonTime} onChange={(value) => updateField("lessonTime", value)} type="time" required />
-          <Select label="Продължителност" value={formState.duration} onChange={(value) => updateField("duration", value)} options={selectOptions.duration} placeholder="Изберете продължителност" />
+          <Select
+            label="Продължителност"
+            value={formState.duration}
+            onChange={(value) => updateField("duration", value)}
+            options={selectOptions.duration}
+            placeholder="Изберете продължителност"
+          />
+          {formState.duration === "custom" && (
+            <Input
+              label="Ръчно минути"
+              value={formState.customDurationMinutes}
+              onChange={(value) =>
+                updateField("customDurationMinutes", value.replace(/\D/g, ""))
+              }
+              placeholder="Например: 75"
+              type="number"
+              required
+            />
+          )}
           <div className="md:col-span-2">
             <Textarea label="Бележка към часа" value={formState.notes} onChange={(value) => updateField("notes", value)} placeholder="Например: начало от централна зона" rows={4} />
           </div>
@@ -189,7 +398,7 @@ export function DashboardQuickActionDialog({ activeAction, onClose, onConfirm }:
       return (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Select label="Тип документ" value={formState.documentType} onChange={(value) => updateField("documentType", value)} options={selectOptions.documentType} placeholder="Изберете тип документ" required />
-          <Input label="Курсист" value={formState.student} onChange={(value) => updateField("student", value)} placeholder="Име на курсиста" required />
+          <Select label="Курсист" value={formState.student} onChange={(value) => updateField("student", value)} options={studentOptions} placeholder="Изберете курсист" required />
           <Input label="Номер на документа" value={formState.documentNumber} onChange={(value) => updateField("documentNumber", value)} placeholder="Ако има номер" />
           <Input label="Дата на издаване" value={formState.issueDate} onChange={(value) => updateField("issueDate", value)} type="date" />
           <Input label="Валиден до" value={formState.expiryDate} onChange={(value) => updateField("expiryDate", value)} type="date" />
@@ -212,7 +421,7 @@ export function DashboardQuickActionDialog({ activeAction, onClose, onConfirm }:
 
     return (
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Input label="Курсист" value={formState.student} onChange={(value) => updateField("student", value)} placeholder="Име на курсиста" required />
+        <Select label="Курсист" value={formState.student} onChange={(value) => updateField("student", value)} options={studentOptions} placeholder="Изберете курсист" required />
         <Input label="Сума" value={formState.amount} onChange={(value) => updateField("amount", value)} placeholder="Например: 250" type="number" required />
         <Select label="Метод на плащане" value={formState.paymentMethod} onChange={(value) => updateField("paymentMethod", value)} options={selectOptions.paymentMethod} placeholder="Изберете метод" required />
         <Input label="Дата на плащане" value={formState.paymentDate} onChange={(value) => updateField("paymentDate", value)} type="date" required />
@@ -238,8 +447,12 @@ export function DashboardQuickActionDialog({ activeAction, onClose, onConfirm }:
           <Button variant="secondary" onClick={onClose}>
             Отказ
           </Button>
-          <Button variant="primary" onClick={() => onConfirm(activeAction)}>
-            {dialogMeta.confirmLabel}
+          <Button
+            variant="primary"
+            onClick={() => void onConfirm(activeAction, formState)}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Записване..." : dialogMeta.confirmLabel}
           </Button>
         </>
       }
@@ -251,6 +464,18 @@ export function DashboardQuickActionDialog({ activeAction, onClose, onConfirm }:
             {dialogMeta.description}
           </p>
         </div>
+        {submitError && (
+          <div
+            className="rounded-2xl border p-4 text-sm"
+            style={{
+              background: "rgba(239, 68, 68, 0.08)",
+              borderColor: "rgba(239, 68, 68, 0.24)",
+              color: "var(--status-error)",
+            }}
+          >
+            {submitError}
+          </div>
+        )}
         {renderFields()}
       </div>
     </Modal>

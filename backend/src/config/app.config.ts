@@ -19,5 +19,8 @@ export const appConfig = {
     accessKey: parsedEnv.OBJECT_STORAGE_ACCESS_KEY,
     secretKey: parsedEnv.OBJECT_STORAGE_SECRET_KEY
   },
+  documentOcrSourceDir: parsedEnv.DOCUMENT_OCR_SOURCE_DIR,
+  documentOcrOutputDir: parsedEnv.DOCUMENT_OCR_OUTPUT_DIR,
+  documentOcrWorkerUrl: parsedEnv.DOCUMENT_OCR_WORKER_URL,
   openAiApiKey: parsedEnv.OPENAI_API_KEY
 };

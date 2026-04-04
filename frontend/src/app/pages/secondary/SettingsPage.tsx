@@ -1,23 +1,24 @@
-﻿import { useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Settings2, ShieldCheck } from 'lucide-react';
-import { PageHeader } from '../../components/ui-system/PageHeader';
 import { Button } from '../../components/ui-system/Button';
+import { Modal } from '../../components/ui-system/Modal';
+import { PageHeader } from '../../components/ui-system/PageHeader';
 import { Switch } from '../../components/ui/switch';
+import { useAuthSession } from '../../services/authSession';
+import type {
+  TenantFeatureKey,
+  TenantFeatureSetting,
+} from '../../services/featureSettings';
+import { useFeatureSettings } from '../../services/featureSettings';
 import { ChecklistItem, InfoStack, PageSection, Panel, TwoColumnGrid } from './secondaryShared';
 
-type FeatureKey = 'payments' | 'invoices' | 'documents' | 'theory' | 'practical' | 'reports' | 'ai';
-type FeatureItem = { key: FeatureKey; label: string; description: string; pages: string; enabled: boolean; tier: string };
-const initialFeatures: FeatureItem[] = [
-  { key: 'payments', label: 'Плащания', description: 'Таблица за плащания, статуси и контрол на дължимите суми.', pages: 'Плащания, практика, профили', enabled: true, tier: 'Core Finance' },
-  { key: 'invoices', label: 'Фактури', description: 'Издаване и преглед на фактури и OCR на разходи.', pages: 'Фактури, отчети', enabled: true, tier: 'Core Finance' },
-  { key: 'documents', label: 'Документи', description: 'Документен модул, подписи, лични карти и контрол на достъпа.', pages: 'Документи, OCR', enabled: true, tier: 'Compliance' },
-  { key: 'theory', label: 'Теория', description: 'Групи, присъствие, отсъствия и автоматични съобщения.', pages: 'Теория, групи по теория', enabled: true, tier: 'Operations' },
-  { key: 'practical', label: 'Практика', description: 'Практически часове, график, оценки и закъснения.', pages: 'Практика, график', enabled: true, tier: 'Operations' },
-  { key: 'reports', label: 'Отчети', description: 'Приходи, разходи, печалба и ръчно добавяне на записи.', pages: 'Отчети', enabled: true, tier: 'Finance Plus' },
-  { key: 'ai', label: 'AI пакет', description: 'AI център, OCR и AI чат за собственика.', pages: 'AI център, OCR, AI чат', enabled: true, tier: 'AI Suite' },
-];
-
-function FeatureRow({ feature, onToggle }: { feature: FeatureItem; onToggle: (key: FeatureKey, enabled: boolean) => void }) {
+function FeatureRow({
+  feature,
+  onToggle,
+}: {
+  feature: TenantFeatureSetting;
+  onToggle: (key: TenantFeatureKey, enabled: boolean) => void;
+}) {
   return (
     <div className="rounded-2xl p-4" style={{ background: feature.enabled ? 'var(--bg-card-elevated)' : 'rgba(15, 23, 42, 0.65)', border: '1px solid var(--ghost-border)' }}>
       <div className="flex items-start justify-between gap-4">
@@ -30,13 +31,82 @@ function FeatureRow({ feature, onToggle }: { feature: FeatureItem; onToggle: (ke
 }
 
 export function SettingsPage() {
-  const [features, setFeatures] = useState<FeatureItem[]>(initialFeatures);
+  const { session } = useAuthSession();
+  const {
+    featureSettingsState,
+    settings,
+    settingsError,
+    saveFeatureSettings,
+  } = useFeatureSettings();
+  const [features, setFeatures] = useState<TenantFeatureSetting[]>(settings);
+  const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const disabledFeatures = useMemo(() => features.filter((feature) => !feature.enabled), [features]);
   const activeCount = features.length - disabledFeatures.length;
-  const toggleFeature = (key: FeatureKey, enabled: boolean) => setFeatures((current) => current.map((feature) => feature.key === key ? { ...feature, enabled } : feature));
+  const toggleFeature = (key: TenantFeatureKey, enabled: boolean) =>
+    setFeatures((current) =>
+      current.map((feature) =>
+        feature.key === key ? { ...feature, enabled } : feature,
+      ),
+    );
+
+  useEffect(() => {
+    setFeatures(settings);
+  }, [settings]);
+
+  const handleSaveFeatures = async () => {
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      const savedSettings = await saveFeatureSettings(
+        features.map((feature) => ({
+          key: feature.key,
+          enabled: feature.enabled,
+        })),
+      );
+
+      setFeatures(savedSettings);
+      setIsSaveModalOpen(true);
+    } catch (error) {
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : 'Неуспешен запис на пакетите.',
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div>
-      <PageHeader title="Настройки" description="Централен licensing контрол за главния админ на платформата. Оттук определяш кои модули са платени и кои страници да се скриват за конкретната школа." breadcrumbs={[{ label: 'Начало' }, { label: 'Настройки' }]} actions={<><Button variant="secondary" icon={<ShieldCheck size={18} />}>Одит на лицензите</Button><Button variant="primary" icon={<Settings2 size={18} />}>Запази пакетите</Button></>} />
+      <PageHeader
+        title="Настройки"
+        description="Централен licensing контрол за главния админ на платформата. Оттук определяш кои модули са платени и кои страници да се скриват за конкретната школа."
+        breadcrumbs={[{ label: 'Начало' }, { label: 'Настройки' }]}
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              icon={<ShieldCheck size={18} />}
+              onClick={() => setIsAuditModalOpen(true)}
+            >
+              Одит на лицензите
+            </Button>
+            <Button
+              variant="primary"
+              icon={<Settings2 size={18} />}
+              onClick={() => void handleSaveFeatures()}
+              disabled={featureSettingsState === 'loading' || isSaving}
+            >
+              {isSaving ? 'Записване...' : 'Запази пакетите'}
+            </Button>
+          </>
+        }
+      />
       <PageSection>
         <TwoColumnGrid>
           <Panel title="Профил на школата" subtitle="Това не е страница за собственика. Това е административен екран за теб като главен админ на SaaS платформата.">
@@ -47,12 +117,92 @@ export function SettingsPage() {
           </Panel>
         </TwoColumnGrid>
         <Panel title="Функционалности по абонамент" subtitle="Под профила на школата включваш и изключваш модулите, за които конкретният бизнес е платил.">
+          {(settingsError || saveError) && (
+            <div className="mb-4">
+              <ChecklistItem
+                title="Проблем при синхронизацията"
+                description={settingsError ?? saveError ?? 'Неуспешна заявка.'}
+                tone="error"
+              />
+            </div>
+          )}
+          {!session?.user.roleKeys.includes('owner') && (
+            <div className="mb-4">
+              <ChecklistItem
+                title="Само owner може да записва пакети"
+                description="Този екран е read-only за текущия потребител."
+                tone="warning"
+              />
+            </div>
+          )}
           <div className="space-y-4">{features.map((feature) => <FeatureRow key={feature.key} feature={feature} onToggle={toggleFeature} />)}</div>
         </Panel>
         <Panel title="Техническа логика" subtitle="Как трябва да се държи системата, когато даден модул е изключен за школа.">
           <div className="grid gap-4 lg:grid-cols-3"><ChecklistItem title="Скриване от менюто" description="Изключеният модул не трябва да се вижда в sidebar и mobile навигацията." tone="warning" /><ChecklistItem title="Route guard" description="Ако някой отвори директен URL към изключена страница, трябва да получи защитен fallback екран." tone="warning" /><ChecklistItem title="Action guard" description="Вътрешните бутони, автоматизации и AI действия на изключения модул също трябва да са спрени." tone="info" /></div>
         </Panel>
       </PageSection>
+
+      <Modal
+        isOpen={isAuditModalOpen}
+        onClose={() => setIsAuditModalOpen(false)}
+        title="Одит на лицензите"
+        size="medium"
+      >
+        <div className="space-y-4">
+          <InfoStack
+            items={[
+              ['Активни модули', `${activeCount} от ${features.length}`],
+              ['Изключени модули', String(disabledFeatures.length)],
+              [
+                'Последен резултат',
+                disabledFeatures.length === 0
+                  ? 'Всички модули са активни и достъпни за tenant-а.'
+                  : `Има ${disabledFeatures.length} изключени модула, които трябва да се скрият от менюта и директни route заявки.`,
+              ],
+            ]}
+          />
+
+          <div className="flex justify-end">
+            <Button variant="primary" onClick={() => setIsAuditModalOpen(false)}>
+              Затвори
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isSaveModalOpen}
+        onClose={() => setIsSaveModalOpen(false)}
+        title="Запази пакетите"
+        size="medium"
+      >
+        <div className="space-y-4">
+          <ChecklistItem
+            title="UI конфигурацията е приложена"
+            description={`Активни модули: ${features
+              .filter((feature) => feature.enabled)
+              .map((feature) => feature.label)
+              .join(', ')}.`}
+            tone="success"
+          />
+
+          {disabledFeatures.length > 0 && (
+            <ChecklistItem
+              title="Изключени модули"
+              description={disabledFeatures
+                .map((feature) => feature.label)
+                .join(', ')}
+              tone="warning"
+            />
+          )}
+
+          <div className="flex justify-end">
+            <Button variant="primary" onClick={() => setIsSaveModalOpen(false)}>
+              Готово
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

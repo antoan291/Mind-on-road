@@ -44,6 +44,150 @@ enum AuditOutcome {
   FAILURE
 }
 
+enum StudentStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  WITHDRAWN
+}
+
+enum StudentEnrollmentStatus {
+  ACTIVE
+  FAILED_EXAM
+  PASSED
+  PAUSED
+  WITHDRAWN
+}
+
+enum StudentTrainingMode {
+  STANDARD_PACKAGE
+  LICENSED_MANUAL_HOURS
+}
+
+enum StudentRegisterMode {
+  ELECTRONIC
+  PAPER
+  HYBRID
+}
+
+enum ParentContactStatus {
+  DISABLED
+  ENABLED
+}
+
+enum DocumentOwnerType {
+  STUDENT
+  INSTRUCTOR
+  VEHICLE
+  SCHOOL
+}
+
+enum DocumentLifecycleStatus {
+  VALID
+  EXPIRING_SOON
+  EXPIRED
+  MISSING
+}
+
+enum InvoiceLifecycleStatus {
+  DRAFT
+  ISSUED
+  CANCELED
+  CORRECTED
+  OVERDUE
+}
+
+enum InvoicePaymentLinkStatus {
+  LINKED
+  NOT_LINKED
+  PARTIAL
+}
+
+enum VehicleLifecycleStatus {
+  ACTIVE
+  SERVICE_SOON
+  OUT_OF_SERVICE
+}
+
+enum TheoryGroupStatus {
+  ACTIVE
+  COMPLETED
+  UPCOMING
+}
+
+enum TheoryLectureStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+}
+
+enum PracticalLessonStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+  NO_SHOW
+  LATE
+}
+
+enum PracticalLessonPaymentStatus {
+  PAID
+  PENDING
+  OVERDUE
+  NOT_REQUIRED
+}
+
+enum PracticalLessonEvaluationStatus {
+  PENDING
+  COMPLETED
+  NOT_REQUIRED
+}
+
+enum TheoryLectureAttendanceStatus {
+  PRESENT
+  ABSENT
+  EXCUSED
+  LATE
+}
+
+enum NotificationChannel {
+  SYSTEM
+  VIBER
+  SYSTEM_AND_VIBER
+}
+
+enum NotificationSeverity {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  RESOLVED
+}
+
+enum NotificationKind {
+  PRACTICE_INACTIVITY
+  ARRIVAL_REMINDER
+  CATEGORY_B_HOUR_MILESTONE
+  PAYMENT_REMINDER
+  PARENT_LESSON_REPORT
+}
+
+enum ExamApplicationStatus {
+  DRAFT
+  READY_FOR_REVIEW
+  SENT
+  RECEIVED
+  APPROVED
+  REJECTED
+}
+
 model Tenant {
   id          String             @id @default(uuid()) @db.Uuid
   name        String             @db.VarChar(200)
@@ -54,8 +198,39 @@ model Tenant {
   memberships TenantMembership[]
   roles       Role[]
   auditLogs   AuditLog[]
+  students    Student[]
+  studentEnrollments StudentEnrollment[]
+  determinatorSessions DeterminatorSession[]
+  paymentRecords PaymentRecord[]
+  documentRecords DocumentRecord[]
+  invoiceRecords InvoiceRecord[]
+  expenseRecords ExpenseRecord[]
+  vehicleRecords VehicleRecord[]
+  featureSettings TenantFeatureSetting[]
+  theoryGroupRecords TheoryGroupRecord[]
+  theoryLectureRecords TheoryLectureRecord[]
+  theoryLectureAttendanceRecords TheoryLectureAttendanceRecord[]
+  practicalLessonRecords PracticalLessonRecord[]
+  notificationRecords NotificationRecord[]
+  examApplicationRecords ExamApplicationRecord[]
+  examApplicationRevisionRecords ExamApplicationRevisionRecord[]
 
   @@map("tenants")
+}
+
+model TenantFeatureSetting {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @db.Uuid
+  featureKey String   @db.VarChar(50)
+  enabled    Boolean  @default(true)
+  updatedBy  String   @db.VarChar(200)
+  createdAt  DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @db.Timestamptz(6)
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, featureKey])
+  @@index([tenantId, enabled])
+  @@map("tenant_feature_settings")
 }
  
 model User {
@@ -200,4 +375,428 @@ model AuditLog {
   @@index([userId, createdAt])
   @@index([actionKey, createdAt])
   @@map("audit_logs")
+}
+
+model Student {
+  id                  String              @id @default(uuid()) @db.Uuid
+  tenantId            String              @db.Uuid
+  firstName           String              @db.VarChar(100)
+  lastName            String              @db.VarChar(100)
+  displayName         String              @db.VarChar(200)
+  phone               String              @db.VarChar(50)
+  email               String?             @db.VarChar(320)
+  nationalId          String?             @db.VarChar(32)
+  birthDate           DateTime?           @db.Date
+  address             String?             @db.VarChar(300)
+  educationLevel      String?             @db.VarChar(100)
+  parentName          String?             @db.VarChar(200)
+  parentPhone         String?             @db.VarChar(50)
+  parentEmail         String?             @db.VarChar(320)
+  parentContactStatus ParentContactStatus @default(DISABLED)
+  status              StudentStatus       @default(ACTIVE)
+  createdAt           DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime            @updatedAt @db.Timestamptz(6)
+  tenant              Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  enrollments         StudentEnrollment[]
+  determinatorSessions DeterminatorSession[]
+  paymentRecords      PaymentRecord[]
+  documentRecords     DocumentRecord[]
+  invoiceRecords      InvoiceRecord[]
+  theoryLectureAttendanceRecords TheoryLectureAttendanceRecord[]
+  practicalLessonRecords PracticalLessonRecord[]
+  notificationRecords NotificationRecord[]
+  examApplicationRecords ExamApplicationRecord[]
+
+  @@unique([tenantId, nationalId])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, displayName])
+  @@map("students")
+}
+
+model StudentEnrollment {
+  id                      String                  @id @default(uuid()) @db.Uuid
+  tenantId                String                  @db.Uuid
+  studentId               String                  @db.Uuid
+  categoryCode            String                  @db.VarChar(10)
+  status                  StudentEnrollmentStatus @default(ACTIVE)
+  trainingMode            StudentTrainingMode     @default(STANDARD_PACKAGE)
+  registerMode            StudentRegisterMode     @default(ELECTRONIC)
+  theoryGroupNumber       String?                 @db.VarChar(50)
+  assignedInstructorName  String?                 @db.VarChar(200)
+  enrollmentDate          DateTime                @db.Date
+  expectedArrivalDate     DateTime?               @db.Date
+  previousLicenseCategory String?                 @db.VarChar(20)
+  packageHours            Int                     @default(0)
+  additionalHours         Int                     @default(0)
+  completedHours          Int                     @default(0)
+  failedExamAttempts      Int                     @default(0)
+  lastPracticeAt          DateTime?               @db.Timestamptz(6)
+  notes                   String?                 @db.VarChar(1000)
+  createdAt               DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt               DateTime                @updatedAt @db.Timestamptz(6)
+  tenant                  Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  student                 Student                 @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, categoryCode])
+  @@index([tenantId, studentId])
+  @@index([tenantId, assignedInstructorName])
+  @@map("student_enrollments")
+}
+
+model DeterminatorSession {
+  id                               String   @id @default(uuid()) @db.Uuid
+  tenantId                         String   @db.Uuid
+  studentId                        String   @db.Uuid
+  studentName                      String   @db.VarChar(200)
+  registrationNumber               String   @db.VarChar(50)
+  measuredAt                       DateTime @default(now()) @db.Timestamptz(6)
+  autoTempoCorrectReactions        Int
+  autoTempoWrongReactions          Int
+  autoTempoSuccessCoefficient      Float
+  forcedTempoCorrectReactions      Int
+  forcedTempoDelayedReactions      Int
+  forcedTempoWrongResults          Int
+  forcedTempoMissedStimuli         Int
+  forcedTempoSuccessCoefficient    Float
+  overallResult                    String   @db.VarChar(1000)
+  instructorNote                   String   @db.VarChar(1000)
+  createdAt                        DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt                        DateTime @updatedAt @db.Timestamptz(6)
+  tenant                           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  student                          Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, studentId, measuredAt])
+  @@map("determinator_sessions")
+}
+
+model PaymentRecord {
+  id            String   @id @default(uuid()) @db.Uuid
+  tenantId      String   @db.Uuid
+  studentId     String   @db.Uuid
+  studentName   String   @db.VarChar(200)
+  paymentNumber String   @db.VarChar(50)
+  amount        Int
+  paidAmount    Int      @default(0)
+  method        String   @db.VarChar(50)
+  status        String   @db.VarChar(50)
+  paidAt        DateTime @db.Date
+  note          String?  @db.VarChar(500)
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(6)
+  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, paymentNumber])
+  @@index([tenantId, studentId, paidAt])
+  @@map("payment_records")
+}
+
+model DocumentRecord {
+  id          String                  @id @default(uuid()) @db.Uuid
+  tenantId    String                  @db.Uuid
+  studentId   String?                 @db.Uuid
+  name        String                  @db.VarChar(200)
+  ownerType   DocumentOwnerType
+  ownerName   String                  @db.VarChar(200)
+  ownerRef    String?                 @db.VarChar(100)
+  category    String                  @db.VarChar(100)
+  documentNo  String?                 @db.VarChar(100)
+  issueDate   DateTime                @db.Date
+  expiryDate  DateTime?               @db.Date
+  status      DocumentLifecycleStatus @default(VALID)
+  fileUrl     String?                 @db.VarChar(500)
+  notes       String?                 @db.VarChar(1000)
+  createdAt   DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime                @updatedAt @db.Timestamptz(6)
+  tenant      Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  student     Student?                @relation(fields: [studentId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, ownerType, status])
+  @@index([tenantId, studentId])
+  @@map("document_records")
+}
+
+model InvoiceRecord {
+  id                String                   @id @default(uuid()) @db.Uuid
+  tenantId          String                   @db.Uuid
+  studentId         String                   @db.Uuid
+  invoiceNumber     String                   @db.VarChar(50)
+  invoiceDate       DateTime                 @db.Date
+  recipientName     String                   @db.VarChar(200)
+  categoryCode      String                   @db.VarChar(10)
+  invoiceReason     String                   @db.VarChar(200)
+  packageType       String                   @db.VarChar(100)
+  totalAmount       Int
+  currency          String                   @default("BGN") @db.Char(3)
+  status            InvoiceLifecycleStatus   @default(ISSUED)
+  paymentLinkStatus InvoicePaymentLinkStatus @default(LINKED)
+  paymentNumber     String?                  @db.VarChar(50)
+  paymentStatus     String?                  @db.VarChar(50)
+  createdBy         String                   @db.VarChar(200)
+  createdDate       DateTime                 @default(now()) @db.Date
+  lastUpdatedBy     String                   @db.VarChar(200)
+  notes             String?                  @db.VarChar(1000)
+  issuedDate        DateTime?                @db.Date
+  dueDate           DateTime?                @db.Date
+  vatAmount         Int                      @default(0)
+  subtotalAmount    Int                      @default(0)
+  wasCorrected      Boolean                  @default(false)
+  correctionReason  String?                  @db.VarChar(500)
+  createdAt         DateTime                 @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime                 @updatedAt @db.Timestamptz(6)
+  tenant            Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  student           Student                  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId, studentId, invoiceDate])
+  @@index([tenantId, status, invoiceDate])
+  @@map("invoice_records")
+}
+
+model ExpenseRecord {
+  id                        String   @id @default(uuid()) @db.Uuid
+  tenantId                  String   @db.Uuid
+  expenseType               String   @db.VarChar(50)
+  title                     String   @db.VarChar(200)
+  category                  String   @db.VarChar(100)
+  amount                    Int
+  vatAmount                 Int      @default(0)
+  paymentMethod             String   @db.VarChar(50)
+  source                    String   @db.VarChar(200)
+  counterparty              String   @db.VarChar(200)
+  note                      String   @db.VarChar(1000)
+  status                    String   @db.VarChar(50)
+  affectsOperationalExpense Boolean  @default(true)
+  entryDate                 DateTime @db.Date
+  createdAt                 DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt                 DateTime @updatedAt @db.Timestamptz(6)
+  tenant                    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, entryDate])
+  @@index([tenantId, expenseType, status])
+  @@map("expense_records")
+}
+
+model VehicleRecord {
+  id             String                @id @default(uuid()) @db.Uuid
+  tenantId       String                @db.Uuid
+  vehicleLabel   String                @db.VarChar(200)
+  instructorName String                @db.VarChar(200)
+  categoryCode   String                @db.VarChar(10)
+  status         VehicleLifecycleStatus @default(ACTIVE)
+  nextInspection DateTime              @db.Date
+  activeLessons  Int                   @default(0)
+  operationalNote String               @db.VarChar(500)
+  createdAt      DateTime              @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime              @updatedAt @db.Timestamptz(6)
+  tenant         Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, status, nextInspection])
+  @@map("vehicle_records")
+}
+
+model TheoryGroupRecord {
+  id                      String               @id @default(uuid()) @db.Uuid
+  tenantId                String               @db.Uuid
+  name                    String               @db.VarChar(120)
+  categoryCode            String               @db.VarChar(10)
+  scheduleLabel           String               @db.VarChar(200)
+  instructorName          String               @db.VarChar(200)
+  daiCode                 String               @db.VarChar(50)
+  startDate               DateTime             @db.Date
+  endDate                 DateTime?            @db.Date
+  totalLectures           Int                  @default(0)
+  completedLectures       Int                  @default(0)
+  activeStudents          Int                  @default(0)
+  studentsWithAbsences    Int                  @default(0)
+  studentsNeedingRecovery Int                  @default(0)
+  averageAttendance       Float                @default(0)
+  status                  TheoryGroupStatus    @default(ACTIVE)
+  createdAt               DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt               DateTime             @updatedAt @db.Timestamptz(6)
+  tenant                  Tenant               @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  lectures                TheoryLectureRecord[]
+
+  @@unique([tenantId, daiCode])
+  @@index([tenantId, status, startDate])
+  @@map("theory_group_records")
+}
+
+model TheoryLectureRecord {
+  id              String              @id @default(uuid()) @db.Uuid
+  tenantId        String              @db.Uuid
+  theoryGroupId   String              @db.Uuid
+  lectureNumber   Int
+  topic           String              @db.VarChar(200)
+  lectureDate     DateTime            @db.Date
+  startTimeLabel  String              @db.VarChar(20)
+  endTimeLabel    String              @db.VarChar(20)
+  durationMinutes Int                 @default(90)
+  location        String              @db.VarChar(120)
+  status          TheoryLectureStatus @default(SCHEDULED)
+  presentCount    Int                 @default(0)
+  absentCount     Int                 @default(0)
+  createdAt       DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime            @updatedAt @db.Timestamptz(6)
+  tenant          Tenant              @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  theoryGroup     TheoryGroupRecord   @relation(fields: [theoryGroupId], references: [id], onDelete: Cascade)
+  attendanceRecords TheoryLectureAttendanceRecord[]
+
+  @@index([tenantId, theoryGroupId, lectureDate])
+  @@index([tenantId, status, lectureDate])
+  @@map("theory_lecture_records")
+}
+
+model TheoryLectureAttendanceRecord {
+  id              String                        @id @default(uuid()) @db.Uuid
+  tenantId        String                        @db.Uuid
+  theoryGroupId   String                        @db.Uuid
+  theoryLectureId String                        @db.Uuid
+  studentId       String                        @db.Uuid
+  status          TheoryLectureAttendanceStatus
+  viberSent       Boolean                       @default(false)
+  markedAt        DateTime                      @default(now()) @db.Timestamptz(6)
+  markedBy        String?                       @db.VarChar(200)
+  createdAt       DateTime                      @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime                      @updatedAt @db.Timestamptz(6)
+  tenant          Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  theoryLecture   TheoryLectureRecord           @relation(fields: [theoryLectureId], references: [id], onDelete: Cascade)
+  student         Student                       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, theoryLectureId, studentId])
+  @@index([tenantId, theoryGroupId, theoryLectureId])
+  @@index([tenantId, studentId, markedAt])
+  @@map("theory_lecture_attendance_records")
+}
+
+model PracticalLessonRecord {
+  id                       String                          @id @default(uuid()) @db.Uuid
+  tenantId                 String                          @db.Uuid
+  studentId                String                          @db.Uuid
+  studentName              String                          @db.VarChar(200)
+  instructorName           String                          @db.VarChar(200)
+  vehicleLabel             String                          @db.VarChar(200)
+  categoryCode             String                          @db.VarChar(10)
+  lessonDate               DateTime                        @db.Date
+  startTimeLabel           String                          @db.VarChar(20)
+  endTimeLabel             String                          @db.VarChar(20)
+  durationMinutes          Int                             @default(90)
+  status                   PracticalLessonStatus           @default(SCHEDULED)
+  paymentStatus            PracticalLessonPaymentStatus    @default(PENDING)
+  evaluationStatus         PracticalLessonEvaluationStatus @default(NOT_REQUIRED)
+  routeLabel               String?                         @db.VarChar(200)
+  startLocation            String?                         @db.VarChar(200)
+  endLocation              String?                         @db.VarChar(200)
+  notes                    String?                         @db.VarChar(1000)
+  kmDriven                 Int?
+  rating                   Int?
+  parentNotificationSent   Boolean                         @default(false)
+  parentPerformanceSummary String?                         @db.VarChar(1000)
+  parentFeedbackRating     Int?
+  parentFeedbackComment    String?                         @db.VarChar(1000)
+  parentFeedbackSubmittedAt DateTime?                      @db.Timestamptz(6)
+  studentFeedbackRating    Int?
+  studentFeedbackComment   String?                         @db.VarChar(1000)
+  studentFeedbackSubmittedAt DateTime?                     @db.Timestamptz(6)
+  createdBy                String?                         @db.VarChar(200)
+  updatedBy                String?                         @db.VarChar(200)
+  createdAt                DateTime                        @default(now()) @db.Timestamptz(6)
+  updatedAt                DateTime                        @updatedAt @db.Timestamptz(6)
+  tenant                   Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  student                  Student                         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  notificationRecords      NotificationRecord[]
+  revisionRecords          PracticalLessonRevisionRecord[]
+
+  @@index([tenantId, studentId, lessonDate])
+  @@index([tenantId, status, lessonDate])
+  @@index([tenantId, instructorName, lessonDate])
+  @@map("practical_lesson_records")
+}
+
+model PracticalLessonRevisionRecord {
+  id                String                @id @default(uuid()) @db.Uuid
+  tenantId          String                @db.Uuid
+  practicalLessonId String                @db.Uuid
+  actorName         String                @db.VarChar(200)
+  changeSummary     String                @db.VarChar(500)
+  previousSnapshot  Json
+  nextSnapshot      Json
+  changedAt         DateTime              @default(now()) @db.Timestamptz(6)
+  practicalLesson   PracticalLessonRecord @relation(fields: [practicalLessonId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, practicalLessonId, changedAt])
+  @@map("practical_lesson_revision_records")
+}
+
+model NotificationRecord {
+  id                String                     @id @default(uuid()) @db.Uuid
+  tenantId          String                     @db.Uuid
+  studentId         String?                    @db.Uuid
+  practicalLessonId String?                    @db.Uuid
+  signalKey         String                     @db.VarChar(200)
+  kind              NotificationKind
+  severity          NotificationSeverity       @default(INFO)
+  deliveryStatus    NotificationDeliveryStatus @default(PENDING)
+  channel           NotificationChannel        @default(SYSTEM)
+  title             String                     @db.VarChar(200)
+  message           String                     @db.VarChar(1000)
+  audienceLabel     String                     @db.VarChar(200)
+  actionLabel       String?                    @db.VarChar(120)
+  actionTarget      String?                    @db.VarChar(240)
+  eventTime         DateTime                   @default(now()) @db.Timestamptz(6)
+  metadata          Json?
+  createdAt         DateTime                   @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime                   @updatedAt @db.Timestamptz(6)
+  tenant            Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  student           Student?                   @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  practicalLesson   PracticalLessonRecord?     @relation(fields: [practicalLessonId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, signalKey])
+  @@index([tenantId, eventTime])
+  @@index([tenantId, kind, deliveryStatus])
+  @@index([tenantId, studentId, eventTime])
+  @@map("notification_records")
+}
+
+model ExamApplicationRecord {
+  id                     String                             @id @default(uuid()) @db.Uuid
+  tenantId               String                             @db.Uuid
+  studentId              String                             @db.Uuid
+  studentName            String                             @db.VarChar(200)
+  categoryCode           String                             @db.VarChar(10)
+  applicationNumber      String                             @db.VarChar(50)
+  status                 ExamApplicationStatus              @default(DRAFT)
+  examOfficeName         String                             @db.VarChar(200)
+  preferredExamDate      DateTime?                          @db.Date
+  requiredDataSnapshot   Json
+  missingRequirements    String[]                           @default([])
+  statusNote             String?                            @db.VarChar(1000)
+  submittedAt            DateTime?                          @db.Timestamptz(6)
+  decidedAt              DateTime?                          @db.Timestamptz(6)
+  createdAt              DateTime                           @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime                           @updatedAt @db.Timestamptz(6)
+  tenant                 Tenant                             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  student                Student                            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  revisionRecords        ExamApplicationRevisionRecord[]
+
+  @@unique([tenantId, applicationNumber])
+  @@index([tenantId, studentId, createdAt])
+  @@index([tenantId, status, createdAt])
+  @@map("exam_application_records")
+}
+
+model ExamApplicationRevisionRecord {
+  id                 String                @id @default(uuid()) @db.Uuid
+  tenantId           String                @db.Uuid
+  examApplicationId  String                @db.Uuid
+  actorName          String                @db.VarChar(200)
+  changeSummary      String                @db.VarChar(500)
+  previousSnapshot   Json
+  nextSnapshot       Json
+  changedAt          DateTime              @default(now()) @db.Timestamptz(6)
+  tenant             Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  examApplication    ExamApplicationRecord @relation(fields: [examApplicationId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, examApplicationId, changedAt])
+  @@map("exam_application_revision_records")
 }

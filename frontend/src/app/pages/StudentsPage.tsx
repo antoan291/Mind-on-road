@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { PageHeader } from '../components/ui-system/PageHeader';
 import { FilterBar } from '../components/ui-system/FilterBar';
@@ -6,7 +6,11 @@ import { DataTable } from '../components/ui-system/DataTable';
 import { StatusBadge } from '../components/ui-system/StatusBadge';
 import { Button } from '../components/ui-system/Button';
 import { Plus, Download, Eye, Edit, TriangleAlert, FileClock, UserCheck, X, CalendarDays, ChevronRight } from 'lucide-react';
-import { studentOperationalRecords } from '../content/studentOperations';
+import {
+  StudentOperationalRecord,
+  studentOperationalRecords,
+} from '../content/studentOperations';
+import { fetchStudentOperations } from '../services/studentsApi';
 
 export function StudentsPage() {
   const navigate = useNavigate();
@@ -14,9 +18,47 @@ export function StudentsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedStudentId, setSelectedStudentId] = useState<number | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | number | null>(null);
+  const [studentRecords, setStudentRecords] = useState<StudentOperationalRecord[]>(
+    studentOperationalRecords,
+  );
+  const [recordsStatus, setRecordsStatus] = useState<'loading' | 'ready' | 'fallback'>(
+    'loading',
+  );
 
-  const students = studentOperationalRecords.filter((student) => {
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchStudentOperations()
+      .then((records) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setStudentRecords(records);
+        setSelectedStudentId((currentStudentId) =>
+          currentStudentId ?? records[0]?.id ?? null,
+        );
+        setRecordsStatus('ready');
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setStudentRecords(studentOperationalRecords);
+        setSelectedStudentId((currentStudentId) =>
+          currentStudentId ?? studentOperationalRecords[0]?.id ?? null,
+        );
+        setRecordsStatus('fallback');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const students = studentRecords.filter((student) => {
     const normalizedSearch = searchValue.trim().toLowerCase();
     const matchesSearch =
       normalizedSearch.length === 0 ||
@@ -288,6 +330,13 @@ export function StudentsPage() {
         <div className="mb-4 flex items-center justify-between">
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             Показани {students.length} курсисти
+          </p>
+          <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
+            {recordsStatus === 'loading'
+              ? 'Зареждане от backend...'
+              : recordsStatus === 'ready'
+                ? 'Данни от PostgreSQL'
+                : 'Fallback към локални mock данни'}
           </p>
           <p className="hidden text-sm lg:block" style={{ color: 'var(--text-tertiary)' }}>
             Клик на ред отваря детайли вдясно

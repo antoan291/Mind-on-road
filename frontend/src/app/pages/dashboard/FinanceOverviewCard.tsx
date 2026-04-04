@@ -1,8 +1,14 @@
 ﻿import { useMemo, useState } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { Card, CardHeader } from '../../components/shared';
+import type { ExpenseRecordView } from '../../services/expensesApi';
+import type { PaymentRecordView } from '../../services/paymentsApi';
 import { dashboardFinanceContent } from './dashboardContent';
-import { formatDashboardMoney, reportEntries } from '../secondary/reportingData';
+import {
+  buildReportEntriesFromFinanceRecords,
+  formatDashboardMoney,
+  reportEntries,
+} from '../secondary/reportingData';
 
 type FinanceRange = 'day' | 'month' | 'year';
 type FinanceTotals = { income: number; expense: number; count: number };
@@ -10,7 +16,7 @@ type FinanceTotals = { income: number; expense: number; count: number };
 const latestReportDate = reportEntries.reduce((latest, entry) => (entry.date > latest ? entry.date : latest), reportEntries[0]?.date ?? '2026-03-01');
 
 function getFinanceWindow(date: string, range: FinanceRange) {
-  const current = new Date(date + 'T12:00:00');
+  const current = parseFinanceDate(date);
   if (range === 'day') {
     const start = new Date(current);
     const end = new Date(current);
@@ -27,24 +33,42 @@ function getFinanceWindow(date: string, range: FinanceRange) {
 }
 
 function shiftFinanceWindow(date: string, range: FinanceRange, direction: -1 | 1) {
-  const current = new Date(date + 'T12:00:00');
+  const current = parseFinanceDate(date);
   if (range === 'day') current.setDate(current.getDate() + direction);
   else if (range === 'month') current.setMonth(current.getMonth() + direction);
   else current.setFullYear(current.getFullYear() + direction);
   return current.toISOString().slice(0, 10);
 }
 
-function getFinanceTotals(range: FinanceRange, anchorDate: string): FinanceTotals {
+function getFinanceTotals(
+  range: FinanceRange,
+  anchorDate: string,
+  entries: Array<{ date: string; type: 'income' | 'expense'; amount: number }>,
+): FinanceTotals {
   const window = getFinanceWindow(anchorDate, range);
-  const entries = reportEntries.filter((entry) => {
-    const value = new Date(entry.date + 'T12:00:00');
+  const visibleEntries = entries.filter((entry) => {
+    const value = parseFinanceDate(entry.date);
     return value >= window.start && value <= window.end;
   });
   return {
-    income: entries.filter((entry) => entry.type === 'income').reduce((sum, entry) => sum + entry.amount, 0),
-    expense: entries.filter((entry) => entry.type === 'expense').reduce((sum, entry) => sum + entry.amount, 0),
-    count: entries.length,
+    income: visibleEntries.filter((entry) => entry.type === 'income').reduce((sum, entry) => sum + entry.amount, 0),
+    expense: visibleEntries.filter((entry) => entry.type === 'expense').reduce((sum, entry) => sum + entry.amount, 0),
+    count: visibleEntries.length,
   };
+}
+
+function parseFinanceDate(value: string) {
+  const normalizedValue =
+    /^\d{2}\.\d{2}\.\d{4}$/.test(value)
+      ? value.split('.').reverse().join('-')
+      : value;
+  const parsed = new Date(`${normalizedValue}T12:00:00`);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return new Date('2026-04-04T12:00:00');
+  }
+
+  return parsed;
 }
 
 function FinanceFilterButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
@@ -65,11 +89,53 @@ function FinanceMiniStat({ label, value, tone }: { label: string; value: string;
   );
 }
 
-export function FinanceOverviewCard() {
+export function FinanceOverviewCard({
+  payments,
+  expenses,
+}: {
+  payments?: PaymentRecordView[];
+  expenses?: ExpenseRecordView[];
+}) {
   const [financeRange, setFinanceRange] = useState<FinanceRange>('month');
-  const financeWindow = useMemo(() => getFinanceWindow(latestReportDate, financeRange), [financeRange]);
-  const financeTotals = useMemo(() => getFinanceTotals(financeRange, latestReportDate), [financeRange]);
-  const previousFinanceTotals = useMemo(() => getFinanceTotals(financeRange, shiftFinanceWindow(latestReportDate, financeRange, -1)), [financeRange]);
+  const financeEntries = useMemo(() => {
+    const sourceEntries =
+      payments || expenses
+        ? buildReportEntriesFromFinanceRecords(payments ?? [], expenses ?? [])
+        : reportEntries;
+
+    return sourceEntries
+      .filter((entry) => entry.type !== 'friend-vat-expense')
+      .map((entry) => ({
+        date: entry.date,
+        type: entry.type,
+        amount: entry.amount,
+      }));
+  }, [expenses, payments]);
+  const financeAnchorDate = useMemo(
+    () =>
+      financeEntries.reduce(
+        (latest, entry) => (entry.date > latest ? entry.date : latest),
+        latestReportDate,
+      ),
+    [financeEntries],
+  );
+  const financeWindow = useMemo(
+    () => getFinanceWindow(financeAnchorDate, financeRange),
+    [financeAnchorDate, financeRange],
+  );
+  const financeTotals = useMemo(
+    () => getFinanceTotals(financeRange, financeAnchorDate, financeEntries),
+    [financeAnchorDate, financeEntries, financeRange],
+  );
+  const previousFinanceTotals = useMemo(
+    () =>
+      getFinanceTotals(
+        financeRange,
+        shiftFinanceWindow(financeAnchorDate, financeRange, -1),
+        financeEntries,
+      ),
+    [financeAnchorDate, financeEntries, financeRange],
+  );
   const financeNet = financeTotals.income - financeTotals.expense;
   const financePreviousNet = previousFinanceTotals.income - previousFinanceTotals.expense;
   const financeDelta = financeNet - financePreviousNet;
@@ -142,5 +208,3 @@ export function FinanceOverviewCard() {
     </Card>
   );
 }
-
-

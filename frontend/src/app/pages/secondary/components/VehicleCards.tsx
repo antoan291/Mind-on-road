@@ -4,15 +4,18 @@ import { statusLabel } from '../secondaryShared';
 
 type Props = {
   vehicles: VehicleRow[];
+  onVehicleClick?: (vehicle: VehicleRow) => void;
 };
 
-export function VehicleCards({ vehicles }: Props) {
+export function VehicleCards({ vehicles, onVehicleClick }: Props) {
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {vehicles.map((item) => (
-        <article
+        <button
+          type="button"
           key={item.vehicle}
-          className="rounded-3xl p-5 h-full"
+          onClick={() => onVehicleClick?.(item)}
+          className="h-full rounded-3xl p-5 text-left transition-all hover:-translate-y-1"
           style={{
             background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)',
             border: '1px solid var(--ghost-border)',
@@ -75,7 +78,7 @@ export function VehicleCards({ vehicles }: Props) {
               <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>{item.issue}</p>
             </div>
           </div>
-        </article>
+        </button>
       ))}
     </div>
   );

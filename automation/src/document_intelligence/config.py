@@ -7,6 +7,13 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
+OCR_LANGUAGE_ALIASES = {
+  "bg": "ru",
+  "bulgarian": "ru",
+  "cyrillic": "ru",
+}
+
+
 @dataclass(frozen=True)
 class ExtractionConfig:
   ocr_language: str
@@ -30,7 +37,13 @@ class ExtractionConfig:
     else:
       load_dotenv()
 
-    ocr_language = (model_override or os.getenv("PADDLEOCR_LANGUAGE", "bg")).strip()
+    requested_language = (
+      model_override or os.getenv("PADDLEOCR_LANGUAGE", "bg")
+    ).strip().lower()
+    ocr_language = OCR_LANGUAGE_ALIASES.get(
+      requested_language,
+      requested_language,
+    )
     ocr_version = os.getenv("PADDLEOCR_VERSION", "PP-OCRv5").strip()
     use_gpu = os.getenv("PADDLEOCR_USE_GPU", "false").strip().lower() in {"1", "true", "yes", "on"}
     min_text_confidence = float(os.getenv("PADDLEOCR_MIN_TEXT_CONFIDENCE", "0.35").strip())

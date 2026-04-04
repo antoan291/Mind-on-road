@@ -90,28 +90,28 @@ export function DashboardDemo() {
           <div className="space-y-3">
             <ScheduleItem
               time="09:00"
-              student="Петър Георгиев"
+              student="Антоан Тест"
               instructor="Георги Петров"
               location="Централна зона"
               status="active"
             />
             <ScheduleItem
               time="10:30"
-              student="Елена Димитрова"
+              student="Антоан Тест"
               instructor="Иван Димитров"
               location="Южна зона"
               status="upcoming"
             />
             <ScheduleItem
               time="12:00"
-              student="Мартин Иванов"
+              student="Антоан Тест"
               instructor="Георги Петров"
               location="Централна зона"
               status="upcoming"
             />
             <ScheduleItem
               time="14:00"
-              student="София Николова"
+              student="Антоан Тест"
               instructor="Иван Димитров"
               location="Северна зона"
               status="upcoming"
@@ -127,7 +127,7 @@ export function DashboardDemo() {
             <ActivityItem
               icon={<CheckCircle size={18} style={{ color: 'var(--status-success)' }} />}
               title="Успешен изпит"
-              description="Петър Георгиев - Категория B"
+              description="Антоан Тест - Категория B"
               time="Преди 2 часа"
             />
             <ActivityItem
@@ -202,7 +202,7 @@ export function DashboardDemo() {
             </thead>
             <tbody>
               <StudentRow
-                name="Петър Георгиев"
+                name="Антоан Тест"
                 category="B"
                 instructor="Георги Петров"
                 completed={12}
@@ -212,7 +212,7 @@ export function DashboardDemo() {
                 statusLabel="Напреднал"
               />
               <StudentRow
-                name="Елена Димитрова"
+                name="Антоан Тест"
                 category="B"
                 instructor="Иван Димитров"
                 completed={8}
@@ -222,7 +222,7 @@ export function DashboardDemo() {
                 statusLabel="В процес"
               />
               <StudentRow
-                name="Мартин Иванов"
+                name="Антоан Тест"
                 category="A"
                 instructor="Георги Петров"
                 completed={15}
@@ -232,7 +232,7 @@ export function DashboardDemo() {
                 statusLabel="Напреднал"
               />
               <StudentRow
-                name="София Николова"
+                name="Антоан Тест"
                 category="B"
                 instructor="Иван Димитров"
                 completed={5}

@@ -53,7 +53,7 @@ export function LessonsPage() {
       id: 1,
       date: '24.03.2024',
       time: '09:00',
-      student: 'Петър Георгиев',
+      student: 'Антоан Тест',
       studentId: 1,
       instructor: 'Георги Петров',
       instructorId: 1,
@@ -70,7 +70,7 @@ export function LessonsPage() {
       id: 2,
       date: '24.03.2024',
       time: '10:30',
-      student: 'Елена Димитрова',
+      student: 'Антоан Тест',
       studentId: 2,
       instructor: 'Иван Димитров',
       instructorId: 2,
@@ -87,7 +87,7 @@ export function LessonsPage() {
       id: 3,
       date: '24.03.2024',
       time: '12:00',
-      student: 'Мартин Иванов',
+      student: 'Антоан Тест',
       studentId: 3,
       instructor: 'Георги Петров',
       instructorId: 1,
@@ -104,7 +104,7 @@ export function LessonsPage() {
       id: 4,
       date: '23.03.2024',
       time: '14:00',
-      student: 'София Николова',
+      student: 'Антоан Тест',
       studentId: 4,
       instructor: 'Иван Димитров',
       instructorId: 2,
@@ -363,8 +363,9 @@ export function LessonsPage() {
   ];
 
   const handleQuickAction = (lessonId: number, action: 'complete' | 'late' | 'no-show') => {
-    console.log(`Quick action: ${action} for lesson ${lessonId}`);
-    // In real app, update lesson status
+    void lessonId;
+    void action;
+    navigate('/schedule');
   };
 
   return (

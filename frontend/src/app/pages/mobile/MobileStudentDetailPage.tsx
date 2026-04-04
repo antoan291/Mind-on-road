@@ -16,9 +16,9 @@ export function MobileStudentDetailPage() {
 
   const student = {
     id: 1,
-    name: 'Петър Георгиев',
-    email: 'petar.georgiev@example.com',
-    phone: '+359 888 123 456',
+    name: 'Антоан Тест',
+    email: 'antoan.test@example.com',
+    phone: '0886612503',
     category: 'B',
     instructor: 'Георги Петров',
     startDate: '15.01.2024',

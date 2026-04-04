@@ -1,30 +1,101 @@
 ﻿import { ArrowLeft, Car, Clock3, TriangleAlert, UserCircle, Users } from 'lucide-react';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { Button } from '../../components/ui-system/Button';
 import { PageHeader } from '../../components/ui-system/PageHeader';
 import { StatusBadge } from '../../components/ui-system/StatusBadge';
-import { instructorStudents, instructors } from './secondaryData';
+import {
+  buildInstructorRows,
+  buildInstructorStudentRows,
+} from '../../services/instructorsApi';
+import {
+  type StudentOperationalRecord,
+} from '../../content/studentOperations';
+import { fetchStudentOperations } from '../../services/studentsApi';
+import {
+  type InstructorStudentRow,
+} from './secondaryData';
 import { DataTableLayout, InfoLine, MetricCard, MetricGrid, PageSection, Panel } from './secondaryShared';
 
 export function InstructorDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
   const instructorId = Number(id);
+  const [instructors, setInstructors] = useState(
+    [] as ReturnType<typeof buildInstructorRows>,
+  );
+  const [studentRecords, setStudentRecords] = useState<StudentOperationalRecord[]>(
+    [],
+  );
+  const [sourceStatus, setSourceStatus] = useState<'loading' | 'backend' | 'fallback'>('loading');
 
-  const instructor = useMemo(() => instructors.find((item) => item.id === instructorId) ?? null, [instructorId]);
-  const students = useMemo(() => instructorStudents.filter((item) => item.instructorId === instructorId), [instructorId]);
+  const instructor = useMemo(
+    () => instructors.find((item) => item.id === instructorId) ?? null,
+    [instructorId, instructors],
+  );
+  const students = useMemo<InstructorStudentRow[]>(() => {
+    if (!instructor) {
+      return [];
+    }
+
+    if (studentRecords.length > 0) {
+      return buildInstructorStudentRows(instructor, studentRecords);
+    }
+
+    return [];
+  }, [instructor, studentRecords]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchStudentOperations()
+      .then((records) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setInstructors(buildInstructorRows(records));
+        setStudentRecords(records);
+        setSourceStatus('backend');
+      })
+      .catch(() => {
+        if (!isMounted) {
+          return;
+        }
+
+        setInstructors([]);
+        setStudentRecords([]);
+        setSourceStatus('fallback');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const totalMaximumHours = students.reduce((sum, item) => sum + item.maximumHours, 0);
   const totalCompletedHours = students.reduce((sum, item) => sum + item.completedHours, 0);
   const totalRemainingHours = students.reduce((sum, item) => sum + item.remainingHours, 0);
+
+  if (!instructor && sourceStatus === 'loading') {
+    return (
+      <div>
+        <PageHeader
+          title="Зареждане на инструктор"
+          description="Данните за инструктора се зареждат от PostgreSQL."
+          breadcrumbs={[{ label: 'Начало' }, { label: 'Инструктори' }, { label: 'Зареждане' }]}
+          actions={<Button variant="secondary" icon={<ArrowLeft size={18} />} onClick={() => navigate('/instructors')}>Назад към инструктори</Button>}
+        />
+      </div>
+    );
+  }
 
   if (!instructor) {
     return (
       <div>
         <PageHeader
           title="Инструкторът не е намерен"
-          description="Избраният инструктор липсва в текущите статични данни."
+          description="Избраният инструктор липсва в текущите данни от базата."
           breadcrumbs={[{ label: 'Начало' }, { label: 'Инструктори' }, { label: 'Липсващ запис' }]}
           actions={<Button variant="secondary" icon={<ArrowLeft size={18} />} onClick={() => navigate('/instructors')}>Назад към инструктори</Button>}
         />
@@ -36,7 +107,13 @@ export function InstructorDetailPage() {
     <div>
       <PageHeader
         title={instructor.name}
-        description="Детайлен изглед на инструктора, неговите курсисти и оставащите учебни часове до завършване."
+        description={`Детайлен изглед на инструктора, неговите курсисти и оставащите учебни часове до завършване. ${
+          sourceStatus === 'backend'
+            ? 'Данните за курсистите са от PostgreSQL.'
+            : sourceStatus === 'fallback'
+              ? 'Backend данните не са достъпни в момента.'
+              : 'Зареждане на курсисти...'
+        }`}
         breadcrumbs={[{ label: 'Начало' }, { label: 'Инструктори' }, { label: instructor.name }]}
         actions={<Button variant="secondary" icon={<ArrowLeft size={18} />} onClick={() => navigate('/instructors')}>Назад към инструктори</Button>}
       />
@@ -130,4 +207,3 @@ export function InstructorDetailPage() {
     </div>
   );
 }
-

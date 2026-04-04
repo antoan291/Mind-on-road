@@ -25,10 +25,25 @@ import {
   Wallet,
   Bot,
   FileSignature,
+  FileCheck2,
   BrainCircuit,
 } from "lucide-react";
+import { useAuthSession } from "../../services/authSession";
+import type { TenantFeatureKey } from "../../services/featureSettings";
+import { useFeatureSettings } from "../../services/featureSettings";
+
+type NavigationItem = {
+  path: string;
+  icon: React.ComponentType<{ size?: number }>;
+  label: string;
+  featureKey?: TenantFeatureKey;
+  permissionKey?: string;
+  ownerOnly?: boolean;
+};
 
 export function AppLayout() {
+  const { session, logout } = useAuthSession();
+  const { isFeatureEnabled } = useFeatureSettings();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
   const location = useLocation();
@@ -47,26 +62,150 @@ export function AppLayout() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-  const navigationItems = [
+  const navigationItems: NavigationItem[] = [
     { path: "/", icon: LayoutDashboard, label: "Табло" },
-    { path: "/payments", icon: CreditCard, label: "Плащания" },
-    { path: "/expenses", icon: Wallet, label: "Разходи" },
-    { path: "/students", icon: Users, label: "Курсисти" },
-    { path: "/invoices", icon: FileText, label: "Фактури" },
-    { path: "/practical-lessons", icon: Car, label: "Практика" },
-    { path: "/theory", icon: BookOpen, label: "Теория" },
-    { path: "/schedule", icon: Calendar, label: "График" },
-    { path: "/instructors", icon: UserCircle, label: "Инструктори" },
-    { path: "/vehicles", icon: Car, label: "Автомобили" },
-    { path: "/documents", icon: FolderOpen, label: "Документи" },
-    { path: "/candidates", icon: FileSignature, label: "Кандидати" },
-    { path: "/determinator", icon: BrainCircuit, label: "Детерминатор" },
-    { path: "/road-sheets", icon: ClipboardList, label: "Пътни листове" },
-    { path: "/notifications", icon: MessageSquare, label: "Известия" },
-    { path: "/reports", icon: BarChart3, label: "Отчети" },
-    { path: "/settings", icon: Settings, label: "Настройки" },
-    { path: "/ai", icon: Bot, label: "AI Център" },
-  ];
+    {
+      path: "/payments",
+      icon: CreditCard,
+      label: "Плащания",
+      featureKey: "payments",
+      permissionKey: "payments.read",
+    },
+    {
+      path: "/expenses",
+      icon: Wallet,
+      label: "Разходи",
+      featureKey: "payments",
+      permissionKey: "payments.read",
+    },
+    {
+      path: "/students",
+      icon: Users,
+      label: "Курсисти",
+      permissionKey: "students.read",
+    },
+    {
+      path: "/invoices",
+      icon: FileText,
+      label: "Фактури",
+      featureKey: "invoices",
+      permissionKey: "invoices.read",
+    },
+    {
+      path: "/practical-lessons",
+      icon: Car,
+      label: "Практика",
+      featureKey: "practical",
+      permissionKey: "scheduling.read",
+    },
+    {
+      path: "/theory",
+      icon: BookOpen,
+      label: "Теория",
+      featureKey: "theory",
+      permissionKey: "scheduling.read",
+    },
+    {
+      path: "/schedule",
+      icon: Calendar,
+      label: "График",
+      featureKey: "practical",
+      permissionKey: "scheduling.read",
+    },
+    {
+      path: "/instructors",
+      icon: UserCircle,
+      label: "Инструктори",
+      featureKey: "practical",
+      permissionKey: "scheduling.read",
+    },
+    {
+      path: "/vehicles",
+      icon: Car,
+      label: "Автомобили",
+      featureKey: "practical",
+      permissionKey: "vehicles.read",
+    },
+    {
+      path: "/documents",
+      icon: FolderOpen,
+      label: "Документи",
+      featureKey: "documents",
+      permissionKey: "documents.read",
+    },
+    {
+      path: "/candidates",
+      icon: FileSignature,
+      label: "Кандидати",
+      featureKey: "documents",
+      permissionKey: "documents.manage",
+    },
+    {
+      path: "/determinator",
+      icon: BrainCircuit,
+      label: "Детерминатор",
+      featureKey: "practical",
+      permissionKey: "students.manage_register",
+    },
+    {
+      path: "/exam-applications",
+      icon: FileCheck2,
+      label: "Заявления за изпит",
+      featureKey: "documents",
+      permissionKey: "students.manage_register",
+    },
+    {
+      path: "/road-sheets",
+      icon: ClipboardList,
+      label: "Пътни листове",
+      featureKey: "practical",
+      permissionKey: "scheduling.read",
+    },
+    {
+      path: "/notifications",
+      icon: MessageSquare,
+      label: "Известия",
+      permissionKey: "students.read",
+    },
+    {
+      path: "/reports",
+      icon: BarChart3,
+      label: "Отчети",
+      featureKey: "reports",
+      permissionKey: "reports.read",
+    },
+    {
+      path: "/settings",
+      icon: Settings,
+      label: "Настройки",
+      ownerOnly: true,
+    },
+    {
+      path: "/ai",
+      icon: Bot,
+      label: "AI Център",
+      featureKey: "ai",
+      permissionKey: "reports.read",
+    },
+  ].filter(
+    (item) =>
+      (!item.featureKey || isFeatureEnabled(item.featureKey)) &&
+      (!item.permissionKey ||
+        session?.user.permissionKeys.includes(item.permissionKey) ||
+        session?.user.roleKeys.includes("owner")) &&
+      (!item.ownerOnly || session?.user.roleKeys.includes("owner")),
+  );
+  const displayName = session?.user.displayName ?? "Потребител";
+  const roleLabel = session?.user.roleKeys.includes("owner")
+    ? "Owner"
+    : session?.user.roleKeys[0] ?? "Потребител";
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((namePart) => namePart[0])
+    .join("")
+    .toUpperCase();
 
   return (
     <div
@@ -235,13 +374,13 @@ export function AppLayout() {
                     className="text-sm font-medium"
                     style={{ color: "var(--text-primary)" }}
                   >
-                    Мария Иванова
+                    {displayName}
                   </div>
                   <div
                     className="text-xs"
                     style={{ color: "var(--text-tertiary)" }}
                   >
-                    Администратор
+                    {roleLabel}
                   </div>
                 </div>
                 <div
@@ -252,7 +391,7 @@ export function AppLayout() {
                     color: "#ffffff",
                   }}
                 >
-                  {"\u041C\u0418"}
+                  {initials || "U"}
                 </div>
                 <ChevronDown
                   size={16}
@@ -269,6 +408,10 @@ export function AppLayout() {
                   }}
                 >
                   <button
+                    onClick={() => {
+                      setProfileOpen(false);
+                      void logout();
+                    }}
                     className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm"
                     style={{
                       color: "var(--text-secondary)",

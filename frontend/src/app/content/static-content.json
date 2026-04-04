@@ -19,7 +19,7 @@
       {
         "variant": "error",
         "title": "2 документа изтичат днес",
-        "message": "Свидетелства за управление на Мартин Иванов и Петър Георгиев.",
+        "message": "Свидетелства за управление на Антоан Тест и Антоан Тест.",
         "actionLabel": "Провери",
         "targetPath": "/documents"
       }
@@ -96,7 +96,7 @@
             "id": "phone",
             "component": "input",
             "label": "Телефон",
-            "placeholder": "+359 888 123 456",
+            "placeholder": "0886612503",
             "inputType": "tel",
             "required": true,
             "layout": "half"
@@ -376,7 +376,7 @@
     "todayLessons": [
       {
         "time": "09:00",
-        "student": "Петър Георгиев",
+        "student": "Антоан Тест",
         "instructor": "Георги Петров",
         "location": "Централна зона",
         "status": "active",
@@ -385,7 +385,7 @@
       },
       {
         "time": "10:30",
-        "student": "Елена Димитрова",
+        "student": "Антоан Тест",
         "instructor": "Иван Димитров",
         "location": "Южна зона",
         "status": "upcoming",
@@ -394,7 +394,7 @@
       },
       {
         "time": "12:00",
-        "student": "Мартин Иванов",
+        "student": "Антоан Тест",
         "instructor": "Георги Петров",
         "location": "Централна зона",
         "status": "upcoming",
@@ -403,7 +403,7 @@
       },
       {
         "time": "14:00",
-        "student": "София Николова",
+        "student": "Антоан Тест",
         "instructor": "Иван Димитров",
         "location": "Северна зона",
         "status": "upcoming",
@@ -412,15 +412,15 @@
       }
     ],
     "overduePayments": [
-      { "student": "Елена Димитрова", "amount": "450 лв.", "daysOverdue": 18, "targetPath": "/students/2" },
-      { "student": "Мартин Иванов", "amount": "380 лв.", "daysOverdue": 15, "targetPath": "/students/3" },
-      { "student": "София Николова", "amount": "410 лв.", "daysOverdue": 14, "targetPath": "/students/4" }
+      { "student": "Антоан Тест", "amount": "450 лв.", "daysOverdue": 18, "targetPath": "/students/2" },
+      { "student": "Антоан Тест", "amount": "380 лв.", "daysOverdue": 15, "targetPath": "/students/3" },
+      { "student": "Антоан Тест", "amount": "410 лв.", "daysOverdue": 14, "targetPath": "/students/4" }
     ],
     "expiringDocuments": [
-      { "student": "Мартин Иванов", "document": "Свидетелство за управление", "daysLeft": 0, "targetPath": "/students/3" },
-      { "student": "Петър Георгиев", "document": "Свидетелство за управление", "daysLeft": 0, "targetPath": "/students/1" },
-      { "student": "София Николова", "document": "Медицинско свидетелство", "daysLeft": 3, "targetPath": "/students/4" },
-      { "student": "Елена Димитрова", "document": "Лична карта", "daysLeft": 5, "targetPath": "/students/2" }
+      { "student": "Антоан Тест", "document": "Свидетелство за управление", "daysLeft": 0, "targetPath": "/students/3" },
+      { "student": "Антоан Тест", "document": "Свидетелство за управление", "daysLeft": 0, "targetPath": "/students/1" },
+      { "student": "Антоан Тест", "document": "Медицинско свидетелство", "daysLeft": 3, "targetPath": "/students/4" },
+      { "student": "Антоан Тест", "document": "Лична карта", "daysLeft": 5, "targetPath": "/students/2" }
     ],
     "finance": {
       "title": "Финансова статистика",

@@ -5,10 +5,18 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  footer?: React.ReactNode;
   size?: 'small' | 'medium' | 'large';
 }
 
-export function Modal({ isOpen, onClose, title, children, size = 'medium' }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  footer,
+  size = 'medium',
+}: ModalProps) {
   if (!isOpen) return null;
 
   const sizeClasses = {
@@ -28,7 +36,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'medium' }: Mod
 
       {/* Modal */}
       <div
-        className={`relative w-full ${sizeClasses} rounded-xl p-6 shadow-[var(--shadow-xl)]`}
+        className={`relative flex max-h-[90vh] w-full ${sizeClasses} flex-col rounded-xl p-6 shadow-[var(--shadow-xl)]`}
         style={{ background: 'var(--bg-modal)' }}
       >
         {/* Header */}
@@ -44,7 +52,16 @@ export function Modal({ isOpen, onClose, title, children, size = 'medium' }: Mod
         </div>
 
         {/* Content */}
-        {children}
+        <div className="min-h-0 overflow-y-auto">{children}</div>
+
+        {footer && (
+          <div
+            className="mt-6 flex flex-wrap justify-end gap-3 border-t pt-4"
+            style={{ borderColor: 'var(--ghost-border)' }}
+          >
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

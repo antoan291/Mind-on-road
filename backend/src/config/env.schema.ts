@@ -15,6 +15,20 @@ export const envSchema = z.object({
   OBJECT_STORAGE_ENDPOINT: z.string().min(1),
   OBJECT_STORAGE_ACCESS_KEY: z.string().min(1),
   OBJECT_STORAGE_SECRET_KEY: z.string().min(1),
+  DOCUMENT_OCR_SOURCE_DIR: z
+    .string()
+    .trim()
+    .min(1)
+    .default('/automation-samples'),
+  DOCUMENT_OCR_OUTPUT_DIR: z
+    .string()
+    .trim()
+    .min(1)
+    .default('/automation-output'),
+  DOCUMENT_OCR_WORKER_URL: z
+    .string()
+    .url()
+    .default('http://ocr-worker:8080'),
   OPENAI_API_KEY: z.string().optional()
 });
 
