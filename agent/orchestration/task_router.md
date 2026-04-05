@@ -35,6 +35,11 @@ Use automatic orchestration with subagents if useful.
 | Architecture decision record | `architecture-decision-record`, `repo-onboarding` | `agent/architecture/README.md`, `agent/architecture/adrs/README.md`, relevant domain docs | `architect_reviewer`, `docs_researcher`, `repo_explorer`, `database_migration_engineer` if schema-heavy |
 | Documentation restructuring | `repo-onboarding`, `review-sweep` | `docs/README.md`, `agent/README.md`, impacted domain folder | `repo_explorer`, `docs_researcher`, `architect_reviewer`, `product_analyst` if docs/product scope changes |
 | DevOps/deployment/backup | `repo-onboarding`, `implementation-slice`, `devops-aws-deployment` | `agent/devops/README.md`, `agent/devops/research/aws_deployment_standards.md`, `agent/architecture/README.md`, `agent/architecture/research/devops_research.md`, relevant docs | `devops_aws_engineer`, `architect_reviewer`, `security_reviewer`, `qa_reviewer`, `docs_researcher` |
+| Sprint planning / work breakdown | `sprint-planning` | `agent/product/README.md`, `docs/product/*`, `agent/architecture/README.md`, relevant delivery docs | `tech_lead`, `product_analyst`, `architect_reviewer` |
+| Tech-debt triage | `sprint-planning` | `agent/architecture/README.md`, `agent/backend/README.md`, `agent/frontend/README.md`, relevant docs | `tech_lead`, `architect_reviewer`, `security_reviewer`, `performance_engineer` |
+| Performance investigation | `repo-onboarding`, `review-sweep` | `agent/architecture/README.md`, `agent/database/README.md`, `agent/backend/README.md`, `agent/frontend/README.md` | `performance_engineer`, `architect_reviewer`, `database_migration_engineer` if query/index work needed, `backend_engineer` if API path optimization needed |
+| Incident response / hotfix | `repo-onboarding`, `implementation-slice`, `review-sweep` | `agent/security/README.md`, domain folder matching incident area, `agent/qa/README.md` | `repo_explorer`, `security_reviewer` if auth/data involved, `qa_reviewer`, `database_migration_engineer` if data corruption risk |
+| Writing tests | `repo-onboarding` | `agent/testing/README.md`, domain folder matching test area, relevant docs | `qa_reviewer` (gap analysis first), `qa_writer` (write tests), `repo_explorer` |
 
 ## Role Selection Rules
 
@@ -49,6 +54,9 @@ Use automatic orchestration with subagents if useful.
 - Use `qa_reviewer` when you need missing-test analysis or a focused verification plan.
 - Use `ux_product_reviewer` when admin UX, form usability, flow consistency, accessibility, or frontend state coverage matters.
 - Use `docs_researcher` when official API/framework behavior must be verified from docs.
+- Use `tech_lead` for sprint planning, work breakdown, tech-debt triage, cross-cutting engineering decisions, and scope risk review.
+- Use `qa_writer` when test code must be authored (not just reviewed) for a bounded implementation slice.
+- Use `performance_engineer` when N+1 queries, missing indexes, slow API paths, large bundles, or memory issues are suspected.
 
 ## Parent-Agent Execution Rules
 

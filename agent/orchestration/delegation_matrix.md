@@ -10,10 +10,13 @@
 | `devops_aws_engineer` | write/review | deployment, AWS, CI/CD, Docker, observability, backup/restore | UI-only changes or pure domain-level backend refactors with no infra effect |
 | `docs_researcher` | read-only | verifying framework/API behavior from official docs | code edits or unsourced claims |
 | `frontend_engineer` | write | bounded frontend implementation and UI tests | backend schema/service changes |
+| `performance_engineer` | read-only | N+1 queries, missing indexes, slow API paths, large frontend bundles, memory leaks | style review, unrelated feature work |
 | `product_analyst` | read-only | workflow decomposition, requirements, acceptance criteria, business-rule ambiguity | implementation ownership or speculative roadmap writing |
 | `qa_reviewer` | read-only | missing tests, edge cases, verification plan | large refactors or implementation ownership |
+| `qa_writer` | write | authoring unit/integration/E2E tests for a bounded implementation slice | reviewing without writing, broad refactors |
 | `repo_explorer` | read-only | mapping code paths, identifying files, explaining current design | editing files or speculative rewrites |
 | `security_reviewer` | read-only | auth, authorization, tenant isolation, sensitive-data risk | non-security style feedback |
+| `tech_lead` | read-only | sprint planning, tech-debt triage, work breakdown, cross-cutting engineering decisions | line-level implementation or pure UI/UX feedback |
 | `ux_product_reviewer` | read-only | admin UX consistency, form usability, accessibility, empty/error/loading states | pure visual preference feedback |
 
 ## Default Fan-Out Patterns
@@ -70,3 +73,21 @@ Each delegated task should request:
 - concrete findings or patch summary;
 - performed or recommended verification;
 - risks, assumptions, and unresolved blockers.
+
+## Conflict Resolution Protocol
+
+When two subagents return contradictory findings or patches, resolve in this order:
+
+1. **Security over features** — a `security_reviewer` finding always takes precedence over a `backend_engineer` or `frontend_engineer` patch that contradicts it.
+2. **Architecture over implementation** — an `architect_reviewer` structural objection must be resolved before the implementation patch is merged.
+3. **Data integrity over speed** — a `database_migration_engineer` migration-safety concern overrides a faster implementation that skips the safe migration path.
+4. **Explicit parent-agent decision** — if two agents disagree on a design choice with no safety/correctness winner, the parent agent makes the call and records the decision in `agent/logs/version_journal.md`.
+5. **No silent discard** — if a subagent finding is overruled, the reason must be stated in the parent agent's final report. Never silently drop a security or correctness finding.
+
+## Sprint Planning Fan-Out Pattern
+
+- Parent agent: define the sprint goal and load relevant product docs.
+- `tech_lead`: break goal into tasks with effort estimates, dependency order, and risk flags.
+- `product_analyst`: clarify acceptance criteria, edge cases, and scope boundaries for each task.
+- `architect_reviewer`: flag cross-cutting concerns, module boundary risks, and migration needs.
+- Parent agent: produce final ordered task list with assigned roles and verification criteria.

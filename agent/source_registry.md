@@ -50,7 +50,7 @@
 - Backend: Node.js + Express + TypeScript
 - Database: PostgreSQL + Prisma
 - Infra: Redis + Nginx + Hetzner
-- API style: GraphQL for reads, REST for commands and uploads
+- API style: REST throughout (GET for queries, POST/PUT/DELETE for commands and uploads)
 - AI rule: tenant-scoped only
 - Security, backups, and auditability are mandatory system properties
 
