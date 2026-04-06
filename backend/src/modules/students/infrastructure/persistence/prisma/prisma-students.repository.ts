@@ -334,6 +334,9 @@ function toPrismaStudentUpdateData(student: StudentWriteInput) {
     parentPhone: student.parentPhone,
     parentEmail: student.parentEmail,
     parentContactStatus: student.parentContactStatus as ParentContactStatus,
+    ...(student.userMembershipId !== undefined
+      ? { userMembershipId: student.userMembershipId }
+      : {}),
     status: student.status as StudentStatus
   };
 }

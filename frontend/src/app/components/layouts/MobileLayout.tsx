@@ -11,6 +11,7 @@ import {
   Wallet,
   Bot,
   FileSignature,
+  FileCheck2,
   BrainCircuit,
 } from "lucide-react";
 import { useState } from "react";
@@ -135,6 +136,13 @@ export function MobileLayout() {
       label: "Детерминатор",
       icon: <BrainCircuit size={20} />,
       featureKey: "practical",
+      permissionKey: "students.manage_register",
+    },
+    {
+      path: "/exam-applications",
+      label: "Заявления за изпит",
+      icon: <FileCheck2 size={20} />,
+      featureKey: "documents",
       permissionKey: "students.manage_register",
     },
     {

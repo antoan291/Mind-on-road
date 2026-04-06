@@ -7,8 +7,14 @@ import type {
   CreatedSessionRecord,
   IdentityAuthRepository,
   LoginIdentityRecord,
+  ProvisionTenantPortalIdentityInput,
+  ProvisionTenantPortalIdentityResult,
   UpdatePasswordInput
 } from '../../../domain/repositories/identity-auth.repository';
+import {
+  generateSessionToken,
+  hashPassword
+} from '../../../domain/services/password-security';
 
 export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
   public constructor(private readonly prisma: PrismaClient) {}
@@ -257,4 +263,230 @@ export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
       }
     });
   }
+
+  public async provisionTenantPortalIdentity(
+    input: ProvisionTenantPortalIdentityInput
+  ): Promise<ProvisionTenantPortalIdentityResult> {
+    const normalizedPhone = input.phone.trim();
+    const normalizedEmail =
+      input.email?.trim().toLowerCase() ??
+      buildSyntheticPortalEmail(input.tenantId, normalizedPhone);
+
+    const role = await this.prisma.role.findUniqueOrThrow({
+      where: {
+        tenantId_key: {
+          tenantId: input.tenantId,
+          key: input.roleKey
+        }
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (input.existingMembershipId) {
+      const existingMembership = await this.prisma.tenantMembership.findFirst({
+        where: {
+          id: input.existingMembershipId,
+          tenantId: input.tenantId
+        },
+        select: {
+          id: true,
+          user: {
+            select: {
+              id: true,
+              email: true
+            }
+          }
+        }
+      });
+
+      if (existingMembership) {
+        await this.prisma.user.update({
+          where: {
+            id: existingMembership.user.id
+          },
+          data: {
+            firstName: input.firstName,
+            lastName: input.lastName,
+            displayName: input.displayName,
+            phone: normalizedPhone,
+            ...(shouldReplaceEmail(existingMembership.user.email, input.email)
+              ? { email: normalizedEmail }
+              : {}),
+            status: UserStatus.ACTIVE
+          }
+        });
+
+        await this.prisma.membershipRole.upsert({
+          where: {
+            membershipId_roleId: {
+              membershipId: existingMembership.id,
+              roleId: role.id
+            }
+          },
+          update: {},
+          create: {
+            membershipId: existingMembership.id,
+            roleId: role.id
+          }
+        });
+
+        return {
+          userId: existingMembership.user.id,
+          membershipId: existingMembership.id,
+          loginIdentifier: normalizedPhone,
+          temporaryPassword: null,
+          status: 'updated_existing'
+        };
+      }
+    }
+
+    const existingUser = await this.prisma.user.findFirst({
+      where: {
+        OR: [{ email: normalizedEmail }, { phone: normalizedPhone }]
+      },
+      select: {
+        id: true,
+        email: true,
+        memberships: {
+          where: {
+            tenantId: input.tenantId
+          },
+          select: {
+            id: true
+          },
+          take: 1
+        }
+      }
+    });
+
+    if (existingUser) {
+      await this.prisma.user.update({
+        where: {
+          id: existingUser.id
+        },
+        data: {
+          firstName: input.firstName,
+          lastName: input.lastName,
+          displayName: input.displayName,
+          phone: normalizedPhone,
+          ...(shouldReplaceEmail(existingUser.email, input.email)
+            ? { email: normalizedEmail }
+            : {}),
+          status: UserStatus.ACTIVE
+        }
+      });
+
+      const membership = await this.prisma.tenantMembership.upsert({
+        where: {
+          tenantId_userId: {
+            tenantId: input.tenantId,
+            userId: existingUser.id
+          }
+        },
+        update: {
+          status: TenantMembershipStatus.ACTIVE,
+          joinedAt: new Date()
+        },
+        create: {
+          tenantId: input.tenantId,
+          userId: existingUser.id,
+          status: TenantMembershipStatus.ACTIVE,
+          joinedAt: new Date()
+        },
+        select: {
+          id: true
+        }
+      });
+
+      await this.prisma.membershipRole.upsert({
+        where: {
+          membershipId_roleId: {
+            membershipId: membership.id,
+            roleId: role.id
+          }
+        },
+        update: {},
+        create: {
+          membershipId: membership.id,
+          roleId: role.id
+        }
+      });
+
+      return {
+        userId: existingUser.id,
+        membershipId: membership.id,
+        loginIdentifier: normalizedPhone,
+        temporaryPassword: null,
+        status: existingUser.memberships[0]
+          ? 'already_linked'
+          : 'linked_existing'
+      };
+    }
+
+    const temporaryPassword = generateSessionToken();
+    const createdUser = await this.prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        passwordHash: hashPassword(temporaryPassword),
+        firstName: input.firstName,
+        lastName: input.lastName,
+        displayName: input.displayName,
+        phone: normalizedPhone,
+        status: UserStatus.ACTIVE,
+        mustChangePassword: true
+      },
+      select: {
+        id: true
+      }
+    });
+
+    const membership = await this.prisma.tenantMembership.create({
+      data: {
+        tenantId: input.tenantId,
+        userId: createdUser.id,
+        status: TenantMembershipStatus.ACTIVE,
+        joinedAt: new Date()
+      },
+      select: {
+        id: true
+      }
+    });
+
+    await this.prisma.membershipRole.create({
+      data: {
+        membershipId: membership.id,
+        roleId: role.id
+      }
+    });
+
+    return {
+      userId: createdUser.id,
+      membershipId: membership.id,
+      loginIdentifier: normalizedPhone,
+      temporaryPassword,
+      status: 'created'
+    };
+  }
+}
+
+function buildSyntheticPortalEmail(tenantId: string, phone: string) {
+  const normalizedPhone = phone.replace(/[^0-9a-z]/gi, '').toLowerCase();
+
+  return `student+${tenantId.slice(0, 8)}.${normalizedPhone}@portal.mindonroad.local`;
+}
+
+function shouldReplaceEmail(
+  currentEmail: string,
+  nextEmail: string | null
+) {
+  if (!nextEmail) {
+    return false;
+  }
+
+  return (
+    currentEmail === nextEmail ||
+    currentEmail.endsWith('@portal.mindonroad.local')
+  );
 }

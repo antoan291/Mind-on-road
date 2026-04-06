@@ -43,7 +43,7 @@
         "icon": "currency",
         "label": "Просрочени плащания",
         "value": "3",
-        "trend": "Общо 1,240 лв.",
+        "trend": "Общо 1,240 €",
         "color": "var(--status-warning)"
       },
       {
@@ -412,9 +412,9 @@
       }
     ],
     "overduePayments": [
-      { "student": "Антоан Тест", "amount": "450 лв.", "daysOverdue": 18, "targetPath": "/students/2" },
-      { "student": "Антоан Тест", "amount": "380 лв.", "daysOverdue": 15, "targetPath": "/students/3" },
-      { "student": "Антоан Тест", "amount": "410 лв.", "daysOverdue": 14, "targetPath": "/students/4" }
+      { "student": "Антоан Тест", "amount": "450 €", "daysOverdue": 18, "targetPath": "/students/2" },
+      { "student": "Антоан Тест", "amount": "380 €", "daysOverdue": 15, "targetPath": "/students/3" },
+      { "student": "Антоан Тест", "amount": "410 €", "daysOverdue": 14, "targetPath": "/students/4" }
     ],
     "expiringDocuments": [
       { "student": "Антоан Тест", "document": "Свидетелство за управление", "daysLeft": 0, "targetPath": "/students/3" },
@@ -565,9 +565,9 @@
         }
       ],
       "recentChecks": [
-        { "id": "#DOC-8472", "date": "12.10.2023", "owner": "Петър Иванов", "status": "Потвърден", "amount": "450,00 лв" },
-        { "id": "#DOC-8469", "date": "12.10.2023", "owner": "Авто-Мобил ООД", "status": "Блокиран", "amount": "1 240,00 лв" },
-        { "id": "#DOC-8461", "date": "11.10.2023", "owner": "Мария Стойчева", "status": "Потвърден", "amount": "85,00 лв" }
+        { "id": "#DOC-8472", "date": "12.10.2023", "owner": "Петър Иванов", "status": "Потвърден", "amount": "450,00 €" },
+        { "id": "#DOC-8469", "date": "12.10.2023", "owner": "Авто-Мобил ООД", "status": "Блокиран", "amount": "1 240,00 €" },
+        { "id": "#DOC-8461", "date": "11.10.2023", "owner": "Мария Стойчева", "status": "Потвърден", "amount": "85,00 €" }
       ]
     }
   }

@@ -244,7 +244,7 @@ export function ExpensesPage() {
       note: payload.note,
       status: payload.status,
       documentReference: `EXP-${Date.now()}`,
-      currency: 'BGN',
+      currency: 'EUR',
       affectsOperationalExpense: payload.affectsOperationalExpense,
     };
 
@@ -810,7 +810,7 @@ function mapExpenseRecord(record: ExpenseRecordView): DashboardReportEntry {
     documentReference: `EXP-${record.id.slice(0, 8)}`,
     counterparty: record.counterparty,
     note: record.note,
-    currency: 'BGN',
+    currency: 'EUR',
     vatAmount: record.vatAmount,
     affectsOperationalExpense: record.affectsOperationalExpense,
   };

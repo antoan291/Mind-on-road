@@ -507,20 +507,20 @@ export function PaymentsPage() {
           <TelemetryCard
             icon={<Wallet size={18} />}
             label="Обща дължима сума"
-            value={`${formatCurrency(totalDue)} лв`}
+            value={`${formatCurrency(totalDue)} €`}
             iconColor="var(--primary-accent)"
           />
           <TelemetryCard
             icon={<CheckCircle size={18} />}
             label="Платено"
-            value={`${formatCurrency(totalPaid)} лв`}
+            value={`${formatCurrency(totalPaid)} €`}
             subtitle={`${calculateSafePercent(totalPaid, totalDue)}%`}
             iconColor="var(--status-success)"
           />
           <TelemetryCard
             icon={<Clock size={18} />}
             label="Остават за плащане"
-            value={`${formatCurrency(totalRemaining)} лв`}
+            value={`${formatCurrency(totalRemaining)} €`}
             subtitle={`${calculateSafePercent(totalRemaining, totalDue)}%`}
             iconColor="var(--status-warning)"
             alert={totalRemaining > 0}
@@ -974,7 +974,7 @@ export function PaymentsPage() {
                     Обща дължима сума:
                   </span>
                   <span className="text-lg font-bold font-mono" style={{ color: 'var(--primary-accent)' }}>
-                    {formatCurrency(totalDue)} лв
+                    {formatCurrency(totalDue)} €
                   </span>
                 </div>
               </div>
@@ -1344,14 +1344,14 @@ function PaymentDetailDrawer({
               <div className="flex items-center justify-between py-3 border-b" style={{ borderColor: 'var(--ghost-border)' }}>
                 <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Дължима сума</span>
                 <span className="text-xl font-bold font-mono" style={{ color: 'var(--text-primary)' }}>
-                  {formatCurrency(payment.dueAmount)} лв
+                  {formatCurrency(payment.dueAmount)} €
                 </span>
               </div>
 
               <div className="flex items-center justify-between py-3 border-b" style={{ borderColor: 'var(--ghost-border)' }}>
                 <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Платена сума</span>
                 <span className="text-xl font-bold font-mono" style={{ color: 'var(--status-success)' }}>
-                  {formatCurrency(payment.paidAmount)} лв
+                  {formatCurrency(payment.paidAmount)} €
                 </span>
               </div>
 
@@ -1362,7 +1362,7 @@ function PaymentDetailDrawer({
                 >
                   <span className="text-sm font-medium" style={{ color: 'var(--status-error)' }}>Остават за плащане</span>
                   <span className="text-2xl font-bold font-mono" style={{ color: 'var(--status-error)' }}>
-                    {formatCurrency(payment.remainingAmount)} лв
+                    {formatCurrency(payment.remainingAmount)} €
                   </span>
                 </div>
               )}

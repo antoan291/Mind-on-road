@@ -788,7 +788,7 @@ export function InvoicesPage() {
                           {formatCurrency(invoice.totalAmount)}
                         </p>
                         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                          лв {invoice.vat && `(ДДС: ${formatCurrency(invoice.vat)})`}
+                          € {invoice.vat && `(ДДС: ${formatCurrency(invoice.vat)} €)`}
                         </p>
                       </td>
 
@@ -1020,7 +1020,7 @@ export function InvoicesPage() {
                         0,
                       ),
                     )}{' '}
-                    лв
+                    €
                   </span>
                 </div>
               </div>
@@ -1146,8 +1146,8 @@ function downloadInvoiceText(invoice: Invoice) {
         `Дата: ${invoice.invoiceDate}`,
         `Пакет: ${invoice.packageType}`,
         `Основание: ${invoice.invoiceReason}`,
-        `Общо: ${invoice.totalAmount} лв`,
-        `ДДС: ${invoice.vat ?? 0} лв`,
+        `Общо: ${invoice.totalAmount} €`,
+        `ДДС: ${invoice.vat ?? 0} €`,
         `Статус: ${getInvoiceStatusLabel(invoice.invoiceStatus)}`,
         `Плащане: ${invoice.paymentNumber ?? 'Няма'}`,
       ].join('\n'),
@@ -1540,7 +1540,7 @@ function InvoiceDetailDrawer({
                 <div className="flex items-center justify-between py-2">
                   <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>Стойност без ДДС</span>
                   <span className="text-lg font-mono" style={{ color: 'var(--text-primary)' }}>
-                    {formatCurrency(invoice.subtotal)} лв
+                    {formatCurrency(invoice.subtotal)} €
                   </span>
                 </div>
               )}
@@ -1549,7 +1549,7 @@ function InvoiceDetailDrawer({
                 <div className="flex items-center justify-between py-2">
                   <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>ДДС (20%)</span>
                   <span className="text-lg font-mono" style={{ color: 'var(--text-primary)' }}>
-                    {formatCurrency(invoice.vat)} лв
+                    {formatCurrency(invoice.vat)} €
                   </span>
                 </div>
               )}
@@ -1563,7 +1563,7 @@ function InvoiceDetailDrawer({
               >
                 <span className="text-base font-semibold" style={{ color: 'var(--text-secondary)' }}>Обща сума</span>
                 <span className="text-2xl font-bold font-mono" style={{ color: 'var(--primary-accent)' }}>
-                  {formatCurrency(invoice.totalAmount)} лв
+                  {formatCurrency(invoice.totalAmount)} €
                 </span>
               </div>
             </div>
@@ -1688,7 +1688,7 @@ function InvoiceDetailDrawer({
                         {invoice.packageType} - {invoice.invoiceReason}
                       </td>
                       <td className="py-3 text-right font-mono text-sm text-gray-900">
-                        {invoice.subtotal && formatCurrency(invoice.subtotal)} лв
+                        {invoice.subtotal && formatCurrency(invoice.subtotal)} €
                       </td>
                     </tr>
                   </tbody>
@@ -1700,18 +1700,18 @@ function InvoiceDetailDrawer({
                     {invoice.subtotal && (
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Без ДДС:</span>
-                        <span className="font-mono text-gray-900">{formatCurrency(invoice.subtotal)} лв</span>
+                        <span className="font-mono text-gray-900">{formatCurrency(invoice.subtotal)} €</span>
                       </div>
                     )}
                     {invoice.vat && (
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">ДДС (20%):</span>
-                        <span className="font-mono text-gray-900">{formatCurrency(invoice.vat)} лв</span>
+                        <span className="font-mono text-gray-900">{formatCurrency(invoice.vat)} €</span>
                       </div>
                     )}
                     <div className="flex justify-between text-base font-bold pt-2 border-t border-gray-300">
                       <span className="text-gray-900">Общо:</span>
-                      <span className="font-mono" style={{ color: '#6366F1' }}>{formatCurrency(invoice.totalAmount)} лв</span>
+                      <span className="font-mono" style={{ color: '#6366F1' }}>{formatCurrency(invoice.totalAmount)} €</span>
                     </div>
                   </div>
                 </div>
@@ -2347,7 +2347,7 @@ function CreateInvoiceModal({
                     >
                       <span className="text-base font-semibold" style={{ color: 'var(--text-secondary)' }}>Обща сума</span>
                       <span className="text-2xl font-bold font-mono" style={{ color: 'var(--primary-accent)' }}>
-                        {amount} лв
+                        {amount} €
                       </span>
                     </div>
 

@@ -17,7 +17,7 @@ export interface FinanceReportEntryResponse {
   documentReference: string;
   counterparty: string;
   note: string;
-  currency: 'BGN';
+  currency: 'EUR';
   vatAmount: number;
   affectsOperationalExpense: boolean;
 }
@@ -69,7 +69,7 @@ export class FinanceReportQueryService {
         documentReference: payment.paymentNumber,
         counterparty: payment.studentName,
         note: payment.note ?? '',
-        currency: 'BGN' as const,
+        currency: 'EUR' as const,
         vatAmount: 0,
         affectsOperationalExpense: true
       })),
@@ -86,7 +86,7 @@ export class FinanceReportQueryService {
         documentReference: '',
         counterparty: expense.counterparty,
         note: expense.note,
-        currency: 'BGN' as const,
+        currency: 'EUR' as const,
         vatAmount: expense.vatAmount,
         affectsOperationalExpense: expense.affectsOperationalExpense
       }))

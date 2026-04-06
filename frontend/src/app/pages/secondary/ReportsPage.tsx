@@ -6,11 +6,13 @@ import { PageHeader } from '../../components/ui-system/PageHeader';
 import { StatusBadge } from '../../components/ui-system/StatusBadge';
 import {
   createExpenseRecord,
+  fetchExpenseRecords,
 } from '../../services/expensesApi';
 import { useAuthSession } from '../../services/authSession';
-import { fetchFinanceLedgerReport } from '../../services/reportsApi';
+import { fetchPaymentRecords } from '../../services/paymentsApi';
 import { DataTableLayout, MetricCard, MetricGrid, PageSection, Panel, type StatusTone } from './secondaryShared';
 import {
+  buildReportEntriesFromFinanceRecords,
   formatDashboardMoney,
   reportEntries,
   type DashboardReportEntry,
@@ -87,13 +89,13 @@ export function ReportsPage() {
   useEffect(() => {
     let isMounted = true;
 
-    fetchFinanceLedgerReport()
-      .then((report) => {
+    Promise.all([fetchPaymentRecords(), fetchExpenseRecords()])
+      .then(([payments, expenses]) => {
         if (!isMounted) {
           return;
         }
 
-        setEntries(report.items);
+        setEntries(buildReportEntriesFromFinanceRecords(payments, expenses));
         setSourceStatus('backend');
       })
       .catch(() => {
@@ -132,9 +134,12 @@ export function ReportsPage() {
   const result = income - realExpenses;
 
   const reloadReportEntries = async () => {
-    const report = await fetchFinanceLedgerReport();
+    const [payments, expenses] = await Promise.all([
+      fetchPaymentRecords(),
+      fetchExpenseRecords(),
+    ]);
 
-    setEntries(report.items);
+    setEntries(buildReportEntriesFromFinanceRecords(payments, expenses));
     setSourceStatus('backend');
   };
 

@@ -30,7 +30,7 @@
     "db:bootstrap-owner": "tsx prisma/bootstrap-owner.ts",
     "db:seed": "tsx prisma/seed.ts",
     "typecheck": "tsc --noEmit",
-    "test": "jest",
+    "test": "node --import tsx --test test/unit/*.test.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate:dev": "prisma migrate dev"
   },

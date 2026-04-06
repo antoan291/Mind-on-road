@@ -289,7 +289,7 @@ export function StudentPortalProfilePage() {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}{' '}
-                  лв
+                  €
                 </span>
               </div>
 
@@ -305,7 +305,7 @@ export function StudentPortalProfilePage() {
                     {paymentProgress}% от общата сума
                   </span>
                   <span className="font-semibold text-[#ff6e84]">
-                    Остават: {remainingAmount.toLocaleString('bg-BG')} лв
+                    Остават: {remainingAmount.toLocaleString('bg-BG')} €
                   </span>
                 </div>
               </div>

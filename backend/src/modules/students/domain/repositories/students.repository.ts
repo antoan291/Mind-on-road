@@ -104,6 +104,7 @@ export interface StudentWriteInput {
   parentPhone: string | null;
   parentEmail: string | null;
   parentContactStatus: string;
+  userMembershipId?: string | null;
   status: string;
   enrollment: StudentEnrollmentWriteInput;
 }

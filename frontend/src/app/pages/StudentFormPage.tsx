@@ -64,6 +64,7 @@ export function StudentFormPage() {
   });
 
   const [showSuccess, setShowSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -148,9 +149,22 @@ export function StudentFormPage() {
       const payload = toStudentMutationPayload(formData);
 
       if (isEdit && isBackendStudentId && id && session?.csrfToken) {
-        await updateStudentRecord(id, payload, session.csrfToken);
+        const updatedStudent = await updateStudentRecord(
+          id,
+          payload,
+          session.csrfToken,
+        );
+
+        setSuccessMessage(buildStudentSaveMessage(true, updatedStudent.portalAccess));
       } else if (!isEdit && session?.csrfToken) {
-        await createStudentRecord(payload, session.csrfToken);
+        const createdStudent = await createStudentRecord(
+          payload,
+          session.csrfToken,
+        );
+
+        setSuccessMessage(
+          buildStudentSaveMessage(false, createdStudent.portalAccess),
+        );
       }
 
       setShowSuccess(true);
@@ -187,7 +201,7 @@ export function StudentFormPage() {
             <Alert
               type="success"
               title={isEdit ? 'Промените са запазени' : 'Курсистът е добавен'}
-              message={isEdit ? 'Информацията беше успешно актуализирана.' : 'Новият курсист е добавен в системата.'}
+              message={successMessage}
             />
           </div>
         )}
@@ -471,10 +485,10 @@ export function StudentFormPage() {
               onChange={(value) => setFormData({ ...formData, lessonPackage: value })}
               options={[
                 { value: '', label: 'Изберете пакет...' },
-                { value: '10', label: 'Пакет 10 часа - 600 лв' },
-                { value: '15', label: 'Пакет 15 часа - 850 лв' },
-                { value: '20', label: 'Пакет 20 часа - 1,100 лв' },
-                { value: '25', label: 'Пакет 25 часа - 1,350 лв' },
+                { value: '10', label: 'Пакет 10 часа - 600 €' },
+                { value: '15', label: 'Пакет 15 часа - 850 €' },
+                { value: '20', label: 'Пакет 20 часа - 1,100 €' },
+                { value: '25', label: 'Пакет 25 часа - 1,350 €' },
                 { value: 'custom', label: 'Персонализиран пакет' },
               ]}
               required
@@ -583,6 +597,45 @@ export function StudentFormPage() {
       </form>
     </div>
   );
+}
+
+function buildStudentSaveMessage(
+  isEdit: boolean,
+  portalAccess:
+    | {
+        loginIdentifier: string;
+        temporaryPassword: string | null;
+        mustChangePassword: boolean;
+        status:
+          | 'created'
+          | 'linked_existing'
+          | 'already_linked'
+          | 'updated_existing';
+      }
+    | null
+    | undefined,
+) {
+  const baseMessage = isEdit
+    ? 'Информацията беше успешно актуализирана.'
+    : 'Новият курсист е добавен в системата.';
+
+  if (!portalAccess) {
+    return baseMessage;
+  }
+
+  if (portalAccess.status === 'created' && portalAccess.temporaryPassword) {
+    return `${baseMessage} Portal вход: ${portalAccess.loginIdentifier}. Временна парола: ${portalAccess.temporaryPassword}. Смяната на паролата е задължителна при първи вход.`;
+  }
+
+  if (portalAccess.status === 'linked_existing') {
+    return `${baseMessage} Курсистът беше свързан с вече съществуващ portal акаунт. Вход: ${portalAccess.loginIdentifier}.`;
+  }
+
+  if (portalAccess.status === 'updated_existing') {
+    return `${baseMessage} Свързаният portal акаунт беше синхронизиран. Вход: ${portalAccess.loginIdentifier}.`;
+  }
+
+  return `${baseMessage} Portal достъпът вече е наличен. Вход: ${portalAccess.loginIdentifier}.`;
 }
 
 function toStudentMutationPayload(

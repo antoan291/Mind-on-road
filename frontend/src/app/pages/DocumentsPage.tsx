@@ -63,6 +63,8 @@ export function DocumentsPage() {
   >([]);
   const [ocrSourceFiles, setOcrSourceFiles] = useState<string[]>([]);
   const [selectedOcrSourceFile, setSelectedOcrSourceFile] = useState('');
+  const [selectedOcrExtraction, setSelectedOcrExtraction] =
+    useState<DocumentOcrExtractionView | null>(null);
   const [ocrRunStatus, setOcrRunStatus] = useState<
     'idle' | 'running' | 'success' | 'error'
   >('idle');
@@ -413,9 +415,9 @@ export function DocumentsPage() {
                 className="mt-2 text-sm max-w-3xl"
                 style={{ color: 'var(--text-secondary)' }}
               >
-                Backend чете JSON резултатите от `automation/output` само за
-                преглед. Данните от OCR не се записват автоматично в профил или
-                документ без ръчно потвърждение.
+                OCR pipeline-ът в `automation/` генерира предложения за
+                документни данни. След ръчен преглед можеш да приложиш
+                извлеченото като реален документен запис.
               </p>
             </div>
 
@@ -597,6 +599,28 @@ export function DocumentsPage() {
                   >
                     {extraction.fileName}
                   </div>
+
+                  {extraction.warnings.length > 0 && (
+                    <div
+                      className="mt-3 rounded-lg px-3 py-2 text-xs"
+                      style={{
+                        background: 'var(--status-warning-bg)',
+                        color: 'var(--status-warning)',
+                      }}
+                    >
+                      {extraction.warnings[0]}
+                    </div>
+                  )}
+
+                  <div className="mt-4 flex gap-2">
+                    <Button
+                      variant="secondary"
+                      icon={<FileText size={16} />}
+                      onClick={() => setSelectedOcrExtraction(extraction)}
+                    >
+                      Приложи към документ
+                    </Button>
+                  </div>
                 </div>
               ))
             )}
@@ -717,6 +741,24 @@ export function DocumentsPage() {
             );
             setShowUploadModal(false);
             setUploadTargetDocument(null);
+            setSourceStatus('backend');
+          }}
+        />
+      )}
+
+      {selectedOcrExtraction && (
+        <OcrApplyModal
+          extraction={selectedOcrExtraction}
+          students={students}
+          onClose={() => setSelectedOcrExtraction(null)}
+          onSubmit={async (payload) => {
+            const savedDocument = await createDocumentRecord(
+              payload,
+              session?.csrfToken ?? '',
+            );
+
+            setAllDocuments((current) => [savedDocument as Document, ...current]);
+            setSelectedOcrExtraction(null);
             setSourceStatus('backend');
           }}
         />
@@ -1347,6 +1389,281 @@ function UploadModal({
   );
 }
 
+function OcrApplyModal({
+  extraction,
+  students,
+  onClose,
+  onSubmit,
+}: {
+  extraction: DocumentOcrExtractionView;
+  students: StudentOperationalRecord[];
+  onClose: () => void;
+  onSubmit: (payload: {
+    studentId?: string | null;
+    name: string;
+    ownerType: 'STUDENT' | 'INSTRUCTOR' | 'VEHICLE' | 'SCHOOL';
+    ownerName: string;
+    ownerRef?: string | null;
+    category: string;
+    documentNo?: string | null;
+    issueDate: string;
+    expiryDate?: string | null;
+    status: 'VALID' | 'EXPIRING_SOON' | 'EXPIRED' | 'MISSING';
+    fileUrl?: string | null;
+    notes?: string | null;
+  }) => Promise<void>;
+}) {
+  const matchedStudentId = findMatchingStudentId(students, extraction.extractedName);
+  const [studentId, setStudentId] = useState(matchedStudentId);
+  const [documentName, setDocumentName] = useState(
+    mapOcrDocumentName(extraction.documentName),
+  );
+  const [issueDate, setIssueDate] = useState(new Date().toISOString().slice(0, 10));
+  const [expiryDate, setExpiryDate] = useState('');
+  const [notes, setNotes] = useState(buildOcrNotes(extraction));
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const selectedStudent =
+    students.find((student) => String(student.id) === studentId) ?? null;
+
+  const handleApply = async () => {
+    if (isSaving) {
+      return;
+    }
+
+    if (!studentId || !selectedStudent) {
+      setSaveError('Избери курсист, към когото да се приложи OCR документът.');
+      return;
+    }
+
+    setSaveError(null);
+    setIsSaving(true);
+
+    try {
+      await onSubmit({
+        studentId,
+        name: documentName,
+        ownerType: 'STUDENT',
+        ownerName: selectedStudent.name,
+        ownerRef: String(selectedStudent.id),
+        category: documentName,
+        documentNo:
+          extraction.documentNumber !== 'Без номер'
+            ? extraction.documentNumber
+            : null,
+        issueDate,
+        expiryDate: expiryDate || null,
+        status: expiryDate ? resolveDocumentStatus(expiryDate) : 'VALID',
+        fileUrl: toDocumentStorageUrl(extraction.sourceFileName),
+        notes: notes.trim() || null,
+      });
+    } catch (error) {
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : 'OCR документът не беше приложен.',
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <div
+        className="fixed inset-0 bg-black/60 z-40 transition-opacity"
+        onClick={onClose}
+        style={{ backdropFilter: 'blur(4px)' }}
+      />
+
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div
+          className="w-full max-w-3xl rounded-xl"
+          style={{ background: 'var(--bg-card)' }}
+        >
+          <div className="p-6 border-b" style={{ borderColor: 'var(--ghost-border)' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl" style={{ color: 'var(--text-primary)' }}>
+                  Приложи OCR към документ
+                </h2>
+                <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  Потвърди разпознатите данни преди запис в системата.
+                </p>
+              </div>
+              <button
+                onClick={onClose}
+                className="w-10 h-10 rounded-lg flex items-center justify-center transition-all hover:shadow-[var(--glow-indigo)]"
+                style={{ background: 'var(--bg-panel)', color: 'var(--text-secondary)' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-6">
+            <div
+              className="rounded-xl p-4"
+              style={{
+                background: 'var(--bg-panel)',
+                border: '1px solid var(--border-color)',
+              }}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    {extraction.extractedName}
+                  </div>
+                  <div className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    {extraction.documentName} · {extraction.documentNumber}
+                  </div>
+                  <div className="mt-2 text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                    OCR файл: {extraction.fileName}
+                    {extraction.confidence !== null
+                      ? ` · Увереност ${(extraction.confidence * 100).toFixed(1)}%`
+                      : ''}
+                  </div>
+                </div>
+                <StatusBadge
+                  status={extraction.manualReviewRequired ? 'warning' : 'success'}
+                  size="small"
+                >
+                  {extraction.manualReviewRequired ? 'Ръчен преглед' : 'Готово'}
+                </StatusBadge>
+              </div>
+
+              {extraction.warnings.length > 0 && (
+                <ul
+                  className="mt-4 list-disc space-y-1 pl-5 text-sm"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  {extraction.warnings.map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Курсист
+                </label>
+                <select
+                  value={studentId}
+                  onChange={(event) => setStudentId(event.target.value)}
+                  className="w-full h-12 rounded-lg px-4 border-none outline-none"
+                  style={{
+                    background: 'var(--bg-panel)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  <option value="">Избери курсист...</option>
+                  {students.map((student) => (
+                    <option key={student.id} value={String(student.id)}>
+                      {student.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Тип документ
+                </label>
+                <select
+                  value={documentName}
+                  onChange={(event) => setDocumentName(event.target.value)}
+                  className="w-full h-12 rounded-lg px-4 border-none outline-none"
+                  style={{
+                    background: 'var(--bg-panel)',
+                    color: 'var(--text-primary)',
+                  }}
+                >
+                  <option>Лична карта</option>
+                  <option>Свидетелство за управление</option>
+                  <option>OCR документ</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Дата на издаване
+                </label>
+                <input
+                  type="date"
+                  value={issueDate}
+                  onChange={(event) => setIssueDate(event.target.value)}
+                  className="w-full h-12 rounded-lg px-4 border-none outline-none"
+                  style={{
+                    background: 'var(--bg-panel)',
+                    color: 'var(--text-primary)',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                  Валиден до
+                </label>
+                <input
+                  type="date"
+                  value={expiryDate}
+                  onChange={(event) => setExpiryDate(event.target.value)}
+                  className="w-full h-12 rounded-lg px-4 border-none outline-none"
+                  style={{
+                    background: 'var(--bg-panel)',
+                    color: 'var(--text-primary)',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
+                Бележки
+              </label>
+              <textarea
+                value={notes}
+                onChange={(event) => setNotes(event.target.value)}
+                rows={5}
+                className="w-full rounded-lg px-4 py-3 border-none outline-none resize-none"
+                style={{
+                  background: 'var(--bg-panel)',
+                  color: 'var(--text-primary)',
+                }}
+              />
+            </div>
+
+            {saveError && (
+              <p className="text-sm" style={{ color: 'var(--status-error)' }}>
+                {saveError}
+              </p>
+            )}
+
+            <div className="flex gap-3">
+              <Button
+                variant="primary"
+                icon={<FileText size={18} />}
+                onClick={() => void handleApply()}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Записване...' : 'Създай документ от OCR'}
+              </Button>
+              <Button variant="secondary" onClick={onClose}>
+                Отказ
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function mapDocumentTypeToOwnerType(documentType: DocumentType) {
   if (documentType === 'instructor') {
     return 'INSTRUCTOR' as const;
@@ -1412,6 +1729,71 @@ function toDocumentStorageUrl(fileName: string) {
   }
 
   return `mindonroad-local-upload://${normalizedFileName}`;
+}
+
+function mapOcrDocumentName(documentName: string) {
+  const normalized = documentName.toLowerCase();
+
+  if (normalized.includes('лична карта')) {
+    return 'Лична карта';
+  }
+
+  if (normalized.includes('шофьорска книжка')) {
+    return 'Свидетелство за управление';
+  }
+
+  return 'OCR документ';
+}
+
+function findMatchingStudentId(
+  students: StudentOperationalRecord[],
+  extractedName: string,
+) {
+  const normalizedExtraction = normalizeComparableName(extractedName);
+
+  if (!normalizedExtraction) {
+    return '';
+  }
+
+  const exactMatch = students.find(
+    (student) =>
+      normalizeComparableName(student.name) === normalizedExtraction,
+  );
+
+  if (exactMatch) {
+    return String(exactMatch.id);
+  }
+
+  const partialMatch = students.find((student) =>
+    normalizeComparableName(student.name).includes(normalizedExtraction) ||
+    normalizedExtraction.includes(normalizeComparableName(student.name)),
+  );
+
+  return partialMatch ? String(partialMatch.id) : '';
+}
+
+function normalizeComparableName(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildOcrNotes(extraction: DocumentOcrExtractionView) {
+  const warningText =
+    extraction.warnings.length > 0
+      ? `Предупреждения: ${extraction.warnings.join(' | ')}`
+      : 'Няма OCR предупреждения.';
+  const confidenceText =
+    extraction.confidence !== null
+      ? `Увереност: ${(extraction.confidence * 100).toFixed(1)}%`
+      : 'Увереност: няма данни';
+
+  return [
+    `OCR източник: ${extraction.fileName}`,
+    confidenceText,
+    warningText,
+  ].join('\n');
 }
 
 // Info Row Component

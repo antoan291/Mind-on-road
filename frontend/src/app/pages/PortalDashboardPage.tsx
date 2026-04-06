@@ -209,7 +209,7 @@ export function PortalDashboardPage() {
           value={
             isParentPortal
               ? dueNotifications.length
-              : `${paidAmount.toLocaleString('bg-BG')} лв.`
+              : `${paidAmount.toLocaleString('bg-BG')} €`
           }
           trend={isParentPortal ? 'Последни съобщения' : `${payments.length} плащания`}
           icon={isParentPortal ? <Bell size={20} /> : <Wallet size={20} />}
@@ -220,7 +220,7 @@ export function PortalDashboardPage() {
           value={
             isParentPortal
               ? expiringDocuments.length
-              : `${dueAmount.toLocaleString('bg-BG')} лв.`
+              : `${dueAmount.toLocaleString('bg-BG')} €`
           }
           trend={
             isParentPortal

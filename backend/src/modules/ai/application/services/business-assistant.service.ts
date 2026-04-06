@@ -571,12 +571,12 @@ function buildFallbackBusinessAnswer(
     const latestInvoice = snapshot.invoices[0];
 
     return [
-      `${reportingPeriod.label}: приходи ${periodRevenueAmount} лв, разходи ${periodExpenseAmount} лв, печалба ${periodProfitAmount} лв. Общо фактури в системата: ${snapshot.stats.invoicesCount}.`,
+      `${reportingPeriod.label}: приходи ${periodRevenueAmount} €, разходи ${periodExpenseAmount} €, печалба ${periodProfitAmount} €. Общо фактури в системата: ${snapshot.stats.invoicesCount}.`,
       latestPayment
-        ? `Последно плащане: ${latestPayment.studentName}, ${latestPayment.amount} лв, номер ${latestPayment.paymentNumber}, статус ${latestPayment.status}.`
+        ? `Последно плащане: ${latestPayment.studentName}, ${latestPayment.amount} €, номер ${latestPayment.paymentNumber}, статус ${latestPayment.status}.`
         : `Няма намерени плащания за периода ${reportingPeriod.label.toLowerCase()}.`,
       latestInvoice
-        ? `Последна фактура: ${latestInvoice.invoiceNumber} към ${latestInvoice.recipientName}, ${latestInvoice.totalAmount} лв, статус ${latestInvoice.status}/${latestInvoice.paymentStatus}.`
+        ? `Последна фактура: ${latestInvoice.invoiceNumber} към ${latestInvoice.recipientName}, ${latestInvoice.totalAmount} €, статус ${latestInvoice.status}/${latestInvoice.paymentStatus}.`
         : 'Няма намерени фактури в текущия tenant.'
     ].join(' ');
   }
@@ -589,7 +589,7 @@ function buildFallbackBusinessAnswer(
       (expense) => expense.type === 'friend-vat-expense'
     );
 
-    return `Оперативни разходи: ${snapshot.stats.expensesTotalAmount} лв. ДДС от разходи от приятели: ${snapshot.stats.friendVatTotalAmount} лв. Записите тип "разход от приятели" са ${friendVatExpenses.length} и не увеличават реалния operational expense.`;
+    return `Оперативни разходи: ${snapshot.stats.expensesTotalAmount} €. ДДС от разходи от приятели: ${snapshot.stats.friendVatTotalAmount} €. Записите тип "разход от приятели" са ${friendVatExpenses.length} и не увеличават реалния operational expense.`;
   }
 
   if (
@@ -683,7 +683,7 @@ function buildFallbackBusinessAnswer(
     ].join(' ');
   }
 
-  return `Обобщение за текущия tenant: курсисти ${snapshot.stats.studentsCount}, активни ${snapshot.stats.activeStudentsCount}, плащания ${snapshot.stats.paymentsTotalAmount} лв, оперативни разходи ${snapshot.stats.expensesTotalAmount} лв, фактури ${snapshot.stats.invoicesCount}, документи за преглед до 30 дни ${snapshot.stats.documentsExpiringSoonCount}, теоретични групи ${snapshot.stats.theoryGroupsCount}, практически часове ${snapshot.stats.practicalLessonsCount}.`;
+  return `Обобщение за текущия tenant: курсисти ${snapshot.stats.studentsCount}, активни ${snapshot.stats.activeStudentsCount}, плащания ${snapshot.stats.paymentsTotalAmount} €, оперативни разходи ${snapshot.stats.expensesTotalAmount} €, фактури ${snapshot.stats.invoicesCount}, документи за преглед до 30 дни ${snapshot.stats.documentsExpiringSoonCount}, теоретични групи ${snapshot.stats.theoryGroupsCount}, практически часове ${snapshot.stats.practicalLessonsCount}.`;
 }
 
 function normalizeQuestionText(value: string) {

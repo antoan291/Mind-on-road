@@ -133,7 +133,8 @@ const studentsQueryService = new StudentsQueryService(
   new PrismaStudentsRepository(prismaClient)
 );
 const studentsCommandService = new StudentsCommandService(
-  new PrismaStudentsRepository(prismaClient)
+  new PrismaStudentsRepository(prismaClient),
+  identityAuthRepository
 );
 const studentsDeterminatorService = new StudentsDeterminatorService(
   new PrismaStudentsRepository(prismaClient)
@@ -549,7 +550,8 @@ export function createHttpApp() {
         await recordMutationAudit(request, 'students.create', {
           studentId: student.id,
           studentName: student.name,
-          categoryCode: student.enrollment?.categoryCode ?? null
+          categoryCode: student.enrollment?.categoryCode ?? null,
+          portalAccessStatus: student.portalAccess?.status ?? null
         });
         await deleteTenantReadCaches(request.auth!.tenantId);
 
@@ -623,7 +625,8 @@ export function createHttpApp() {
         await recordMutationAudit(request, 'students.update', {
           studentId: student.id,
           studentName: student.name,
-          categoryCode: student.enrollment?.categoryCode ?? null
+          categoryCode: student.enrollment?.categoryCode ?? null,
+          portalAccessStatus: student.portalAccess?.status ?? null
         });
         await deleteTenantReadCaches(request.auth!.tenantId);
 
@@ -1984,7 +1987,7 @@ export function createHttpApp() {
           invoiceReason: parsedRequest.data.invoiceReason,
           packageType: parsedRequest.data.packageType,
           totalAmount: parsedRequest.data.totalAmount,
-          currency: 'BGN',
+          currency: 'EUR',
           status: parsedRequest.data.status,
           paymentLinkStatus: parsedRequest.data.paymentLinkStatus,
           paymentNumber: parsedRequest.data.paymentNumber ?? null,

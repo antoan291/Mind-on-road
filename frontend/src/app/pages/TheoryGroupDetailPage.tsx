@@ -531,7 +531,7 @@ export function TheoryGroupDetailPage() {
                                           {att.dueAmount && (
                                             <span className="flex items-center gap-1" style={{ color: 'var(--status-error)' }}>
                                               <DollarSign size={12} />
-                                              Дължи {att.dueAmount} лв
+                                              Дължи {att.dueAmount} €
                                             </span>
                                           )}
                                           {att.notificationSent && (

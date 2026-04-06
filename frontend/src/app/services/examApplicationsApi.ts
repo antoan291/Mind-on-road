@@ -86,6 +86,14 @@ function mapExamApplication(
 ): ExamApplicationView {
   return {
     ...application,
+    preferredExamDate: application.preferredExamDate ?? null,
+    missingRequirements: application.missingRequirements ?? [],
+    statusNote: application.statusNote ?? null,
+    submittedAt: application.submittedAt ?? null,
+    decidedAt: application.decidedAt ?? null,
+    createdAt: application.createdAt ?? '',
+    updatedAt: application.updatedAt ?? '',
+    revisionHistory: application.revisionHistory ?? [],
     statusLabel: mapStatusLabel(application.status),
     statusTone: mapStatusTone(application.status),
   };

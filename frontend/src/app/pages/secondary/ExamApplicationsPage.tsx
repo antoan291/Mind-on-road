@@ -131,6 +131,10 @@ export function ExamApplicationsPage() {
   const approvedCount = applications.filter(
     (application) => application.status === 'APPROVED',
   ).length;
+  const updatedAtLabel =
+    selectedApplication?.updatedAt?.slice(0, 10) || '—';
+  const submittedAtLabel =
+    selectedApplication?.submittedAt?.slice(0, 10) || '—';
 
   return (
     <div>
@@ -268,18 +272,33 @@ export function ExamApplicationsPage() {
                 searchValue={searchValue}
                 onSearchChange={setSearchValue}
                 showFilterButton={false}
-                filters={[
-                  {
-                    label: 'Статус',
-                    value: statusFilter,
-                    options: [
-                      { value: 'all', label: 'Всички' },
-                      ...STATUS_OPTIONS,
-                    ],
-                    onChange: (value) =>
-                      setStatusFilter(value as 'all' | ExamApplicationStatus),
-                  },
-                ]}
+                filters={
+                  <select
+                    aria-label="Филтър по статус"
+                    value={statusFilter}
+                    onChange={(event) =>
+                      setStatusFilter(
+                        event.target.value as 'all' | ExamApplicationStatus,
+                      )
+                    }
+                    className="h-11 rounded-lg px-4 text-sm outline-none"
+                    style={{
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--ghost-border-medium)',
+                      color: 'var(--text-primary)',
+                    }}
+                  >
+                    <option value="all">Всички</option>
+                    {STATUS_OPTIONS.map((statusOption) => (
+                      <option
+                        key={statusOption.value}
+                        value={statusOption.value}
+                      >
+                        {statusOption.label}
+                      </option>
+                    ))}
+                  </select>
+                }
               />
             </div>
 
@@ -394,11 +413,11 @@ export function ExamApplicationsPage() {
                   />
                   <DetailTile
                     label="Обновено на"
-                    value={selectedApplication.updatedAt.slice(0, 10)}
+                    value={updatedAtLabel}
                   />
                   <DetailTile
                     label="Изпратено на"
-                    value={selectedApplication.submittedAt?.slice(0, 10) ?? '—'}
+                    value={submittedAtLabel}
                   />
                 </div>
 

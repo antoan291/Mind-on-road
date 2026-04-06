@@ -126,7 +126,7 @@ export function MobileStudentProfile() {
     },
     { label: 'Теория', value: '18/20', subtitle: '90% посещения', color: 'var(--ai-accent)' },
     { label: 'Изпити', value: '1/2', subtitle: 'Теория - изд.', color: 'var(--status-success)' },
-    { label: 'Остатък', value: '450 лв', subtitle: 'От 1200 лв', color: 'var(--status-warning)' },
+    { label: 'Остатък', value: '450 €', subtitle: 'От 1200 €', color: 'var(--status-warning)' },
   ];
 
   const recentLessons = [
@@ -141,8 +141,8 @@ export function MobileStudentProfile() {
   ];
 
   const payments = [
-    { id: 1, date: '15.03.2026', amount: '500 лв', type: 'Практически часове', status: 'paid', statusLabel: 'Платено' },
-    { id: 2, date: '01.03.2026', amount: '250 лв', type: 'Теория', status: 'paid', statusLabel: 'Платено' },
+    { id: 1, date: '15.03.2026', amount: '500 €', type: 'Практически часове', status: 'paid', statusLabel: 'Платено' },
+    { id: 2, date: '01.03.2026', amount: '250 €', type: 'Теория', status: 'paid', statusLabel: 'Платено' },
   ];
 
   const documents = [
@@ -340,7 +340,7 @@ export function MobileStudentProfile() {
                 Остатък за плащане
               </div>
               <div className="text-3xl font-semibold mb-3" style={{ color: 'var(--status-warning)' }}>
-                450 лв
+                450 €
               </div>
               <button
                 className="w-full h-12 rounded-xl font-medium transition-all active:scale-95"

@@ -2,6 +2,8 @@ import type { BackendModuleDefinition } from './common/contracts/backend-module-
 import { aiModule } from './modules/ai';
 import { auditModule } from './modules/audit';
 import { documentsModule } from './modules/documents';
+import { examApplicationsModule } from './modules/exam-applications';
+import { expensesModule } from './modules/expenses';
 import { identityModule } from './modules/identity';
 import { instructorsModule } from './modules/instructors';
 import { invoicingModule } from './modules/invoicing';
@@ -11,6 +13,7 @@ import { platformAdminModule } from './modules/platform-admin';
 import { practiceModule } from './modules/practice';
 import { reportingModule } from './modules/reporting';
 import { schedulingModule } from './modules/scheduling';
+import { settingsModule } from './modules/settings';
 import { studentsModule } from './modules/students';
 import { tenancyModule } from './modules/tenancy';
 import { theoryModule } from './modules/theory';
@@ -27,10 +30,13 @@ export const registeredModules: readonly BackendModuleDefinition[] = [
   theoryModule,
   practiceModule,
   paymentsModule,
+  expensesModule,
   invoicingModule,
   documentsModule,
+  examApplicationsModule,
   notificationsModule,
   reportingModule,
+  settingsModule,
   auditModule,
   aiModule
 ];

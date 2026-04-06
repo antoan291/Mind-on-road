@@ -166,9 +166,9 @@ function DocumentsWorkspace() {
         <div className="flex items-center justify-between gap-3"><div><h3 className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Последни проверки</h3><p className="mt-1 text-sm" style={{ color: 'var(--text-tertiary)' }}>Последните автоматични проверки от AI модула за документи.</p></div><button className="text-sm font-medium" style={{ color: '#8b5cf6' }}>Виж всички</button></div>
         <div className="mt-5 overflow-hidden rounded-[22px] border" style={{ borderColor: 'rgba(148, 163, 184, 0.12)' }}>
           <div className="grid grid-cols-[1fr_0.8fr_1.4fr_0.9fr_0.8fr] gap-3 px-5 py-4 text-xs uppercase tracking-[0.14em]" style={{ color: 'var(--text-tertiary)', background: 'rgba(255,255,255,0.03)' }}><span>Документ ID</span><span>Дата</span><span>Курсист / фирма</span><span>Статус</span><span className="text-right">Сума</span></div>
-          <DocumentRow id="#DOC-8472" date="12.10.2023" owner="Петър Иванов" status="Потвърден" amount="450,00 лв" />
-          <DocumentRow id="#DOC-8469" date="12.10.2023" owner="Авто-Мобил ООД" status="Блокиран" amount="1 240,00 лв" />
-          <DocumentRow id="#DOC-8461" date="11.10.2023" owner="Мария Стойчева" status="Потвърден" amount="85,00 лв" />
+          <DocumentRow id="#DOC-8472" date="12.10.2023" owner="Петър Иванов" status="Потвърден" amount="450,00 €" />
+          <DocumentRow id="#DOC-8469" date="12.10.2023" owner="Авто-Мобил ООД" status="Блокиран" amount="1 240,00 €" />
+          <DocumentRow id="#DOC-8461" date="11.10.2023" owner="Мария Стойчева" status="Потвърден" amount="85,00 €" />
         </div>
       </section>
     </div>

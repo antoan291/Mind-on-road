@@ -1706,7 +1706,7 @@ export function TheoryPage() {
                           className="font-semibold"
                           style={{ color: '#fb923c', fontSize: '1.125rem' }}
                         >
-                          {selectedAbsentStudent.student.dueAmount} лв
+                          {selectedAbsentStudent.student.dueAmount} €
                         </span>
                       </div>
                     </div>

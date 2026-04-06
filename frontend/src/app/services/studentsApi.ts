@@ -47,6 +47,16 @@ export type BackendStudentDetail = BackendStudentListItem & {
       notes: string | null;
     }
   >;
+  portalAccess?: {
+    loginIdentifier: string;
+    temporaryPassword: string | null;
+    mustChangePassword: boolean;
+    status:
+      | 'created'
+      | 'linked_existing'
+      | 'already_linked'
+      | 'updated_existing';
+  } | null;
 };
 
 export async function fetchStudentOperations() {

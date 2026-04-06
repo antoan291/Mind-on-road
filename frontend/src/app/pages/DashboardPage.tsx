@@ -215,7 +215,7 @@ export function DashboardPage() {
         confirmLabel: dashboardQuickActions.registerPayment.confirmLabel,
         fields: [
           { label: "Курсист", value: "Изберете курсист", kind: "input" },
-          { label: "Сума", value: "250 лв.", kind: "input" },
+          { label: "Сума", value: "250 €", kind: "input" },
           { label: "Метод", value: "В брой", kind: "select" },
         ],
         onConfirm: () => navigate("/payments"),
@@ -301,7 +301,7 @@ export function DashboardPage() {
     payments.length > 0
       ? payments.slice(0, 5).map((payment) => ({
           student: payment.student,
-          amount: `${payment.remainingAmount} лв.`,
+          amount: `${payment.remainingAmount} €`,
           daysOverdue: payment.paymentStatus === 'overdue' ? 1 : 0,
           targetPath: `/students/${payment.studentId}`,
         }))
@@ -332,7 +332,7 @@ export function DashboardPage() {
         label: 'Платени суми',
         value: `${payments
           .reduce((sum, payment) => sum + payment.paidAmount, 0)
-          .toLocaleString('bg-BG')} лв.`,
+          .toLocaleString('bg-BG')} €`,
         trend: `${payments.length} плащания`,
         color: 'var(--status-success)',
         icon: 'currency',
@@ -341,7 +341,7 @@ export function DashboardPage() {
         label: 'Оставащи суми',
         value: `${payments
           .reduce((sum, payment) => sum + payment.remainingAmount, 0)
-          .toLocaleString('bg-BG')} лв.`,
+          .toLocaleString('bg-BG')} €`,
         trend: 'Дължими суми по активни досиета',
         color: 'var(--status-warning)',
         icon: 'currency',

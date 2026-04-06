@@ -39,6 +39,10 @@ type AuthSessionContextValue = {
   session: AuthenticatedSession | null;
   authError: string | null;
   login: (payload: LoginPayload) => Promise<void>;
+  changePassword: (payload: {
+    currentPassword: string;
+    newPassword: string;
+  }) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
 };
@@ -106,16 +110,36 @@ export function AuthSessionProvider({
     setAuthError(null);
   }, [session?.csrfToken]);
 
+  const changePassword = useCallback(
+    async (payload: { currentPassword: string; newPassword: string }) => {
+      if (!session?.csrfToken) {
+        throw new Error('Липсва активна сесия.');
+      }
+
+      await apiClient.post<void>(
+        '/auth/change-password',
+        payload,
+        session.csrfToken,
+      );
+
+      setSession(null);
+      setAuthState('anonymous');
+      setAuthError(null);
+    },
+    [session?.csrfToken],
+  );
+
   const value = useMemo<AuthSessionContextValue>(
     () => ({
       authState,
       session,
       authError,
       login,
+      changePassword,
       logout,
       refreshSession,
     }),
-    [authError, authState, login, logout, refreshSession, session],
+    [authError, authState, changePassword, login, logout, refreshSession, session],
   );
 
   return (

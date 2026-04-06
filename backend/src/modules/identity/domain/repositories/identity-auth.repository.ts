@@ -44,6 +44,29 @@ export interface UpdatePasswordInput {
   passwordHash: string;
 }
 
+export interface ProvisionTenantPortalIdentityInput {
+  tenantId: string;
+  roleKey: string;
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  phone: string;
+  email: string | null;
+  existingMembershipId?: string | null;
+}
+
+export interface ProvisionTenantPortalIdentityResult {
+  userId: string;
+  membershipId: string;
+  loginIdentifier: string;
+  temporaryPassword: string | null;
+  status:
+    | 'created'
+    | 'linked_existing'
+    | 'already_linked'
+    | 'updated_existing';
+}
+
 export interface IdentityAuthRepository {
   findLoginIdentity(params: {
     tenantSlug: string;
@@ -57,4 +80,7 @@ export interface IdentityAuthRepository {
   revokeUserSessions(userId: string): Promise<void>;
   updateSessionActivity(sessionId: string): Promise<void>;
   updatePassword(input: UpdatePasswordInput): Promise<void>;
+  provisionTenantPortalIdentity(
+    input: ProvisionTenantPortalIdentityInput
+  ): Promise<ProvisionTenantPortalIdentityResult>;
 }

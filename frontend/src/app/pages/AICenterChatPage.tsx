@@ -547,7 +547,7 @@ function buildRightRail(response: BusinessAssistantResponse) {
     },
     {
       label: 'Оперативни разходи / ДДС приятели',
-      value: `${response.stats.expensesTotalAmount} лв / ${response.stats.friendVatTotalAmount} лв`,
+      value: `${response.stats.expensesTotalAmount} € / ${response.stats.friendVatTotalAmount} €`,
       tone: 'info' as const,
     },
   ];

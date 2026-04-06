@@ -43,7 +43,7 @@ export function MobileDashboard() {
   const stats = [
     { label: 'Активни курсисти', value: String(students.length), trend: mainStudent?.name ?? 'Няма курсист', icon: Users, color: 'var(--primary-accent)' },
     { label: 'Часове днес', value: mainStudent ? '1' : '0', trend: mainStudent?.instructor ?? 'Няма час', icon: Calendar, color: 'var(--ai-accent)' },
-    { label: 'Приходи месец', value: '12,450 лв', trend: '+8%', icon: DollarSign, color: 'var(--status-success)' },
+    { label: 'Приходи месец', value: '12,450 €', trend: '+8%', icon: DollarSign, color: 'var(--status-success)' },
     { label: 'Нови заявки', value: '7', trend: 'Тази седмица', icon: Bell, color: 'var(--status-warning)' },
   ];
 

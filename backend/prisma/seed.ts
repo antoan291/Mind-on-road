@@ -772,6 +772,40 @@ async function seedDemoStudents(prismaClient: PrismaClient, tenantId: string) {
           status: 'success',
           affectsOperationalExpense: false,
           entryDate: studentData.expenseDate
+        },
+        {
+          tenantId,
+          expenseType: 'friend-vat-expense',
+          title: `Сервизна фактура от приятел · ${studentData.seedCode}`,
+          category: 'ДДС от приятели',
+          amount: 180 + studentData.completedHours * 3,
+          vatAmount: Math.round((180 + studentData.completedHours * 3) / 6),
+          paymentMethod: 'bank',
+          source: 'Приятелски документ',
+          counterparty: `Сервизен партньор ${studentData.seedCode}`,
+          note: 'Допълнителен тестов запис за по-реалистичен ДДС сценарий.',
+          status: 'success',
+          affectsOperationalExpense: false,
+          entryDate: new Date(
+            studentData.expenseDate.getTime() - 1000 * 60 * 60 * 24 * 12
+          )
+        },
+        {
+          tenantId,
+          expenseType: 'friend-vat-expense',
+          title: `Консумативи от приятел · ${studentData.seedCode}`,
+          category: 'ДДС от приятели',
+          amount: 96 + studentData.completedHours,
+          vatAmount: Math.round((96 + studentData.completedHours) / 6),
+          paymentMethod: 'cash',
+          source: 'Приятелски документ',
+          counterparty: `Консумативен партньор ${studentData.seedCode}`,
+          note: 'Още един тестов запис за спестено ДДС по консумативи.',
+          status: 'success',
+          affectsOperationalExpense: false,
+          entryDate: new Date(
+            studentData.expenseDate.getTime() - 1000 * 60 * 60 * 24 * 24
+          )
         }
       ]
     });

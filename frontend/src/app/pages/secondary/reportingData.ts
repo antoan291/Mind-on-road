@@ -21,7 +21,7 @@ export type DashboardReportEntry = {
   documentReference: string;
   counterparty: string;
   note: string;
-  currency: 'BGN' | 'EUR';
+  currency: 'EUR';
   vatAmount?: number;
   affectsOperationalExpense?: boolean;
 };
@@ -40,7 +40,7 @@ export const reportEntries: DashboardReportEntry[] = [
     documentReference: 'PAY-AT-001',
     counterparty: 'Антоан Тест',
     note: 'Единствен тестов курсист за локална проверка на отчетите.',
-    currency: 'BGN'
+    currency: 'EUR'
   },
   {
     id: 'entry-friend-vat-001',
@@ -55,14 +55,14 @@ export const reportEntries: DashboardReportEntry[] = [
     documentReference: 'FR-VAT-AT-001',
     counterparty: 'Партньор доставчик',
     note: 'Не е реален разход в касата, използва се само за ДДС калкулация.',
-    currency: 'BGN',
+    currency: 'EUR',
     vatAmount: 40,
     affectsOperationalExpense: false
   }
 ];
 
 export function formatDashboardMoney(amount: number) {
-  return amount.toLocaleString('bg-BG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' лв';
+  return amount.toLocaleString('bg-BG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
 }
 
 export function buildReportEntriesFromFinanceRecords(
@@ -82,7 +82,7 @@ export function buildReportEntriesFromFinanceRecords(
     documentReference: payment.paymentNumber,
     counterparty: payment.student,
     note: payment.notes || '',
-    currency: 'BGN',
+    currency: 'EUR',
     affectsOperationalExpense: true,
   }));
 
@@ -99,7 +99,7 @@ export function buildReportEntriesFromFinanceRecords(
     documentReference: '',
     counterparty: expense.counterparty,
     note: expense.note,
-    currency: 'BGN',
+    currency: 'EUR',
     vatAmount: expense.vatAmount,
     affectsOperationalExpense: expense.affectsOperationalExpense,
   }));

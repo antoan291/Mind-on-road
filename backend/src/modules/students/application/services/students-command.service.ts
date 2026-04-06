@@ -3,19 +3,113 @@ import type {
   StudentWriteInput,
   StudentsRepository
 } from '../../domain/repositories/students.repository';
+import type {
+  IdentityAuthRepository,
+  ProvisionTenantPortalIdentityResult
+} from '../../../identity/domain/repositories/identity-auth.repository';
+
+export interface StudentPortalAccessInfo {
+  loginIdentifier: string;
+  temporaryPassword: string | null;
+  mustChangePassword: boolean;
+  status:
+    | 'created'
+    | 'linked_existing'
+    | 'already_linked'
+    | 'updated_existing';
+}
+
+export interface StudentDetailView {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  nationalId: string | null;
+  status: string;
+  parentContactEnabled: boolean;
+  enrollment: {
+    id: string;
+    categoryCode: string;
+    status: string;
+    trainingMode: string;
+    registerMode: string;
+    instructorName: string | null;
+    theoryGroupNumber: string | null;
+    enrollmentDate: string;
+    expectedArrivalDate: string | null;
+    previousLicenseCategory: string | null;
+    packageHours: number;
+    additionalHours: number;
+    completedHours: number;
+    remainingHours: number;
+    maxHours: number;
+    failedExamAttempts: number;
+    lastPracticeAt: string | null;
+  } | null;
+  createdAt: string;
+  updatedAt: string;
+  firstName: string;
+  lastName: string;
+  birthDate: string | null;
+  address: string | null;
+  educationLevel: string | null;
+  parentName: string | null;
+  parentPhone: string | null;
+  parentEmail: string | null;
+  enrollments: Array<{
+    id: string;
+    categoryCode: string;
+    status: string;
+    trainingMode: string;
+    registerMode: string;
+    theoryGroupNumber: string | null;
+    assignedInstructorName: string | null;
+    enrollmentDate: string;
+    expectedArrivalDate: string | null;
+    previousLicenseCategory: string | null;
+    packageHours: number;
+    additionalHours: number;
+    completedHours: number;
+    remainingHours: number;
+    maxHours: number;
+    failedExamAttempts: number;
+    lastPracticeAt: string | null;
+    notes: string | null;
+  }>;
+  portalAccess: StudentPortalAccessInfo | null;
+}
 
 export class StudentsCommandService {
-  public constructor(private readonly studentsRepository: StudentsRepository) {}
+  public constructor(
+    private readonly studentsRepository: StudentsRepository,
+    private readonly identityAuthRepository: IdentityAuthRepository
+  ) {}
 
   public async createStudent(command: {
     tenantId: string;
     student: StudentWriteInput;
   }) {
+    const portalIdentity = await this.identityAuthRepository.provisionTenantPortalIdentity(
+      {
+        tenantId: command.tenantId,
+        roleKey: 'student',
+        firstName: command.student.firstName,
+        lastName: command.student.lastName,
+        displayName: command.student.displayName,
+        phone: command.student.phone,
+        email: command.student.email
+      }
+    );
+
     return toStudentDetail(
       await this.studentsRepository.createForTenant({
         tenantId: command.tenantId,
-        student: command.student
-      })
+        student: {
+          ...command.student,
+          userMembershipId: portalIdentity.membershipId
+        }
+      }),
+      toPortalAccessInfo(portalIdentity)
     );
   }
 
@@ -24,23 +118,51 @@ export class StudentsCommandService {
     studentId: string;
     student: StudentWriteInput;
   }) {
+    const existingStudent = await this.studentsRepository.findByTenantAndId({
+      tenantId: command.tenantId,
+      studentId: command.studentId
+    });
+
+    if (!existingStudent) {
+      return null;
+    }
+
+    const portalIdentity = await this.identityAuthRepository.provisionTenantPortalIdentity(
+      {
+        tenantId: command.tenantId,
+        roleKey: 'student',
+        firstName: command.student.firstName,
+        lastName: command.student.lastName,
+        displayName: command.student.displayName,
+        phone: command.student.phone,
+        email: command.student.email,
+        existingMembershipId: existingStudent.userMembershipId
+      }
+    );
+
     const student = await this.studentsRepository.updateByTenantAndId({
       tenantId: command.tenantId,
       studentId: command.studentId,
-      student: command.student
+      student: {
+        ...command.student,
+        userMembershipId: portalIdentity.membershipId
+      }
     });
 
     if (!student) {
       return null;
     }
 
-    return toStudentDetail(student);
+    return toStudentDetail(student, toPortalAccessInfo(portalIdentity));
   }
 }
 
 export { StudentAlreadyExistsError } from '../../domain/students.errors';
 
-function toStudentDetail(student: StudentProfileRecord) {
+function toStudentDetail(
+  student: StudentProfileRecord,
+  portalAccess: StudentPortalAccessInfo | null = null
+): StudentDetailView {
   const enrollment = student.enrollments[0] ?? null;
   const maxHours = enrollment
     ? enrollment.packageHours + enrollment.additionalHours
@@ -119,6 +241,18 @@ function toStudentDetail(student: StudentProfileRecord) {
           studentEnrollment.lastPracticeAt?.toISOString() ?? null,
         notes: studentEnrollment.notes
       };
-    })
+    }),
+    portalAccess
+  };
+}
+
+function toPortalAccessInfo(
+  portalIdentity: ProvisionTenantPortalIdentityResult
+): StudentPortalAccessInfo {
+  return {
+    loginIdentifier: portalIdentity.loginIdentifier,
+    temporaryPassword: portalIdentity.temporaryPassword,
+    mustChangePassword: true,
+    status: portalIdentity.status
   };
 }

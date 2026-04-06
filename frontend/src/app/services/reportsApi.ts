@@ -13,7 +13,7 @@ export type FinanceReportEntryView = {
   documentReference: string;
   counterparty: string;
   note: string;
-  currency: 'BGN';
+  currency: 'EUR';
   vatAmount: number;
   affectsOperationalExpense: boolean;
 };

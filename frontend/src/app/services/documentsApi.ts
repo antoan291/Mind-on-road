@@ -22,6 +22,9 @@ export type DocumentOcrExtractionView = {
   extractedName: string;
   documentNumber: string;
   manualReviewRequired: boolean;
+  confidence: number | null;
+  warnings: string[];
+  sourceFileName: string;
   rawData: Record<string, unknown>;
 };
 
@@ -235,10 +238,28 @@ function mapOcrExtraction(
     manualReviewRequired:
       rawData['нужен_ръчен_преглед'] !== false &&
       rawData['manual_review_required'] !== false,
+    confidence:
+      typeof rawData['увереност'] === 'number'
+        ? rawData['увереност']
+        : typeof rawData['confidence'] === 'number'
+          ? rawData['confidence']
+          : null,
+    warnings: extractWarnings(rawData),
+    sourceFileName: extraction.fileName.replace(/\.json$/i, ''),
     rawData,
   };
 }
 
 function toText(value: unknown) {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function extractWarnings(rawData: Record<string, unknown>) {
+  const value = rawData['предупреждения'] ?? rawData['warnings'];
+
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === 'string');
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router';
+import { ForcePasswordChangeScreen } from '../ForcePasswordChangeScreen';
 import { AppLayout } from './AppLayout';
 import { MobileLayout } from './MobileLayout';
 import { useAuthSession } from '../../services/authSession';
@@ -32,6 +33,10 @@ export function ResponsiveLayout() {
 
   if (authState === 'anonymous') {
     return <Navigate to="/login" replace />;
+  }
+
+  if (session?.mustChangePassword) {
+    return <ForcePasswordChangeScreen />;
   }
 
   if (session?.user.roleKeys.includes('student')) {
