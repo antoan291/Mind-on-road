@@ -108,4 +108,18 @@ export class PrismaInvoicesRepository implements InvoicesRepository {
       select: invoiceSelect
     });
   }
+
+  public async deleteByTenantAndId(params: {
+    tenantId: string;
+    invoiceId: string;
+  }): Promise<boolean> {
+    const deletedRows = await this.prisma.invoiceRecord.deleteMany({
+      where: {
+        id: params.invoiceId,
+        tenantId: params.tenantId
+      }
+    });
+
+    return deletedRows.count > 0;
+  }
 }

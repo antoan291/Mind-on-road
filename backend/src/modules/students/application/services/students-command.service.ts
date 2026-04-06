@@ -155,6 +155,13 @@ export class StudentsCommandService {
 
     return toStudentDetail(student, toPortalAccessInfo(portalIdentity));
   }
+
+  public async deleteStudent(command: {
+    tenantId: string;
+    studentId: string;
+  }) {
+    return this.studentsRepository.deleteByTenantAndId(command);
+  }
 }
 
 export { StudentAlreadyExistsError } from '../../domain/students.errors';

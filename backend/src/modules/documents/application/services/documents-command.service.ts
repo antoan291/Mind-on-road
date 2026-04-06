@@ -25,4 +25,11 @@ export class DocumentsCommandService {
 
     return document ? toDocumentResponse(document) : null;
   }
+
+  public async deleteDocument(params: {
+    tenantId: string;
+    documentId: string;
+  }) {
+    return this.documentsRepository.deleteByTenantAndId(params);
+  }
 }

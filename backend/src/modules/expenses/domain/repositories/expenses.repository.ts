@@ -38,4 +38,8 @@ export interface ExpensesRepository {
     tenantId: string;
     expense: ExpenseCreateInput;
   }): Promise<ExpenseRecord>;
+  deleteByTenantAndId(params: {
+    tenantId: string;
+    expenseId: string;
+  }): Promise<boolean>;
 }

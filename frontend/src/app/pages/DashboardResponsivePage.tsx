@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useIsMobile } from '../components/ui/use-mobile';
 import { useAuthSession } from '../services/authSession';
 import { DashboardPage } from './DashboardPage';
 import { PortalDashboardPage } from './PortalDashboardPage';
@@ -6,16 +6,7 @@ import { MobileDashboard } from './mobile/MobileDashboard';
 
 export function DashboardResponsivePage() {
   const { session } = useAuthSession();
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const isMobile = useIsMobile();
 
   if (
     session?.user.roleKeys.includes('student') ||

@@ -124,32 +124,48 @@ export function MobileStudentProfile() {
       subtitle: `${studentRecord.progress}% завършени`,
       color: 'var(--primary-accent)',
     },
-    { label: 'Теория', value: '18/20', subtitle: '90% посещения', color: 'var(--ai-accent)' },
-    { label: 'Изпити', value: '1/2', subtitle: 'Теория - изд.', color: 'var(--status-success)' },
-    { label: 'Остатък', value: '450 €', subtitle: 'От 1200 €', color: 'var(--status-warning)' },
+    { label: 'Теория', value: '0/0', subtitle: 'Няма занятия', color: 'var(--ai-accent)' },
+    { label: 'Изпити', value: '0/0', subtitle: 'Няма явявания', color: 'var(--status-success)' },
+    { label: 'Остатък', value: '0 €', subtitle: 'Няма данни', color: 'var(--status-warning)' },
   ];
 
-  const recentLessons = [
-    { id: 1, date: '22.03.2026', time: '14:00', instructor: 'Георги Петров', type: 'Градско шофиране', status: 'completed', statusLabel: 'Завършен', duration: '90 мин' },
-    { id: 2, date: '20.03.2026', time: '16:00', instructor: 'Георги Петров', type: 'Паркиране', status: 'completed', statusLabel: 'Завършен', duration: '90 мин' },
-    { id: 3, date: '18.03.2026', time: '10:00', instructor: 'Иван Димитров', type: 'Магистрала', status: 'completed', statusLabel: 'Завършен', duration: '120 мин' },
-  ];
+  const recentLessons: Array<{
+    id: number;
+    date: string;
+    time: string;
+    instructor: string;
+    type: string;
+    status: string;
+    statusLabel: string;
+    duration?: string;
+  }> = [];
 
-  const upcomingLessons = [
-    { id: 4, date: '25.03.2026', time: '14:00', instructor: 'Георги Петров', type: 'Сложни маневри', status: 'scheduled', statusLabel: 'Записан' },
-    { id: 5, date: '27.03.2026', time: '10:00', instructor: 'Георги Петров', type: 'Градско шофиране', status: 'scheduled', statusLabel: 'Записан' },
-  ];
+  const upcomingLessons: Array<{
+    id: number;
+    date: string;
+    time: string;
+    instructor: string;
+    type: string;
+    status: string;
+    statusLabel: string;
+  }> = [];
 
-  const payments = [
-    { id: 1, date: '15.03.2026', amount: '500 €', type: 'Практически часове', status: 'paid', statusLabel: 'Платено' },
-    { id: 2, date: '01.03.2026', amount: '250 €', type: 'Теория', status: 'paid', statusLabel: 'Платено' },
-  ];
+  const payments: Array<{
+    id: number;
+    date: string;
+    amount: string;
+    type: string;
+    status: string;
+    statusLabel: string;
+  }> = [];
 
-  const documents = [
-    { id: 1, name: 'Медицинско свидетелство', date: '10.01.2026', status: 'approved', statusLabel: 'Одобрен' },
-    { id: 2, name: 'Лична карта - копие', date: '10.01.2026', status: 'approved', statusLabel: 'Одобрен' },
-    { id: 3, name: 'Снимка', date: '10.01.2026', status: 'approved', statusLabel: 'Одобрен' },
-  ];
+  const documents: Array<{
+    id: number;
+    name: string;
+    date: string;
+    status: string;
+    statusLabel: string;
+  }> = [];
 
   return (
     <div className="min-h-screen" style={{ background: 'var(--bg-page)' }}>
@@ -311,11 +327,15 @@ export function MobileStudentProfile() {
               <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
                 Предстоящи часове
               </h3>
-              <div className="space-y-2">
-                {upcomingLessons.map((lesson) => (
-                  <LessonCard key={lesson.id} lesson={lesson} />
-                ))}
-              </div>
+              {upcomingLessons.length === 0 ? (
+                <EmptyMobileState message="Няма насрочени практически часове." />
+              ) : (
+                <div className="space-y-2">
+                  {upcomingLessons.map((lesson) => (
+                    <LessonCard key={lesson.id} lesson={lesson} />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Recent */}
@@ -323,11 +343,15 @@ export function MobileStudentProfile() {
               <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
                 Последни часове
               </h3>
-              <div className="space-y-2">
-                {recentLessons.map((lesson) => (
-                  <LessonCard key={lesson.id} lesson={lesson} />
-                ))}
-              </div>
+              {recentLessons.length === 0 ? (
+                <EmptyMobileState message="Няма проведени практически часове." />
+              ) : (
+                <div className="space-y-2">
+                  {recentLessons.map((lesson) => (
+                    <LessonCard key={lesson.id} lesson={lesson} />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -340,7 +364,7 @@ export function MobileStudentProfile() {
                 Остатък за плащане
               </div>
               <div className="text-3xl font-semibold mb-3" style={{ color: 'var(--status-warning)' }}>
-                450 €
+                0 €
               </div>
               <button
                 className="w-full h-12 rounded-xl font-medium transition-all active:scale-95"
@@ -358,69 +382,77 @@ export function MobileStudentProfile() {
               <h3 className="text-sm font-semibold mb-3" style={{ color: 'var(--text-secondary)' }}>
                 История на плащанията
               </h3>
-              <div className="space-y-2">
-                {payments.map((payment) => (
-                  <div
-                    key={payment.id}
-                    className="p-4 rounded-xl"
-                    style={{ background: 'var(--bg-card)' }}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <div className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
-                          {payment.type}
+              {payments.length === 0 ? (
+                <EmptyMobileState message="Няма плащания за този курсист." />
+              ) : (
+                <div className="space-y-2">
+                  {payments.map((payment) => (
+                    <div
+                      key={payment.id}
+                      className="p-4 rounded-xl"
+                      style={{ background: 'var(--bg-card)' }}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <div className="font-medium mb-1" style={{ color: 'var(--text-primary)' }}>
+                            {payment.type}
+                          </div>
+                          <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                            {payment.date}
+                          </div>
                         </div>
-                        <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                          {payment.date}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
-                          {payment.amount}
-                        </div>
-                        <div
-                          className="text-xs px-2 py-0.5 rounded inline-block"
-                          style={{
-                            background: 'rgba(34, 197, 94, 0.15)',
-                            color: 'var(--status-success)',
-                          }}
-                        >
-                          {payment.statusLabel}
+                        <div className="text-right">
+                          <div className="font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                            {payment.amount}
+                          </div>
+                          <div
+                            className="text-xs px-2 py-0.5 rounded inline-block"
+                            style={{
+                              background: 'rgba(34, 197, 94, 0.15)',
+                              color: 'var(--status-success)',
+                            }}
+                          >
+                            {payment.statusLabel}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
 
         {activeTab === 'documents' && (
           <div className="space-y-2">
-            {documents.map((doc) => (
-              <div
-                key={doc.id}
-                className="p-4 rounded-xl flex items-center gap-3"
-                style={{ background: 'var(--bg-card)' }}
-              >
+            {documents.length === 0 ? (
+              <EmptyMobileState message="Няма качени документи за този курсист." />
+            ) : (
+              documents.map((doc) => (
                 <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: 'rgba(34, 197, 94, 0.15)' }}
+                  key={doc.id}
+                  className="p-4 rounded-xl flex items-center gap-3"
+                  style={{ background: 'var(--bg-card)' }}
                 >
-                  <CheckCircle size={18} style={{ color: 'var(--status-success)' }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium mb-1 truncate" style={{ color: 'var(--text-primary)' }}>
-                    {doc.name}
+                  <div
+                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                    style={{ background: 'rgba(34, 197, 94, 0.15)' }}
+                  >
+                    <CheckCircle size={18} style={{ color: 'var(--status-success)' }} />
                   </div>
-                  <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                    Качен на {doc.date}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium mb-1 truncate" style={{ color: 'var(--text-primary)' }}>
+                      {doc.name}
+                    </div>
+                    <div className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                      Качен на {doc.date}
+                    </div>
                   </div>
+                  <ChevronRight size={16} style={{ color: 'var(--text-tertiary)' }} />
                 </div>
-                <ChevronRight size={16} style={{ color: 'var(--text-tertiary)' }} />
-              </div>
-            ))}
+              ))
+            )}
 
             <button
               className="w-full h-12 rounded-xl flex items-center justify-center gap-2 font-medium transition-all active:scale-95"
@@ -487,6 +519,14 @@ function ContactRow({
   }
 
   return <div className="flex items-center justify-between">{content}</div>;
+}
+
+function EmptyMobileState({ message }: { message: string }) {
+  return (
+    <div className="rounded-xl p-4 text-sm text-center" style={{ background: 'var(--bg-card)', color: 'var(--text-secondary)' }}>
+      {message}
+    </div>
+  );
 }
 
 function LessonCard({ lesson }: { lesson: any }) {

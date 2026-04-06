@@ -18,4 +18,11 @@ export class ExpensesCommandService {
       })
     );
   }
+
+  public async deleteExpense(command: {
+    tenantId: string;
+    expenseId: string;
+  }) {
+    return this.expensesRepository.deleteByTenantAndId(command);
+  }
 }

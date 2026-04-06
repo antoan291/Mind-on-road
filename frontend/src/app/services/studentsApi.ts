@@ -141,6 +141,13 @@ export async function updateStudentRecord(
   );
 }
 
+export async function deleteStudentRecord(
+  studentId: string,
+  csrfToken: string,
+) {
+  return apiClient.delete<void>(`/students/${studentId}`, csrfToken);
+}
+
 function mapStudentSummaryToOperationalRecord(
   student: BackendStudentListItem,
 ): StudentOperationalRecord {

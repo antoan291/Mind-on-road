@@ -90,4 +90,8 @@ export interface InvoicesRepository {
     invoiceId: string;
     invoice: InvoiceUpdateInput;
   }): Promise<InvoiceRecord | null>;
+  deleteByTenantAndId(params: {
+    tenantId: string;
+    invoiceId: string;
+  }): Promise<boolean>;
 }

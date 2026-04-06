@@ -72,9 +72,37 @@ test('updateStudent provisions missing portal access for existing student', asyn
   assert.equal(result?.portalAccess?.loginIdentifier, '0888123456');
 });
 
+test('deleteStudent removes the student through the tenant-scoped repository path', async () => {
+  const studentsRepository = new InMemoryStudentsRepository();
+  const identityRepository = new StubIdentityAuthRepository({
+    userId: 'user-3',
+    membershipId: 'membership-3',
+    loginIdentifier: '0888123456',
+    temporaryPassword: null,
+    status: 'already_linked',
+  });
+  const service = new StudentsCommandService(
+    studentsRepository,
+    identityRepository,
+  );
+
+  const deleted = await service.deleteStudent({
+    tenantId: 'tenant-1',
+    studentId: 'student-1',
+  });
+
+  assert.equal(deleted, true);
+  assert.deepEqual(studentsRepository.lastDeletedStudent, {
+    tenantId: 'tenant-1',
+    studentId: 'student-1',
+  });
+});
+
 class InMemoryStudentsRepository implements StudentsRepository {
   public lastCreatedStudent: StudentWriteInput | null = null;
   public lastUpdatedStudent: StudentWriteInput | null = null;
+  public lastDeletedStudent: { tenantId: string; studentId: string } | null =
+    null;
   private student: StudentProfileRecord | null = null;
 
   public seedStudent(student: StudentProfileRecord) {
@@ -111,6 +139,14 @@ class InMemoryStudentsRepository implements StudentsRepository {
 
     this.student = buildStudentProfileRecord(params.student.userMembershipId ?? null);
     return this.student;
+  }
+
+  public async deleteByTenantAndId(params: {
+    tenantId: string;
+    studentId: string;
+  }): Promise<boolean> {
+    this.lastDeletedStudent = params;
+    return true;
   }
 
   public async listDeterminatorSessionsByTenant(): Promise<DeterminatorSessionRecord[]> {

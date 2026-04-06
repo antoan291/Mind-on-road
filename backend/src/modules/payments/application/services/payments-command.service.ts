@@ -35,4 +35,11 @@ export class PaymentsCommandService {
 
     return payment ? toPaymentResponse(payment) : null;
   }
+
+  public async deletePayment(params: {
+    tenantId: string;
+    paymentId: string;
+  }) {
+    return this.paymentsRepository.deleteByTenantAndId(params);
+  }
 }

@@ -47,3 +47,10 @@ export async function createExpenseRecord(
 ) {
   return apiClient.post<ExpenseRecordView>('/expenses', payload, csrfToken);
 }
+
+export async function deleteExpenseRecord(
+  expenseId: string,
+  csrfToken: string,
+) {
+  return apiClient.delete<void>(`/expenses/${expenseId}`, csrfToken);
+}

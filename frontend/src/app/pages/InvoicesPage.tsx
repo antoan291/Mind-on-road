@@ -9,11 +9,12 @@ import {
   Filter, Calendar, MoreVertical, Eye,
   Mail, Edit2, FileCheck, ChevronRight, Printer,
   XCircle, Link as LinkIcon, FileX, User, CreditCard,
-  Check, FilePlus
+  Check, FilePlus, Trash2
 } from 'lucide-react';
 import { mockInvoicePackages } from '../content/mockDb';
 import {
   createInvoiceRecord,
+  deleteInvoiceRecord,
   fetchInvoiceRecords,
   type InvoiceRecordView,
   updateInvoiceRecord,
@@ -25,6 +26,7 @@ import {
   type PaymentRecordView,
 } from '../services/paymentsApi';
 import { useAuthSession } from '../services/authSession';
+import { useIsMobile } from '../components/ui/use-mobile';
 
 type Invoice = InvoiceRecordView & {
   id: string | number;
@@ -132,6 +134,7 @@ const formatCurrency = (amount: number) => {
 export function InvoicesPage() {
   const { session } = useAuthSession();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [searchValue, setSearchValue] = useState('');
   const [studentSearchValue, setStudentSearchValue] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -163,6 +166,10 @@ export function InvoicesPage() {
   const [filterDraftsOnly, setFilterDraftsOnly] = useState(false);
   const [filterNoPaymentLink, setFilterNoPaymentLink] = useState(false);
   const [filterCorrectedOnly, setFilterCorrectedOnly] = useState(false);
+  const canDeleteInvoices = Boolean(
+    session?.user.roleKeys.includes('owner') ||
+      session?.user.roleKeys.includes('admin'),
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -407,6 +414,45 @@ export function InvoicesPage() {
     setIsEditInvoiceOpen(false);
   };
 
+  const handleDeleteInvoice = async (invoiceId: string | number) => {
+    if (!canDeleteInvoices) {
+      return;
+    }
+
+    const invoice = invoices.find((currentInvoice) => currentInvoice.id === invoiceId);
+
+    if (!invoice) {
+      return;
+    }
+
+    const shouldDelete = globalThis.confirm(
+      `Сигурен ли си, че искаш да изтриеш фактура ${invoice.invoiceNumber}?`,
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    try {
+      await deleteInvoiceRecord(String(invoiceId), session?.csrfToken ?? '');
+      setInvoices((currentInvoices) =>
+        currentInvoices.filter((currentInvoice) => currentInvoice.id !== invoiceId),
+      );
+      setSelectedInvoice((currentInvoice) =>
+        currentInvoice?.id === invoiceId ? null : currentInvoice,
+      );
+      setIsEditInvoiceOpen(false);
+      setOpenMenuId(null);
+      setSourceStatus('backend');
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Фактурата не можа да бъде изтрита.';
+      globalThis.alert(message);
+    }
+  };
+
   return (
     <div className="min-h-screen pb-12" style={{ background: 'var(--bg-base)' }}>
       {/* Page Header */}
@@ -420,7 +466,7 @@ export function InvoicesPage() {
               : 'Зареждане...'
         }`}
         actions={
-          <>
+          <div className={`flex ${isMobile ? 'flex-col' : 'flex-wrap justify-end'} gap-2`}>
             <Button 
               variant="secondary" 
               icon={<AlertTriangle size={18} />}
@@ -442,13 +488,13 @@ export function InvoicesPage() {
             >
               Нова фактура
             </Button>
-          </>
+          </div>
         }
       />
 
-      <div className="px-6 lg:px-8 space-y-6">
+      <div className="px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Summary Telemetry Strip */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-7 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-7 gap-4">
           <TelemetryCard
             icon={<FileText size={18} />}
             label="Всички фактури"
@@ -684,47 +730,72 @@ export function InvoicesPage() {
               </div>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr style={{ background: 'var(--bg-panel)' }}>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                      Фактура
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                      Курсист
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                      Причина / Пакет
-                    </th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                      Обща сума
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                      Статус
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                      Плащане
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                      Създадена от
-                    </th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                      Действия
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredInvoices.map((invoice, idx) => (
-                    <tr
+            {isMobile ? (
+              <div className="space-y-3 p-4">
+                {filteredInvoices.length === 0 ? (
+                  <div
+                    className="rounded-2xl p-5 text-sm text-center"
+                    style={{ background: 'var(--bg-panel)', color: 'var(--text-secondary)' }}
+                  >
+                    Няма фактури по активните филтри.
+                  </div>
+                ) : (
+                  filteredInvoices.map((invoice) => (
+                    <InvoiceMobileCard
                       key={invoice.id}
-                      onClick={() => handleRowClick(invoice)}
-                      className="transition-all hover:bg-opacity-50 cursor-pointer group"
-                      style={{
-                        background: idx % 2 === 0 ? 'transparent' : 'var(--bg-panel-ghost)',
-                      }}
-                    >
+                      invoice={invoice}
+                      formatCurrency={formatCurrency}
+                      onOpen={() => handleRowClick(invoice)}
+                      onEdit={() => handleCreateCorrection(invoice.id)}
+                      onIssue={() => void handleIssueInvoice(invoice.id)}
+                      onDownload={() => handleDownload(invoice.id)}
+                      onDelete={() => void handleDeleteInvoice(invoice.id)}
+                      canDelete={canDeleteInvoices}
+                    />
+                  ))
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr style={{ background: 'var(--bg-panel)' }}>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                        Фактура
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                        Курсист
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                        Причина / Пакет
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                        Обща сума
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                        Статус
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                        Плащане
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                        Създадена от
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                        Действия
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredInvoices.map((invoice, idx) => (
+                      <tr
+                        key={invoice.id}
+                        onClick={() => handleRowClick(invoice)}
+                        className="transition-all hover:bg-opacity-50 cursor-pointer group"
+                        style={{
+                          background: idx % 2 === 0 ? 'transparent' : 'var(--bg-panel-ghost)',
+                        }}
+                      >
                       {/* Invoice Number & Date */}
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
@@ -988,16 +1059,32 @@ export function InvoicesPage() {
                                     </span>
                                   </button>
                                 )}
+                                {canDeleteInvoices && (
+                                  <>
+                                    <div className="h-px" style={{ background: 'var(--ghost-border)' }} />
+                                    <button
+                                      onClick={() => void handleDeleteInvoice(invoice.id)}
+                                      className="w-full px-4 py-3 flex items-center gap-3 transition-all hover:bg-opacity-50 text-left"
+                                      style={{ background: 'transparent' }}
+                                    >
+                                      <Trash2 size={16} style={{ color: 'var(--status-error)' }} />
+                                      <span className="text-sm" style={{ color: 'var(--status-error)' }}>
+                                        Изтрий фактурата
+                                      </span>
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             )}
                           </div>
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             {/* Table Footer */}
             <div 
@@ -1062,6 +1149,18 @@ export function InvoicesPage() {
           title="Редакция на фактура"
           footer={
             <>
+              {canDeleteInvoices && (
+                <Button
+                  variant="danger"
+                  onClick={() =>
+                    selectedInvoice
+                      ? void handleDeleteInvoice(selectedInvoice.id)
+                      : undefined
+                  }
+                >
+                  Изтрий
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 onClick={() => setIsEditInvoiceOpen(false)}
@@ -1133,6 +1232,141 @@ export function InvoicesPage() {
           onClick={() => setOpenMenuId(null)}
         />
       )}
+    </div>
+  );
+}
+
+function InvoiceMobileCard({
+  invoice,
+  formatCurrency,
+  onOpen,
+  onEdit,
+  onIssue,
+  onDownload,
+  onDelete,
+  canDelete,
+}: {
+  invoice: Invoice;
+  formatCurrency: (amount: number) => string;
+  onOpen: () => void;
+  onEdit: () => void;
+  onIssue: () => void;
+  onDownload: () => void;
+  onDelete: () => void;
+  canDelete: boolean;
+}) {
+  return (
+    <div
+      className="rounded-2xl p-4 space-y-4"
+      style={{ background: 'var(--bg-panel)', border: '1px solid var(--ghost-border)' }}
+    >
+      <button onClick={onOpen} className="w-full text-left">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-base font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+              {invoice.invoiceNumber}
+            </p>
+            <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+              {invoice.student} · {invoice.invoiceDate}
+            </p>
+          </div>
+          <Badge variant={getInvoiceStatusVariant(invoice.invoiceStatus)} size="sm">
+            {getInvoiceStatusLabel(invoice.invoiceStatus)}
+          </Badge>
+        </div>
+      </button>
+
+      <div className="grid grid-cols-2 gap-3">
+        <MobileInfoCard label="Сума" value={`${formatCurrency(invoice.totalAmount)} €`} tone="default" />
+        <MobileInfoCard
+          label="Плащане"
+          value={getPaymentLinkStatusLabel(invoice.paymentLinkStatus)}
+          tone={invoice.paymentLinkStatus === 'linked' ? 'success' : invoice.paymentLinkStatus === 'not_linked' ? 'error' : 'warning'}
+        />
+      </div>
+
+      <div className="space-y-2 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <span style={{ color: 'var(--text-secondary)' }}>Пакет</span>
+          <span className="text-right" style={{ color: 'var(--text-primary)' }}>
+            {invoice.packageType}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span style={{ color: 'var(--text-secondary)' }}>Причина</span>
+          <span className="text-right" style={{ color: 'var(--text-primary)' }}>
+            {invoice.invoiceReason}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span style={{ color: 'var(--text-secondary)' }}>Създадена от</span>
+          <span className="text-right" style={{ color: 'var(--text-primary)' }}>
+            {invoice.createdBy}
+          </span>
+        </div>
+        {invoice.paymentNumber && (
+          <div className="flex items-center justify-between gap-3">
+            <span style={{ color: 'var(--text-secondary)' }}>Плащане №</span>
+            <span className="font-mono text-right" style={{ color: 'var(--text-primary)' }}>
+              {invoice.paymentNumber}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="primary" onClick={onOpen}>
+          Детайли
+        </Button>
+        <Button variant="secondary" onClick={onEdit}>
+          Редакция
+        </Button>
+        <Button variant="secondary" onClick={onDownload}>
+          PDF
+        </Button>
+        <Button
+          variant={invoice.invoiceStatus === 'draft' ? 'success' : 'secondary'}
+          onClick={onIssue}
+          disabled={invoice.invoiceStatus !== 'draft'}
+        >
+          {invoice.invoiceStatus === 'draft' ? 'Издай' : 'Издадена'}
+        </Button>
+        {canDelete && (
+          <Button variant="danger" onClick={onDelete}>
+            Изтрий
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MobileInfoCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: 'default' | 'success' | 'warning' | 'error';
+}) {
+  const color =
+    tone === 'success'
+      ? 'var(--status-success)'
+      : tone === 'warning'
+        ? 'var(--status-warning)'
+        : tone === 'error'
+          ? 'var(--status-error)'
+          : 'var(--text-primary)';
+
+  return (
+    <div className="rounded-xl p-3" style={{ background: 'var(--bg-card)' }}>
+      <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--text-tertiary)' }}>
+        {label}
+      </p>
+      <p className="mt-2 text-sm font-semibold" style={{ color }}>
+        {value}
+      </p>
     </div>
   );
 }
@@ -2235,7 +2469,7 @@ function CreateInvoiceModal({
                               <p className="text-xl font-bold font-mono" style={{ color: 'var(--primary-accent)' }}>
                                 {formatCurrency(pkg.price)}
                               </p>
-                              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>лв</p>
+                              <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>€</p>
                             </div>
                             {selectedPackage === pkg.id.toString() && (
                               <CheckCircle size={24} style={{ color: 'var(--primary-accent)' }} className="ml-3" />

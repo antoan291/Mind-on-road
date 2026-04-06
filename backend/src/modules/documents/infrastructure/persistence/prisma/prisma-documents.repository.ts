@@ -103,6 +103,20 @@ export class PrismaDocumentsRepository implements DocumentsRepository {
     });
   }
 
+  public async deleteByTenantAndId(params: {
+    tenantId: string;
+    documentId: string;
+  }): Promise<boolean> {
+    const deletedRows = await this.prisma.documentRecord.deleteMany({
+      where: {
+        id: params.documentId,
+        tenantId: params.tenantId
+      }
+    });
+
+    return deletedRows.count > 0;
+  }
+
   private async normalizeDocumentForTenant(params: {
     tenantId: string;
     document: DocumentWriteInput;

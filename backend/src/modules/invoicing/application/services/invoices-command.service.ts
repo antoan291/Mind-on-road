@@ -26,4 +26,11 @@ export class InvoicesCommandService {
 
     return invoice ? toInvoiceResponse(invoice) : null;
   }
+
+  public async deleteInvoice(params: {
+    tenantId: string;
+    invoiceId: string;
+  }) {
+    return this.invoicesRepository.deleteByTenantAndId(params);
+  }
 }

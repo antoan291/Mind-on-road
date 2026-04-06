@@ -48,4 +48,8 @@ export interface PaymentsRepository {
     paymentId: string;
     payment: PaymentUpdateInput;
   }): Promise<PaymentRecord | null>;
+  deleteByTenantAndId(params: {
+    tenantId: string;
+    paymentId: string;
+  }): Promise<boolean>;
 }

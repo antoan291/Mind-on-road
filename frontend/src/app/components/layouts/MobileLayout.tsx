@@ -6,13 +6,22 @@ import {
   Calendar,
   Bell,
   Menu,
-  Search,
   X,
   Wallet,
   Bot,
   FileSignature,
   FileCheck2,
   BrainCircuit,
+  Receipt,
+  Car,
+  BookOpen,
+  FolderOpen,
+  ClipboardList,
+  BarChart3,
+  Settings,
+  UserCircle,
+  LogOut,
+  ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuthSession } from "../../services/authSession";
@@ -22,7 +31,9 @@ import { useFeatureSettings } from "../../services/featureSettings";
 type MobileMenuItem = {
   path: string;
   label: string;
-  icon?: React.ReactNode;
+  icon: React.ReactNode;
+  section: "finance" | "training" | "operations" | "system";
+  shortLabel?: string;
   featureKey?: TenantFeatureKey;
   permissionKey?: string;
   ownerOnly?: boolean;
@@ -78,6 +89,8 @@ export function MobileLayout() {
       path: "/payments",
       label: "Плащания",
       icon: <CreditCard size={20} />,
+      shortLabel: "Плащания",
+      section: "finance",
       featureKey: "payments",
       permissionKey: "payments.read",
     },
@@ -85,42 +98,62 @@ export function MobileLayout() {
       path: "/expenses",
       label: "Разходи",
       icon: <Wallet size={20} />,
+      shortLabel: "Разходи",
+      section: "finance",
       featureKey: "payments",
       permissionKey: "payments.read",
     },
     {
       path: "/invoices",
       label: "Фактури",
+      icon: <Receipt size={20} />,
+      shortLabel: "Фактури",
+      section: "finance",
       featureKey: "invoices",
       permissionKey: "invoices.read",
     },
     {
       path: "/practical-lessons",
       label: "Практика",
+      icon: <Car size={20} />,
+      shortLabel: "Практика",
+      section: "training",
       featureKey: "practical",
       permissionKey: "scheduling.read",
     },
     {
       path: "/theory",
       label: "Теория",
+      icon: <BookOpen size={20} />,
+      shortLabel: "Теория",
+      section: "training",
       featureKey: "theory",
       permissionKey: "scheduling.read",
     },
     {
       path: "/instructors",
       label: "Инструктори",
+      icon: <UserCircle size={20} />,
+      shortLabel: "Инструктори",
+      section: "training",
       featureKey: "practical",
       permissionKey: "scheduling.read",
     },
     {
       path: "/vehicles",
       label: "Автомобили",
+      icon: <Car size={20} />,
+      shortLabel: "Автомобили",
+      section: "training",
       featureKey: "practical",
       permissionKey: "vehicles.read",
     },
     {
       path: "/documents",
       label: "Документи",
+      icon: <FolderOpen size={20} />,
+      shortLabel: "Документи",
+      section: "operations",
       featureKey: "documents",
       permissionKey: "documents.read",
     },
@@ -128,6 +161,8 @@ export function MobileLayout() {
       path: "/candidates",
       label: "Кандидати",
       icon: <FileSignature size={20} />,
+      shortLabel: "Кандидати",
+      section: "operations",
       featureKey: "documents",
       permissionKey: "documents.manage",
     },
@@ -135,6 +170,8 @@ export function MobileLayout() {
       path: "/determinator",
       label: "Детерминатор",
       icon: <BrainCircuit size={20} />,
+      shortLabel: "Детерминатор",
+      section: "operations",
       featureKey: "practical",
       permissionKey: "students.manage_register",
     },
@@ -142,18 +179,26 @@ export function MobileLayout() {
       path: "/exam-applications",
       label: "Заявления за изпит",
       icon: <FileCheck2 size={20} />,
+      shortLabel: "Изпити",
+      section: "operations",
       featureKey: "documents",
       permissionKey: "students.manage_register",
     },
     {
       path: "/road-sheets",
       label: "Пътни листове",
+      icon: <ClipboardList size={20} />,
+      shortLabel: "Пътни листове",
+      section: "operations",
       featureKey: "practical",
       permissionKey: "scheduling.read",
     },
     {
       path: "/reports",
       label: "Отчети",
+      icon: <BarChart3 size={20} />,
+      shortLabel: "Отчети",
+      section: "finance",
       featureKey: "reports",
       permissionKey: "reports.read",
     },
@@ -161,12 +206,17 @@ export function MobileLayout() {
       path: "/ai",
       label: "AI Център",
       icon: <Bot size={20} />,
+      shortLabel: "AI Център",
+      section: "system",
       featureKey: "ai",
       permissionKey: "reports.read",
     },
     {
       path: "/settings",
       label: "Настройки",
+      icon: <Settings size={20} />,
+      shortLabel: "Настройки",
+      section: "system",
       ownerOnly: true,
     },
   ].filter(
@@ -188,6 +238,35 @@ export function MobileLayout() {
         session?.user.permissionKeys.includes(item.permissionKey) ||
         session?.user.roleKeys.includes("owner")),
   );
+  const currentPageLabel =
+    [...visibleBottomNavItems, ...menuItems].find((item) =>
+      item.path === "/"
+        ? location.pathname === "/"
+        : location.pathname.startsWith(item.path),
+    )?.label ?? "MindOnRoad";
+  const quickMenuItems = menuItems.slice(0, 4);
+  const menuSections = [
+    {
+      key: "finance",
+      label: "Финанси",
+      items: menuItems.filter((item) => item.section === "finance"),
+    },
+    {
+      key: "training",
+      label: "Обучение",
+      items: menuItems.filter((item) => item.section === "training"),
+    },
+    {
+      key: "operations",
+      label: "Операции",
+      items: menuItems.filter((item) => item.section === "operations"),
+    },
+    {
+      key: "system",
+      label: "Система",
+      items: menuItems.filter((item) => item.section === "system"),
+    },
+  ].filter((section) => section.items.length > 0);
 
   return (
     <div
@@ -216,41 +295,48 @@ export function MobileLayout() {
               KA
             </span>
           </div>
-          <div>
+          <div className="min-w-0">
             <div
-              className="text-sm font-semibold"
-              style={{ color: "var(--text-primary)" }}
+              className="text-xs font-semibold uppercase tracking-[0.18em]"
+              style={{ color: "var(--text-tertiary)" }}
             >
               MindOnRoad
+            </div>
+            <div
+              className="text-sm font-semibold truncate"
+              style={{ color: "var(--text-primary)" }}
+            >
+              {currentPageLabel}
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setMenuOpen(true)}
             className="w-9 h-9 rounded-lg flex items-center justify-center"
             style={{
               background: "var(--bg-card)",
               color: "var(--text-secondary)",
             }}
           >
-            <Search size={18} />
+            <Menu size={18} />
           </button>
         </div>
       </header>
 
-      <main className="flex-1 overflow-auto pb-20">
+      <main className="flex-1 overflow-auto pb-24">
         <Outlet />
       </main>
 
       <nav
-        className="fixed bottom-0 left-0 right-0 h-16 border-t z-50"
+        className="fixed bottom-0 left-0 right-0 border-t z-50 pb-[env(safe-area-inset-bottom)]"
         style={{
           background: "var(--bg-panel)",
           borderColor: "var(--ghost-border)",
         }}
       >
-        <div className="h-full flex items-center justify-around px-2">
+        <div className="h-16 flex items-center justify-around px-2">
           {visibleBottomNavItems.map((item) => {
             const isActive =
               item.path === "/"
@@ -327,87 +413,145 @@ export function MobileLayout() {
       </nav>
 
       {menuOpen && (
-        <div
-          className="fixed inset-0 z-50"
-          style={{ background: "var(--bg-page)" }}
-        >
+        <div className="fixed inset-0 z-[70]">
+          <button
+            type="button"
+            aria-label="Затвори менюто"
+            onClick={() => setMenuOpen(false)}
+            className="absolute inset-0 w-full"
+            style={{ background: "rgba(6, 11, 20, 0.72)" }}
+          />
           <div
-            className="h-14 flex items-center justify-between px-4 border-b"
+            className="absolute inset-y-0 right-0 flex w-full max-w-[26rem] flex-col border-l shadow-2xl"
             style={{
               background: "var(--bg-panel)",
               borderColor: "var(--ghost-border)",
             }}
           >
-            <h2 style={{ color: "var(--text-primary)" }}>Меню</h2>
-            <button
-              onClick={() => setMenuOpen(false)}
-              className="w-9 h-9 rounded-lg flex items-center justify-center"
-              style={{
-                background: "var(--bg-card)",
-                color: "var(--text-secondary)",
-              }}
+            <div
+              className="flex items-center justify-between border-b px-4 py-4"
+              style={{ borderColor: "var(--ghost-border)" }}
             >
-              <X size={18} />
-            </button>
-          </div>
-
-          <div className="p-4 space-y-2">
-            {menuItems.map((item) => (
-              <MenuLink
-                key={item.path}
-                to={item.path}
-                label={item.label}
-                icon={item.icon}
-                onClick={() => setMenuOpen(false)}
-              />
-            ))}
-
-            <div className="pt-6">
-              <div
-                className="flex items-center gap-3 p-4 rounded-xl"
-                style={{ background: "var(--bg-card)" }}
-              >
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center font-semibold"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, var(--ai-accent), var(--ai-accent-dim))",
-                    color: "#ffffff",
-                  }}
+              <div>
+                <p
+                  className="text-[11px] font-semibold uppercase tracking-[0.18em]"
+                  style={{ color: "var(--text-tertiary)" }}
                 >
-                  {initials || "U"}
-                </div>
-                <div>
-                  <div
-                    className="text-sm font-medium"
-                    style={{ color: "var(--text-primary)" }}
-                  >
-                    {displayName}
-                  </div>
-                  <div
-                    className="text-xs"
-                    style={{ color: "var(--text-tertiary)" }}
-                  >
-                    {roleLabel}
-                  </div>
-                </div>
+                  Навигация
+                </p>
+                <h2 className="mt-1 text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+                  Меню
+                </h2>
               </div>
+              <button
+                onClick={() => setMenuOpen(false)}
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{
+                  background: "var(--bg-card)",
+                  color: "var(--text-secondary)",
+                }}
+              >
+                <X size={18} />
+              </button>
             </div>
 
-            <button
-              onClick={() => {
-                setMenuOpen(false);
-                void logout();
-              }}
-              className="h-12 w-full rounded-xl font-medium"
-              style={{
-                background: "var(--bg-card)",
-                color: "var(--text-primary)",
-                border: "1px solid var(--ghost-border-medium)",
-              }}
-            >
-              Излез
-            </button>
+            <div className="overflow-y-auto p-4 pb-6 space-y-5">
+              <div
+                className="rounded-2xl p-4"
+                style={{
+                  background:
+                    "linear-gradient(135deg, rgba(99,102,241,0.16), rgba(15,23,42,0.9))",
+                  border: "1px solid var(--ghost-border-medium)",
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-12 h-12 rounded-2xl flex items-center justify-center font-semibold"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, var(--primary-accent), var(--primary-accent-dim))",
+                      color: "#ffffff",
+                    }}
+                  >
+                    {initials || "U"}
+                  </div>
+                  <div
+                    className="min-w-0"
+                  >
+                    <div
+                      className="text-sm font-medium truncate"
+                      style={{ color: "var(--text-primary)" }}
+                    >
+                      {displayName}
+                    </div>
+                    <div
+                      className="text-xs mt-1"
+                      style={{ color: "rgba(255,255,255,0.72)" }}
+                    >
+                      {roleLabel}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  {quickMenuItems.map((item) => (
+                    <MenuShortcut
+                      key={item.path}
+                      to={item.path}
+                      label={item.shortLabel ?? item.label}
+                      icon={item.icon}
+                      active={matchesPath(location.pathname, item.path)}
+                      onClick={() => setMenuOpen(false)}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {menuSections.map((section) => (
+                <div key={section.key}>
+                  <p
+                    className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                    style={{ color: "var(--text-tertiary)" }}
+                  >
+                    {section.label}
+                  </p>
+                  <div
+                    className="overflow-hidden rounded-2xl"
+                    style={{
+                      background: "var(--bg-card)",
+                      border: "1px solid var(--ghost-border)",
+                    }}
+                  >
+                    {section.items.map((item, index) => (
+                      <MenuRow
+                        key={item.path}
+                        to={item.path}
+                        label={item.label}
+                        icon={item.icon}
+                        active={matchesPath(location.pathname, item.path)}
+                        bordered={index < section.items.length - 1}
+                        onClick={() => setMenuOpen(false)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <button
+                onClick={() => {
+                  setMenuOpen(false);
+                  void logout();
+                }}
+                className="h-12 w-full rounded-2xl font-medium flex items-center justify-center gap-2"
+                style={{
+                  background: "var(--bg-card)",
+                  color: "var(--text-primary)",
+                  border: "1px solid var(--ghost-border-medium)",
+                }}
+              >
+                <LogOut size={18} />
+                Излез
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -415,29 +559,82 @@ export function MobileLayout() {
   );
 }
 
-function MenuLink({
+function MenuShortcut({
   to,
   label,
   icon,
+  active,
   onClick,
 }: {
   to: string;
   label: string;
-  icon?: React.ReactNode;
+  icon: React.ReactNode;
+  active: boolean;
   onClick: () => void;
 }) {
   return (
     <Link to={to} onClick={onClick}>
       <button
-        className="w-full h-12 px-4 rounded-lg flex items-center gap-3 transition-all"
+        className="w-full rounded-2xl px-3 py-3 text-left"
         style={{
-          background: "var(--bg-card)",
-          color: "var(--text-primary)",
+          background: active ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.06)",
+          color: "#ffffff",
         }}
       >
-        {icon && <span style={{ color: "var(--text-secondary)" }}>{icon}</span>}
-        <span className="font-medium">{label}</span>
+        <div className="flex items-center gap-3">
+          <span style={{ color: "#ffffff" }}>{icon}</span>
+          <span className="text-sm font-medium">{label}</span>
+        </div>
       </button>
     </Link>
   );
+}
+
+function MenuRow({
+  to,
+  label,
+  icon,
+  active,
+  bordered,
+  onClick,
+}: {
+  to: string;
+  label: string;
+  icon: React.ReactNode;
+  active: boolean;
+  bordered: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Link to={to} onClick={onClick}>
+      <button
+        className="flex w-full items-center gap-3 px-4 py-4 text-left"
+        style={{
+          background: active ? "rgba(99, 102, 241, 0.1)" : "transparent",
+          borderBottom: bordered ? "1px solid var(--ghost-border)" : "none",
+        }}
+      >
+        <span
+          className="flex h-10 w-10 items-center justify-center rounded-xl"
+          style={{
+            background: active ? "rgba(99, 102, 241, 0.16)" : "var(--bg-panel)",
+            color: active ? "var(--primary-accent)" : "var(--text-secondary)",
+          }}
+        >
+          {icon}
+        </span>
+        <span className="min-w-0 flex-1 text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+          {label}
+        </span>
+        <ChevronRight
+          size={16}
+          style={{ color: active ? "var(--primary-accent)" : "var(--text-dim)" }}
+        />
+      </button>
+    </Link>
+  );
+}
+
+function matchesPath(currentPath: string, itemPath: string) {
+  return itemPath === "/" ? currentPath === "/" : currentPath.startsWith(itemPath);
 }

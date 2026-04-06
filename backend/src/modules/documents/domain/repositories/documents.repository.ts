@@ -47,4 +47,8 @@ export interface DocumentsRepository {
     documentId: string;
     document: DocumentWriteInput;
   }): Promise<DocumentRecord | null>;
+  deleteByTenantAndId(params: {
+    tenantId: string;
+    documentId: string;
+  }): Promise<boolean>;
 }

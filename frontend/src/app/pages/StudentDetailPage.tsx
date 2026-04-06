@@ -32,11 +32,16 @@ import {
   determinatorSessions,
   type StudentOperationalRecord,
 } from "../content/studentOperations";
-import { fetchStudentOperationalDetail } from "../services/studentsApi";
+import { useAuthSession } from "../services/authSession";
+import {
+  deleteStudentRecord,
+  fetchStudentOperationalDetail,
+} from "../services/studentsApi";
 
 export function StudentDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { session } = useAuthSession();
   const routeStudentId = id ?? "";
   const [studentRecord, setStudentRecord] =
     useState<StudentOperationalRecord | null>(null);
@@ -46,6 +51,10 @@ export function StudentDetailPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [parentReportStatus, setParentReportStatus] = useState(
     "Няма изпратен отчет",
+  );
+  const canDeleteStudent = Boolean(
+    session?.user.roleKeys.includes("owner") ||
+      session?.user.roleKeys.includes("admin"),
   );
 
   useEffect(() => {
@@ -168,12 +177,12 @@ export function StudentDetailPage() {
           ? "Хартиен регистър"
           : "Електронен регистър",
     insuranceStatus: studentRecord.insuranceStatus === "active" ? "Активна" : "Очаква се",
-    protocolNumber: "PR-2024-118",
-    protocolDate: "26.04.2024",
-    certificateIssueDate: "30.04.2024",
+    protocolNumber: "Няма",
+    protocolDate: "Няма",
+    certificateIssueDate: "Няма",
     theoryCompleted: studentRecord.theoryCompleted,
-    theoryAttendance: 10,
-    theoryTotal: 12,
+    theoryAttendance: 0,
+    theoryTotal: 0,
     parentName: studentRecord.parentName || "Няма въведен родител",
     parentPhone: studentRecord.parentPhone || "Няма въведен телефон",
     parentEmail: studentRecord.parentEmail || "Няма въведен email",
@@ -191,136 +200,51 @@ export function StudentDetailPage() {
     parentFeedbackEnabled: studentRecord.parentFeedbackEnabled,
   };
 
-  const payments = [
-    {
-      id: 1,
-      date: "15.01.2024",
-      type: "Пакет 20 часа",
-      amount: "1,200 €",
-      method: "Банков превод",
-      status: "success",
-      statusLabel: "Платено",
-      invoiceNumber: "INV-2024-001",
-    },
-    {
-      id: 2,
-      date: "20.02.2024",
-      type: "Теория",
-      amount: "180 €",
-      method: "В брой",
-      status: "success",
-      statusLabel: "Платено",
-      invoiceNumber: "INV-2024-045",
-    },
-  ];
+  const payments: Array<{
+    id: number;
+    date: string;
+    type: string;
+    amount: string;
+    method: string;
+    status: string;
+    statusLabel: string;
+    invoiceNumber: string;
+  }> = [];
 
-  const lessons = [
-    {
-      id: 1,
-      date: "24.03.2024",
-      time: "10:00",
-      type: "Градско шофиране",
-      duration: "90 мин",
-      instructor: "Георги Петров",
-      vehicle: "Toyota Corolla - СА 1234 АВ",
-      route: "Център - Младост",
-      status: "success",
-      statusLabel: "Завършен",
-      rating: 4,
-      notes: "Отлично се справи с паркирането",
-    },
-    {
-      id: 2,
-      date: "22.03.2024",
-      time: "14:00",
-      type: "Паркиране",
-      duration: "90 мин",
-      instructor: "Георги Петров",
-      vehicle: "Toyota Corolla - СА 1234 АВ",
-      route: "Павел Баня - упражнения",
-      status: "success",
-      statusLabel: "Завършен",
-      rating: 5,
-      notes: "Перфектно паркиране",
-    },
-    {
-      id: 3,
-      date: "20.03.2024",
-      time: "11:00",
-      type: "Магистрала",
-      duration: "90 мин",
-      instructor: "Георги Петров",
-      vehicle: "Toyota Corolla - СА 1234 АВ",
-      route: "София - Перник",
-      status: "success",
-      statusLabel: "Завършен",
-      rating: 4,
-      notes: "Добро управление при висока скорост",
-    },
-  ];
+  const lessons: Array<{
+    id: number;
+    date: string;
+    time: string;
+    type: string;
+    duration: string;
+    instructor: string;
+    vehicle: string;
+    route: string;
+    status: string;
+    statusLabel: string;
+    rating: number;
+    notes: string;
+  }> = [];
 
-  const documents = [
-    {
-      id: 1,
-      name: "Лична карта",
-      type: "Документ за самоличност",
-      issueDate: "10.01.2020",
-      expiryDate: "10.01.2030",
-      status: "success",
-      statusLabel: "Валиден",
-      daysLeft: 2190,
-    },
-    {
-      id: 2,
-      name: "Медицинско свидетелство",
-      type: "Здравно състояние",
-      issueDate: "05.01.2024",
-      expiryDate: "05.01.2025",
-      status: "success",
-      statusLabel: "Валиден",
-      daysLeft: 287,
-    },
-    {
-      id: 3,
-      name: "Свидетелство за управление",
-      type: "Предходна категория",
-      issueDate: "15.01.2024",
-      expiryDate: "15.04.2024",
-      status: "warning",
-      statusLabel: "22 дни",
-      daysLeft: 22,
-    },
-  ];
+  const documents: Array<{
+    id: number;
+    name: string;
+    type: string;
+    issueDate: string;
+    expiryDate: string;
+    status: string;
+    statusLabel: string;
+    daysLeft: number;
+  }> = [];
 
-  const notes = [
-    {
-      id: 1,
-      date: "24.03.2024",
-      author: "Георги Петров",
-      type: "Инструктор",
-      content:
-        "Курсистът показва отлични резултати. Готов за по-сложни маневри.",
-      important: false,
-    },
-    {
-      id: 2,
-      date: "15.03.2024",
-      author: "Мария Иванова",
-      type: "Администратор",
-      content:
-        "Родителят се обади да запита за напредъка. Изпратена информация по email.",
-      important: false,
-    },
-    {
-      id: 3,
-      date: "10.03.2024",
-      author: "Георги Петров",
-      type: "Инструктор",
-      content:
-        "Препоръчвам допълнителни часове за паркиране след достигане на 15 часа.",
-      important: true,
-    },
-  ];
+  const notes: Array<{
+    id: number;
+    date: string;
+    author: string;
+    type: string;
+    content: string;
+    important: boolean;
+  }> = [];
 
   const notifications = [
     ...(student.inactivityAlert
@@ -347,30 +271,6 @@ export function StudentDetailPage() {
           },
         ]
       : []),
-    {
-      id: 1,
-      type: "milestone",
-      title: "Достигнати 10 часа практика",
-      message: "Автоматичен сигнал за категория B",
-      date: "20.03.2024",
-      status: "info",
-    },
-    {
-      id: 2,
-      type: "theory",
-      title: "Теория завършена",
-      message: "Присъствие: 10/12 занятия",
-      date: "15.03.2024",
-      status: "success",
-    },
-    {
-      id: 3,
-      type: "payment",
-      title: "Плащане получено",
-      message: "1,200 € за пакет 20 часа",
-      date: "15.01.2024",
-      status: "success",
-    },
   ];
 
   const tabs = [
@@ -398,6 +298,31 @@ export function StudentDetailPage() {
     setParentReportStatus(
       `Изпратен отчет към родител: ${new Date().toLocaleString("bg-BG")} · Последен урок и детерминатор бележки.`,
     );
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!student || !canDeleteStudent) {
+      return;
+    }
+
+    const shouldDelete = globalThis.confirm(
+      `Сигурен ли си, че искаш да изтриеш курсиста ${student.name}? Това ще премахне и свързаните му записи.`,
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    try {
+      await deleteStudentRecord(student.id, session?.csrfToken ?? "");
+      navigate("/students");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Курсистът не можа да бъде изтрит.";
+      globalThis.alert(message);
+    }
   };
 
   return (
@@ -431,6 +356,15 @@ export function StudentDetailPage() {
             >
               Редактирай
             </Button>
+            {canDeleteStudent && (
+              <Button
+                variant="destructive"
+                icon={<TriangleAlert size={18} />}
+                onClick={() => void handleDeleteStudent()}
+              >
+                Изтрий
+              </Button>
+            )}
           </>
         }
       />
@@ -736,7 +670,7 @@ export function StudentDetailPage() {
                     <div
                       className="h-full rounded-full"
                       style={{
-                        width: `${(student.usedLessons / student.paidLessons) * 100}%`,
+                        width: `${student.paidLessons > 0 ? (student.usedLessons / student.paidLessons) * 100 : 0}%`,
                         background:
                           "linear-gradient(135deg, var(--primary-accent), var(--primary-accent-dim))",
                       }}
@@ -987,31 +921,35 @@ export function StudentDetailPage() {
                 </h3>
               </div>
               <div className="p-6 space-y-3">
-                {lessons.slice(0, 3).map((lesson) => (
-                  <div
-                    key={lesson.id}
-                    className="p-3 rounded-lg"
-                    style={{ background: "var(--bg-panel)" }}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <p
-                        className="font-medium text-sm"
-                        style={{ color: "var(--text-primary)" }}
-                      >
-                        {lesson.type}
-                      </p>
-                      <StatusBadge status={lesson.status as any} size="small">
-                        {lesson.statusLabel}
-                      </StatusBadge>
-                    </div>
-                    <p
-                      className="text-xs"
-                      style={{ color: "var(--text-tertiary)" }}
+                {lessons.length === 0 ? (
+                  <EmptyDetailState message="Все още няма проведени практически часове." />
+                ) : (
+                  lessons.slice(0, 3).map((lesson) => (
+                    <div
+                      key={lesson.id}
+                      className="p-3 rounded-lg"
+                      style={{ background: "var(--bg-panel)" }}
                     >
-                      {lesson.date} • {lesson.time}
-                    </p>
-                  </div>
-                ))}
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <p
+                          className="font-medium text-sm"
+                          style={{ color: "var(--text-primary)" }}
+                        >
+                          {lesson.type}
+                        </p>
+                        <StatusBadge status={lesson.status as any} size="small">
+                          {lesson.statusLabel}
+                        </StatusBadge>
+                      </div>
+                      <p
+                        className="text-xs"
+                        style={{ color: "var(--text-tertiary)" }}
+                      >
+                        {lesson.date} • {lesson.time}
+                      </p>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>
@@ -1078,6 +1016,7 @@ export function StudentDetailPage() {
                   },
                 ]}
                 data={lessons}
+                emptyMessage="Няма проведени практически часове за този курсист."
               />
             </div>
           </div>
@@ -1208,6 +1147,7 @@ export function StudentDetailPage() {
                   },
                 ]}
                 data={payments}
+                emptyMessage="Няма плащания за този курсист."
               />
             </div>
           </div>
@@ -1226,39 +1166,43 @@ export function StudentDetailPage() {
                 <h3 style={{ color: "var(--text-primary)" }}>Документи</h3>
               </div>
               <div className="p-6 space-y-3">
-                {documents.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="p-4 rounded-lg"
-                    style={{ background: "var(--bg-panel)" }}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div>
-                        <p
-                          className="font-medium"
-                          style={{ color: "var(--text-primary)" }}
-                        >
-                          {doc.name}
-                        </p>
-                        <p
-                          className="text-xs mt-0.5"
-                          style={{ color: "var(--text-tertiary)" }}
-                        >
-                          {doc.type}
-                        </p>
-                      </div>
-                      <StatusBadge status={doc.status as any} size="small">
-                        {doc.statusLabel}
-                      </StatusBadge>
-                    </div>
+                {documents.length === 0 ? (
+                  <EmptyDetailState message="Няма качени документи за този курсист." />
+                ) : (
+                  documents.map((doc) => (
                     <div
-                      className="text-xs"
-                      style={{ color: "var(--text-secondary)" }}
+                      key={doc.id}
+                      className="p-4 rounded-lg"
+                      style={{ background: "var(--bg-panel)" }}
                     >
-                      Издаден: {doc.issueDate} • Валиден до: {doc.expiryDate}
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                          <p
+                            className="font-medium"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            {doc.name}
+                          </p>
+                          <p
+                            className="text-xs mt-0.5"
+                            style={{ color: "var(--text-tertiary)" }}
+                          >
+                            {doc.type}
+                          </p>
+                        </div>
+                        <StatusBadge status={doc.status as any} size="small">
+                          {doc.statusLabel}
+                        </StatusBadge>
+                      </div>
+                      <div
+                        className="text-xs"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        Издаден: {doc.issueDate} • Валиден до: {doc.expiryDate}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
@@ -1314,86 +1258,90 @@ export function StudentDetailPage() {
               </div>
             </div>
             <div className="p-6 space-y-4">
-              {notes.map((note) => (
-                <div
-                  key={note.id}
-                  className="p-4 rounded-lg"
-                  style={{
-                    background: note.important
-                      ? "var(--status-warning-bg)"
-                      : "var(--bg-panel)",
-                    border: note.important
-                      ? "1px solid var(--status-warning-border)"
-                      : "1px solid transparent",
-                  }}
-                >
-                  <div className="flex items-start gap-3 mb-2">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0"
-                      style={{
-                        background:
-                          "linear-gradient(135deg, var(--primary-accent), var(--primary-accent-dim))",
-                        color: "#ffffff",
-                      }}
-                    >
-                      {note.author
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span
-                          className="font-medium text-sm"
-                          style={{ color: "var(--text-primary)" }}
-                        >
-                          {note.author}
-                        </span>
-                        <span
-                          className="text-xs"
-                          style={{ color: "var(--text-tertiary)" }}
-                        >
-                          •
-                        </span>
-                        <span
-                          className="text-xs"
-                          style={{ color: "var(--text-tertiary)" }}
-                        >
-                          {note.type}
-                        </span>
-                        {note.important && (
-                          <>
-                            <span
-                              className="text-xs"
-                              style={{ color: "var(--text-tertiary)" }}
-                            >
-                              •
-                            </span>
-                            <span
-                              className="text-xs font-semibold"
-                              style={{ color: "var(--status-warning)" }}
-                            >
-                              Важно
-                            </span>
-                          </>
-                        )}
+              {notes.length === 0 ? (
+                <EmptyDetailState message="Няма бележки по този курсист." />
+              ) : (
+                notes.map((note) => (
+                  <div
+                    key={note.id}
+                    className="p-4 rounded-lg"
+                    style={{
+                      background: note.important
+                        ? "var(--status-warning-bg)"
+                        : "var(--bg-panel)",
+                      border: note.important
+                        ? "1px solid var(--status-warning-border)"
+                        : "1px solid transparent",
+                    }}
+                  >
+                    <div className="flex items-start gap-3 mb-2">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0"
+                        style={{
+                          background:
+                            "linear-gradient(135deg, var(--primary-accent), var(--primary-accent-dim))",
+                          color: "#ffffff",
+                        }}
+                      >
+                        {note.author
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
                       </div>
-                      <p
-                        className="text-sm mb-2"
-                        style={{ color: "var(--text-secondary)" }}
-                      >
-                        {note.content}
-                      </p>
-                      <p
-                        className="text-xs"
-                        style={{ color: "var(--text-tertiary)" }}
-                      >
-                        {note.date}
-                      </p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span
+                            className="font-medium text-sm"
+                            style={{ color: "var(--text-primary)" }}
+                          >
+                            {note.author}
+                          </span>
+                          <span
+                            className="text-xs"
+                            style={{ color: "var(--text-tertiary)" }}
+                          >
+                            •
+                          </span>
+                          <span
+                            className="text-xs"
+                            style={{ color: "var(--text-tertiary)" }}
+                          >
+                            {note.type}
+                          </span>
+                          {note.important && (
+                            <>
+                              <span
+                                className="text-xs"
+                                style={{ color: "var(--text-tertiary)" }}
+                              >
+                                •
+                              </span>
+                              <span
+                                className="text-xs font-semibold"
+                                style={{ color: "var(--status-warning)" }}
+                              >
+                                Важно
+                              </span>
+                            </>
+                          )}
+                        </div>
+                        <p
+                          className="text-sm mb-2"
+                          style={{ color: "var(--text-secondary)" }}
+                        >
+                          {note.content}
+                        </p>
+                        <p
+                          className="text-xs"
+                          style={{ color: "var(--text-tertiary)" }}
+                        >
+                          {note.date}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         )}
@@ -1409,7 +1357,9 @@ export function StudentDetailPage() {
               </h3>
             </div>
             <div className="p-6 space-y-3">
-              {notifications.map((notif) => {
+              {notifications.length === 0 ? (
+                <EmptyDetailState message="Няма известия и сигнали за този курсист." />
+              ) : notifications.map((notif) => {
                 const iconMap = {
                   milestone: <CheckCircle size={20} />,
                   theory: <BookOpen size={20} />,
@@ -1473,6 +1423,17 @@ export function StudentDetailPage() {
 }
 
 // Helper Components
+function EmptyDetailState({ message }: { message: string }) {
+  return (
+    <div
+      className="rounded-lg p-4 text-sm"
+      style={{ background: "var(--bg-panel)", color: "var(--text-secondary)" }}
+    >
+      {message}
+    </div>
+  );
+}
+
 function LessonStat({
   label,
   value,

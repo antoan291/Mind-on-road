@@ -110,6 +110,13 @@ export async function updatePaymentRecord(
   return mapBackendPayment(response);
 }
 
+export async function deletePaymentRecord(
+  paymentId: string,
+  csrfToken: string,
+) {
+  return apiClient.delete<void>(`/payments/${paymentId}`, csrfToken);
+}
+
 function mapBackendPayment(payment: BackendPaymentRecord): PaymentRecordView {
   const paymentStatus = mapPaymentStatus(payment.status);
   const paidAmount =

@@ -47,7 +47,7 @@ export function PageHeader({
         </button>
       )}
       
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-2xl font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
@@ -72,7 +72,7 @@ export function PageHeader({
           )}
         </div>
         {actions && (
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap md:w-auto md:justify-end md:flex-shrink-0">
             {actions}
           </div>
         )}

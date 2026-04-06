@@ -166,6 +166,35 @@ export class PrismaStudentsRepository implements StudentsRepository {
     }
   }
 
+  public async deleteByTenantAndId(params: {
+    tenantId: string;
+    studentId: string;
+  }): Promise<boolean> {
+    return this.prisma.$transaction(async (transaction) => {
+      await transaction.documentRecord.deleteMany({
+        where: {
+          tenantId: params.tenantId,
+          OR: [
+            { studentId: params.studentId },
+            {
+              ownerType: 'STUDENT',
+              ownerRef: params.studentId
+            }
+          ]
+        }
+      });
+
+      const deletedRows = await transaction.student.deleteMany({
+        where: {
+          id: params.studentId,
+          tenantId: params.tenantId
+        }
+      });
+
+      return deletedRows.count > 0;
+    });
+  }
+
   public async listDeterminatorSessionsByTenant(params: {
     tenantId: string;
     studentId?: string;

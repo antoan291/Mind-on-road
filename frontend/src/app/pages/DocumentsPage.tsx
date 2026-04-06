@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import {
   createDocumentRecord,
+  deleteDocumentRecord,
   fetchDocumentOcrExtractions,
   fetchDocumentOcrSourceFiles,
   fetchDocumentRecords,
@@ -73,6 +74,10 @@ export function DocumentsPage() {
   const [sourceStatus, setSourceStatus] = useState<
     'loading' | 'backend' | 'fallback'
   >('loading');
+  const canDeleteDocuments = Boolean(
+    session?.user.roleKeys.includes('owner') ||
+      session?.user.roleKeys.includes('admin'),
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -136,6 +141,45 @@ export function DocumentsPage() {
         return 'error';
       default:
         return 'info';
+    }
+  };
+
+  const handleDeleteDocument = async (documentId: string | number) => {
+    if (!canDeleteDocuments) {
+      return;
+    }
+
+    const document = allDocuments.find(
+      (currentDocument) => currentDocument.id === documentId,
+    );
+
+    if (!document) {
+      return;
+    }
+
+    const shouldDelete = globalThis.confirm(
+      `Сигурен ли си, че искаш да изтриеш документа ${document.name} на ${document.owner}?`,
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    try {
+      await deleteDocumentRecord(String(documentId), session?.csrfToken ?? '');
+      setAllDocuments((currentDocuments) =>
+        currentDocuments.filter((currentDocument) => currentDocument.id !== documentId),
+      );
+      setSelectedDocument((currentDocument) =>
+        currentDocument?.id === documentId ? null : currentDocument,
+      );
+      setSourceStatus('backend');
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Документът не можа да бъде изтрит.';
+      globalThis.alert(message);
     }
   };
 
@@ -283,6 +327,19 @@ export function DocumentsPage() {
               >
                 <Download size={16} />
               </button>
+              {canDeleteDocuments && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void handleDeleteDocument(row.id);
+                  }}
+                  className="w-9 h-9 rounded-lg flex items-center justify-center transition-all hover:shadow-[var(--glow-indigo)]"
+                  style={{ background: 'var(--bg-panel)', color: 'var(--status-error)' }}
+                  title="Изтрий"
+                >
+                  <XCircle size={16} />
+                </button>
+              )}
             </>
           )}
         </div>
@@ -711,6 +768,11 @@ export function DocumentsPage() {
             setShowUploadModal(true);
             setSelectedDocument(null);
           }}
+          onDelete={
+            canDeleteDocuments
+              ? () => void handleDeleteDocument(selectedDocument.id)
+              : undefined
+          }
         />
       )}
 
@@ -862,10 +924,12 @@ function DocumentDetailModal({
   document,
   onClose,
   onUpdate,
+  onDelete,
 }: {
   document: Document;
   onClose: () => void;
   onUpdate: () => void;
+  onDelete?: () => void;
 }) {
   const getStatusColor = (status: DocumentStatus): 'success' | 'warning' | 'error' | 'info' => {
     switch (status) {
@@ -1035,6 +1099,23 @@ function DocumentDetailModal({
                 Актуализирай
               </Button>
             </div>
+          </div>
+
+          <div
+            className="flex flex-wrap items-center justify-end gap-3 border-t p-6"
+            style={{ borderColor: 'var(--ghost-border)' }}
+          >
+            {onDelete && (
+              <Button variant="destructive" onClick={onDelete}>
+                Изтрий
+              </Button>
+            )}
+            <Button variant="secondary" onClick={onUpdate}>
+              Редактирай
+            </Button>
+            <Button variant="primary" onClick={onClose}>
+              Затвори
+            </Button>
           </div>
         </div>
       </div>

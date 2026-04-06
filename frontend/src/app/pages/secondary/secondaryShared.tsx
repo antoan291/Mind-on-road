@@ -1,6 +1,7 @@
 ﻿import type { StatusTone } from './secondaryData';
 export type { StatusTone } from './secondaryData';
 import { StatusBadge } from '../../components/ui-system/StatusBadge';
+import { useIsMobile } from '../../components/ui/use-mobile';
 
 export function PageSection({ children }: { children: React.ReactNode }) {
   return <div className="space-y-6 p-6 lg:space-y-8 lg:p-8">{children}</div>;
@@ -37,6 +38,12 @@ export function InfoLine({ label, value }: { label: string; value: string }) {
 }
 
 export function DataTableLayout({ columns, rows }: { columns: string[]; rows: React.ReactNode[][] }) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return <div className="space-y-3">{rows.map((row, rowIndex) => <div key={rowIndex} className="rounded-2xl p-4" style={{ background: rowIndex % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-card-elevated)', border: '1px solid var(--ghost-border)' }}>{row.map((cell, cellIndex) => <div key={cellIndex} className={cellIndex === row.length - 1 ? '' : 'mb-3 pb-3'} style={cellIndex === row.length - 1 ? undefined : { borderBottom: '1px solid var(--ghost-border)' }}><p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--text-tertiary)' }}>{columns[cellIndex] ?? `Колона ${cellIndex + 1}`}</p><div className="mt-1 text-sm" style={{ color: cellIndex === 0 ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{cell}</div></div>)}</div>)}</div>;
+  }
+
   return <div className="overflow-hidden rounded-2xl" style={{ border: '1px solid var(--ghost-border)' }}><div className="overflow-x-auto"><table className="min-w-full text-sm"><thead style={{ background: 'var(--bg-card-elevated)' }}><tr>{columns.map((column) => <th key={column} className="px-4 py-3 text-left text-[11px] uppercase tracking-[0.16em] font-medium" style={{ color: 'var(--text-tertiary)' }}>{column}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={index} style={{ background: index % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-card-elevated)' }}>{row.map((cell, cellIndex) => <td key={cellIndex} className="px-4 py-4 align-top" style={{ color: cellIndex === 0 ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{cell}</td>)}</tr>)}</tbody></table></div></div>;
 }
 

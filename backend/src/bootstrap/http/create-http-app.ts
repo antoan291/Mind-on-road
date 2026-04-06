@@ -260,6 +260,10 @@ const studentIdParamsSchema = z.object({
   studentId: z.string().uuid()
 });
 
+const expenseIdParamsSchema = z.object({
+  expenseId: z.string().uuid()
+});
+
 const lessonIdParamsSchema = z.object({
   lessonId: z.string().uuid()
 });
@@ -646,6 +650,42 @@ export function createHttpApp() {
     }
   );
 
+  app.delete(
+    '/students/:studentId',
+    requireAuthenticatedSession,
+    requireAnyRole(['owner', 'admin']),
+    requireCsrfProtection,
+    async (request: AuthenticatedRequest, response) => {
+      const parsedParams = studentIdParamsSchema.safeParse(request.params);
+
+      if (!parsedParams.success) {
+        response.status(400).json({
+          error: 'Invalid student id.'
+        });
+        return;
+      }
+
+      const deleted = await studentsCommandService.deleteStudent({
+        tenantId: request.auth!.tenantId,
+        studentId: parsedParams.data.studentId
+      });
+
+      if (!deleted) {
+        response.status(404).json({
+          error: 'Student not found.'
+        });
+        return;
+      }
+
+      await recordMutationAudit(request, 'students.delete', {
+        studentId: parsedParams.data.studentId
+      });
+      await deleteTenantReadCaches(request.auth!.tenantId);
+
+      response.status(204).send();
+    }
+  );
+
   app.get(
     '/determinator/sessions',
     requireAuthenticatedSession,
@@ -871,6 +911,42 @@ export function createHttpApp() {
     }
   );
 
+  app.delete(
+    '/payments/:paymentId',
+    requireAuthenticatedSession,
+    requireAnyRole(['owner', 'admin']),
+    requireCsrfProtection,
+    async (request: AuthenticatedRequest, response) => {
+      const parsedParams = paymentIdParamsSchema.safeParse(request.params);
+
+      if (!parsedParams.success) {
+        response.status(400).json({
+          error: 'Invalid payment id.'
+        });
+        return;
+      }
+
+      const deleted = await paymentsCommandService.deletePayment({
+        tenantId: request.auth!.tenantId,
+        paymentId: parsedParams.data.paymentId
+      });
+
+      if (!deleted) {
+        response.status(404).json({
+          error: 'Payment not found.'
+        });
+        return;
+      }
+
+      await recordMutationAudit(request, 'payments.delete', {
+        paymentId: parsedParams.data.paymentId
+      });
+      await deleteTenantReadCaches(request.auth!.tenantId);
+
+      response.status(204).send();
+    }
+  );
+
   app.get(
     '/expenses',
     requireAuthenticatedSession,
@@ -947,6 +1023,42 @@ export function createHttpApp() {
       await deleteTenantReadCaches(request.auth!.tenantId);
 
       response.status(201).json(expense);
+    }
+  );
+
+  app.delete(
+    '/expenses/:expenseId',
+    requireAuthenticatedSession,
+    requireAnyRole(['owner', 'admin']),
+    requireCsrfProtection,
+    async (request: AuthenticatedRequest, response) => {
+      const parsedParams = expenseIdParamsSchema.safeParse(request.params);
+
+      if (!parsedParams.success) {
+        response.status(400).json({
+          error: 'Invalid expense id.'
+        });
+        return;
+      }
+
+      const deleted = await expensesCommandService.deleteExpense({
+        tenantId: request.auth!.tenantId,
+        expenseId: parsedParams.data.expenseId
+      });
+
+      if (!deleted) {
+        response.status(404).json({
+          error: 'Expense not found.'
+        });
+        return;
+      }
+
+      await recordMutationAudit(request, 'expenses.delete', {
+        expenseId: parsedParams.data.expenseId
+      });
+      await deleteTenantReadCaches(request.auth!.tenantId);
+
+      response.status(204).send();
     }
   );
 
@@ -1775,6 +1887,42 @@ export function createHttpApp() {
     }
   );
 
+  app.delete(
+    '/documents/:documentId',
+    requireAuthenticatedSession,
+    requireAnyRole(['owner', 'admin']),
+    requireCsrfProtection,
+    async (request: AuthenticatedRequest, response) => {
+      const parsedParams = documentIdParamsSchema.safeParse(request.params);
+
+      if (!parsedParams.success) {
+        response.status(400).json({
+          error: 'Invalid document id.'
+        });
+        return;
+      }
+
+      const deleted = await documentsCommandService.deleteDocument({
+        tenantId: request.auth!.tenantId,
+        documentId: parsedParams.data.documentId
+      });
+
+      if (!deleted) {
+        response.status(404).json({
+          error: 'Document not found.'
+        });
+        return;
+      }
+
+      await recordMutationAudit(request, 'documents.delete', {
+        documentId: parsedParams.data.documentId
+      });
+      await deleteTenantReadCaches(request.auth!.tenantId);
+
+      response.status(204).send();
+    }
+  );
+
   app.get(
     '/exam-applications',
     requireAuthenticatedSession,
@@ -2120,6 +2268,42 @@ export function createHttpApp() {
       await deleteTenantReadCaches(request.auth!.tenantId);
 
       response.status(200).json(invoice);
+    }
+  );
+
+  app.delete(
+    '/invoices/:invoiceId',
+    requireAuthenticatedSession,
+    requireAnyRole(['owner', 'admin']),
+    requireCsrfProtection,
+    async (request: AuthenticatedRequest, response) => {
+      const parsedParams = invoiceIdParamsSchema.safeParse(request.params);
+
+      if (!parsedParams.success) {
+        response.status(400).json({
+          error: 'Invalid invoice id.'
+        });
+        return;
+      }
+
+      const deleted = await invoicesCommandService.deleteInvoice({
+        tenantId: request.auth!.tenantId,
+        invoiceId: parsedParams.data.invoiceId
+      });
+
+      if (!deleted) {
+        response.status(404).json({
+          error: 'Invoice not found.'
+        });
+        return;
+      }
+
+      await recordMutationAudit(request, 'invoices.delete', {
+        invoiceId: parsedParams.data.invoiceId
+      });
+      await deleteTenantReadCaches(request.auth!.tenantId);
+
+      response.status(204).send();
     }
   );
 
@@ -3076,6 +3260,36 @@ function requireOwnerRole(
   }
 
   next();
+}
+
+function requireAnyRole(roleKeys: string[]) {
+  return (
+    request: AuthenticatedRequest,
+    response: express.Response,
+    next: express.NextFunction
+  ) => {
+    const userRoleKeys = request.auth?.user.roleKeys ?? [];
+
+    if (!roleKeys.some((roleKey) => userRoleKeys.includes(roleKey))) {
+      void authAuditService.record({
+        tenantId: request.auth?.tenantId,
+        userId: request.auth?.user.id,
+        sessionId: request.auth?.sessionId,
+        actorType: 'USER',
+        actionKey: 'authz.role_denied',
+        outcome: 'FAILURE',
+        ipAddress: request.ip,
+        userAgent: request.get('user-agent') ?? undefined,
+        metadata: { requiredRoles: roleKeys, path: request.path }
+      });
+      response.status(403).json({
+        error: 'Forbidden.'
+      });
+      return;
+    }
+
+    next();
+  };
 }
 
 function requireCsrfProtection(

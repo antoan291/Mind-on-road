@@ -55,9 +55,10 @@ export function StudentFormPage() {
     parentFeedbackEnabled: '',
     
     // Lessons & Payments
-    paidLessons: '',
+    paidAmount: '',
     completedHours: '0',
     lessonPackage: '',
+    customPackageHours: '',
     
     // Notes
     notes: '',
@@ -117,10 +118,17 @@ export function StudentFormPage() {
           parentPhone: record.parentPhone ?? '',
           parentEmail: record.parentEmail ?? '',
           parentFeedbackEnabled: record.parentFeedbackEnabled ? 'enabled' : 'disabled',
-          paidLessons: String(record.maxTrainingHours - (record.extraHours ?? 0)),
+          paidAmount: extractPaidAmount(record.notes ?? ''),
           completedHours: String(record.used ?? 0),
-          lessonPackage: String(record.maxTrainingHours - (record.extraHours ?? 0)),
-          notes: '',
+          lessonPackage: mapPackageHoursToFormValue(
+            record.maxTrainingHours - (record.extraHours ?? 0),
+          ),
+          customPackageHours: isPresetPackageHours(
+            record.maxTrainingHours - (record.extraHours ?? 0),
+          )
+            ? ''
+            : String(record.maxTrainingHours - (record.extraHours ?? 0)),
+          notes: stripPaidAmountNote(record.notes ?? ''),
         }));
       })
       .catch((error) => {
@@ -263,11 +271,11 @@ export function StudentFormPage() {
 
             <InputField
               label="Дата на раждане"
-              type="text"
-              placeholder="ДД.ММ.ГГГГ"
+              type="date"
               value={formData.birthDate}
               onChange={(value) => setFormData({ ...formData, birthDate: value })}
               icon={<Calendar size={18} />}
+              helpText="Изберете датата от календара."
               required
             />
 
@@ -495,14 +503,28 @@ export function StudentFormPage() {
             />
 
             <InputField
-              label="Платени часове"
+              label="Платена сума"
               type="number"
-              placeholder="20"
-              value={formData.paidLessons}
-              onChange={(value) => setFormData({ ...formData, paidLessons: value })}
-              helpText="Брой платени часове практика"
+              placeholder="0"
+              value={formData.paidAmount}
+              onChange={(value) => setFormData({ ...formData, paidAmount: value })}
+              helpText="Реално платената сума при записване. Не променя часовете по пакета."
               required
             />
+
+            {formData.lessonPackage === 'custom' && (
+              <InputField
+                label="Часове по персонализиран пакет"
+                type="number"
+                placeholder="0"
+                value={formData.customPackageHours}
+                onChange={(value) =>
+                  setFormData({ ...formData, customPackageHours: value })
+                }
+                helpText="Използва се само когато пакетът е персонализиран."
+                required
+              />
+            )}
           </div>
         </div>
 
@@ -646,8 +668,9 @@ function toStudentMutationPayload(
     formData.courseOutcome,
     Number(formData.failedExamAttempts || 0),
   );
-  const packageHours = Number(
-    formData.paidLessons || formData.lessonPackage || 0,
+  const packageHours = resolvePackageHours(
+    formData.lessonPackage,
+    formData.customPackageHours,
   );
   const additionalHours = Number(formData.extraHours || 0);
   const completedHours = Math.min(
@@ -696,7 +719,7 @@ function toStudentMutationPayload(
       failedExamAttempts: Number(formData.failedExamAttempts || 0),
       lastPracticeAt:
         completedHours > 0 ? new Date().toISOString() : null,
-      notes: formData.notes || null,
+      notes: buildEnrollmentNotes(formData.notes, formData.paidAmount),
     },
   };
 }
@@ -728,9 +751,10 @@ function useStudentFormInitialState() {
     parentPhone: '',
     parentEmail: '',
     parentFeedbackEnabled: '',
-    paidLessons: '',
+    paidAmount: '',
     completedHours: '0',
     lessonPackage: '',
+    customPackageHours: '',
     notes: '',
   };
 }
@@ -753,6 +777,55 @@ function normalizeFormDate(value: string) {
   }
 
   return `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`;
+}
+
+function resolvePackageHours(lessonPackage: string, customPackageHours: string) {
+  if (lessonPackage === 'custom') {
+    return Number(customPackageHours || 0);
+  }
+
+  return Number(lessonPackage || 0);
+}
+
+function buildEnrollmentNotes(notes: string, paidAmount: string) {
+  const trimmedNotes = stripPaidAmountNote(notes).trim();
+  const numericAmount = Number(paidAmount || 0);
+  const paidAmountLine =
+    Number.isFinite(numericAmount) && numericAmount > 0
+      ? `Платена сума при записване: ${numericAmount.toFixed(2)} €`
+      : '';
+
+  return [trimmedNotes, paidAmountLine].filter(Boolean).join('\n') || null;
+}
+
+function extractPaidAmount(notes: string) {
+  const match = /Платена сума при записване:\s*([0-9]+(?:[.,][0-9]{1,2})?)/i.exec(
+    notes,
+  );
+
+  if (!match) {
+    return '';
+  }
+
+  return match[1].replace(',', '.');
+}
+
+function stripPaidAmountNote(notes: string) {
+  return notes
+    .split('\n')
+    .filter(
+      (line) => !line.toLowerCase().includes('платена сума при записване:'),
+    )
+    .join('\n')
+    .trim();
+}
+
+function mapPackageHoursToFormValue(packageHours: number) {
+  return isPresetPackageHours(packageHours) ? String(packageHours) : 'custom';
+}
+
+function isPresetPackageHours(packageHours: number) {
+  return [10, 15, 20, 25].includes(packageHours);
 }
 
 function mapEducationLevelToBackendLabel(value: string) {

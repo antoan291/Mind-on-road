@@ -1,19 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useIsMobile } from '../components/ui/use-mobile';
 import { SchedulePage } from './SchedulePage';
 import { MobileSchedulePage } from './mobile/MobileSchedulePage';
 
 export function ResponsiveSchedulePage() {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  const isMobile = useIsMobile(1024);
 
   return isMobile ? <MobileSchedulePage /> : <SchedulePage />;
 }

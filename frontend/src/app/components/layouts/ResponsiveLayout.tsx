@@ -1,24 +1,14 @@
-import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router';
 import { ForcePasswordChangeScreen } from '../ForcePasswordChangeScreen';
 import { AppLayout } from './AppLayout';
 import { MobileLayout } from './MobileLayout';
 import { useAuthSession } from '../../services/authSession';
 import { StudentPortalProfilePage } from '../../pages/StudentPortalProfilePage';
+import { useIsMobile } from '../ui/use-mobile';
 
 export function ResponsiveLayout() {
   const { authState, session } = useAuthSession();
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+  const isMobile = useIsMobile(1024);
 
   if (authState === 'loading') {
     return (

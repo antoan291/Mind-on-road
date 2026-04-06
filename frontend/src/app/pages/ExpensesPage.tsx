@@ -29,6 +29,7 @@ import {
 import { useAuthSession } from '../services/authSession';
 import {
   createExpenseRecord,
+  deleteExpenseRecord,
   fetchExpenseRecords,
   type ExpenseCreatePayload,
   type ExpenseRecordView,
@@ -141,6 +142,10 @@ export function ExpensesPage() {
   const [sourceStatus, setSourceStatus] = useState<
     'loading' | 'backend' | 'fallback'
   >('loading');
+  const canDeleteExpenses = Boolean(
+    session?.user.roleKeys.includes('owner') ||
+      session?.user.roleKeys.includes('admin'),
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -263,6 +268,40 @@ export function ExpensesPage() {
 
     setEntries((current) => [nextEntry, ...current]);
     setIsCreateExpenseOpen(false);
+  };
+
+  const handleDeleteExpense = async (expenseId: string) => {
+    if (!canDeleteExpenses) {
+      return;
+    }
+
+    const expense = entries.find((entry) => entry.id === expenseId);
+
+    if (!expense) {
+      return;
+    }
+
+    const shouldDelete = globalThis.confirm(
+      `Сигурен ли си, че искаш да изтриеш разхода ${expense.title}?`,
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    try {
+      await deleteExpenseRecord(expenseId, session?.csrfToken ?? '');
+      setEntries((currentEntries) =>
+        currentEntries.filter((entry) => entry.id !== expenseId),
+      );
+      setSourceStatus('backend');
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Разходът не можа да бъде изтрит.';
+      globalThis.alert(message);
+    }
   };
 
   return (
@@ -480,7 +519,12 @@ export function ExpensesPage() {
         >
           <div className="space-y-4">
             {expenses.map((entry) => (
-              <ExpenseCard key={entry.id} entry={entry} />
+              <ExpenseCard
+                key={entry.id}
+                entry={entry}
+                canDelete={canDeleteExpenses}
+                onDelete={() => void handleDeleteExpense(entry.id)}
+              />
             ))}
 
             {!expenses.length && (
@@ -696,7 +740,15 @@ export function ExpensesPage() {
   );
 }
 
-function ExpenseCard({ entry }: { entry: DashboardReportEntry }) {
+function ExpenseCard({
+  entry,
+  canDelete,
+  onDelete,
+}: {
+  entry: DashboardReportEntry;
+  canDelete: boolean;
+  onDelete: () => void;
+}) {
   const isFriendVat = entry.type === 'friend-vat-expense';
 
   return (
@@ -751,6 +803,14 @@ function ExpenseCard({ entry }: { entry: DashboardReportEntry }) {
         <InfoChip icon={<UserRound size={14} />} label="Доставчик" value={entry.source} />
         <InfoChip icon={<Receipt size={14} />} label="Категория" value={entry.category} />
       </div>
+
+      {canDelete && (
+        <div className="mt-4 flex justify-end">
+          <Button variant="destructive" onClick={onDelete}>
+            Изтрий
+          </Button>
+        </div>
+      )}
     </article>
   );
 }

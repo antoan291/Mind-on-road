@@ -134,6 +134,13 @@ export async function updateDocumentRecord(
   return mapBackendDocument(response);
 }
 
+export async function deleteDocumentRecord(
+  documentId: string,
+  csrfToken: string,
+) {
+  return apiClient.delete<void>(`/documents/${documentId}`, csrfToken);
+}
+
 function mapBackendDocument(
   document: BackendDocumentRecord,
 ): DocumentRecordView {

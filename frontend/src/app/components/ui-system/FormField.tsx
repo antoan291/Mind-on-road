@@ -8,7 +8,7 @@ interface BaseFieldProps {
 }
 
 interface InputFieldProps extends BaseFieldProps {
-  type?: 'text' | 'email' | 'tel' | 'number' | 'password';
+  type?: 'text' | 'email' | 'tel' | 'number' | 'password' | 'date';
   placeholder?: string;
   value?: string;
   onChange?: (value: string) => void;

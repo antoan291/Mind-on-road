@@ -110,6 +110,20 @@ export class PrismaPaymentsRepository implements PaymentsRepository {
     });
   }
 
+  public async deleteByTenantAndId(params: {
+    tenantId: string;
+    paymentId: string;
+  }): Promise<boolean> {
+    const deletedRows = await this.prisma.paymentRecord.deleteMany({
+      where: {
+        id: params.paymentId,
+        tenantId: params.tenantId
+      }
+    });
+
+    return deletedRows.count > 0;
+  }
+
   private async normalizePaymentForTenant(
     tenantId: string,
     payment: PaymentWriteInput | PaymentUpdateInput

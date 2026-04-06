@@ -8,10 +8,11 @@ import {
   AlertCircle, Clock, Users, FileText, Search, X,
   CreditCard, Receipt, Filter, Calendar,
   TrendingUp, Wallet, User, MoreVertical, Check,
-  Mail, Edit2, FileCheck, ChevronRight
+  Mail, Edit2, FileCheck, ChevronRight, Trash2
 } from 'lucide-react';
 import {
   createPaymentRecord,
+  deletePaymentRecord,
   fetchPaymentRecords,
   type PaymentRecordView,
   updatePaymentRecord,
@@ -21,6 +22,7 @@ import {
 } from '../services/studentsApi';
 import type { StudentOperationalRecord } from '../content/studentOperations';
 import { useAuthSession } from '../services/authSession';
+import { useIsMobile } from '../components/ui/use-mobile';
 
 type Payment = PaymentRecordView & {
   id: string | number;
@@ -96,6 +98,7 @@ const formatCurrency = (amount: number) => {
 export function PaymentsPage() {
   const { session } = useAuthSession();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [searchValue, setSearchValue] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
@@ -117,6 +120,10 @@ export function PaymentsPage() {
   const [filterMethod, setFilterMethod] = useState('all');
   const [filterInvoiceStatus, setFilterInvoiceStatus] = useState('all');
   const [filterOverdueOnly, setFilterOverdueOnly] = useState(false);
+  const canDeletePayments = Boolean(
+    session?.user.roleKeys.includes('owner') ||
+      session?.user.roleKeys.includes('admin'),
+  );
 
   const filteredPayments = useMemo(
     () =>
@@ -230,6 +237,11 @@ export function PaymentsPage() {
   const handleRowClick = (payment: Payment) => {
     setSelectedPayment(payment);
     setOpenMenuId(null);
+  };
+
+  const handleEditPayment = (payment: Payment) => {
+    handleRowClick(payment);
+    setIsEditPaymentOpen(true);
   };
 
   const handleMarkAsPaid = async (paymentId: string | number) => {
@@ -462,6 +474,47 @@ export function PaymentsPage() {
     void persistPayment();
   };
 
+  const handleDeletePayment = async (paymentId: string | number) => {
+    if (!canDeletePayments) {
+      return;
+    }
+
+    const payment = payments.find(
+      (currentPayment) => currentPayment.id === paymentId,
+    );
+
+    if (!payment) {
+      return;
+    }
+
+    const shouldDelete = globalThis.confirm(
+      `Сигурен ли си, че искаш да изтриеш плащане ${payment.paymentNumber} за ${payment.student}?`,
+    );
+
+    if (!shouldDelete) {
+      return;
+    }
+
+    try {
+      await deletePaymentRecord(String(paymentId), session?.csrfToken ?? '');
+      setPayments((currentPayments) =>
+        currentPayments.filter((currentPayment) => currentPayment.id !== paymentId),
+      );
+      setSelectedPayment((currentPayment) =>
+        currentPayment?.id === paymentId ? null : currentPayment,
+      );
+      setIsEditPaymentOpen(false);
+      setOpenMenuId(null);
+      setSourceStatus('backend');
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Плащането не можа да бъде изтрито.';
+      globalThis.alert(message);
+    }
+  };
+
   return (
     <div className="min-h-screen pb-12" style={{ background: 'var(--bg-base)' }}>
       {/* Page Header */}
@@ -475,7 +528,7 @@ export function PaymentsPage() {
               : 'Зареждане...'
         }`}
         actions={
-          <>
+          <div className={`flex ${isMobile ? 'flex-col' : 'flex-wrap justify-end'} gap-2`}>
             <Button 
               variant="secondary" 
               icon={<AlertTriangle size={18} />}
@@ -497,13 +550,13 @@ export function PaymentsPage() {
             >
               Ново плащане
             </Button>
-          </>
+          </div>
         }
       />
 
-      <div className="px-6 lg:px-8 space-y-6">
+      <div className="px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Summary Telemetry Strip */}
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 xl:grid-cols-6 gap-4">
           <TelemetryCard
             icon={<Wallet size={18} />}
             label="Обща дължима сума"
@@ -703,47 +756,72 @@ export function PaymentsPage() {
               </div>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr style={{ background: 'var(--bg-panel)' }}>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                      Курсист
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                      Пакет / Услуга
-                    </th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                      Дължима сума
-                    </th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                      Платена сума
-                    </th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                      Остават
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                      Статус
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                      Фактура
-                    </th>
-                    <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
-                      Действия
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPayments.map((payment, idx) => (
-                    <tr
+            {isMobile ? (
+              <div className="space-y-3 p-4">
+                {filteredPayments.length === 0 ? (
+                  <div
+                    className="rounded-2xl p-5 text-sm text-center"
+                    style={{ background: 'var(--bg-panel)', color: 'var(--text-secondary)' }}
+                  >
+                    Няма плащания по активните филтри.
+                  </div>
+                ) : (
+                  filteredPayments.map((payment) => (
+                    <PaymentMobileCard
                       key={payment.id}
-                      onClick={() => handleRowClick(payment)}
-                      className="transition-all hover:bg-opacity-50 cursor-pointer group"
-                      style={{
-                        background: idx % 2 === 0 ? 'transparent' : 'var(--bg-panel-ghost)',
-                      }}
-                    >
+                      payment={payment}
+                      formatCurrency={formatCurrency}
+                      onOpen={() => handleRowClick(payment)}
+                      onEdit={() => handleEditPayment(payment)}
+                      onMarkAsPaid={() => void handleMarkAsPaid(payment.id)}
+                      onOpenStudent={() => navigate(`/students/${payment.studentId}`)}
+                      onDelete={() => void handleDeletePayment(payment.id)}
+                      canDelete={canDeletePayments}
+                    />
+                  ))
+                )}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr style={{ background: 'var(--bg-panel)' }}>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                        Курсист
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                        Пакет / Услуга
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                        Дължима сума
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                        Платена сума
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                        Остават
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                        Статус
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                        Фактура
+                      </th>
+                      <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--text-tertiary)' }}>
+                        Действия
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredPayments.map((payment, idx) => (
+                      <tr
+                        key={payment.id}
+                        onClick={() => handleRowClick(payment)}
+                        className="transition-all hover:bg-opacity-50 cursor-pointer group"
+                        style={{
+                          background: idx % 2 === 0 ? 'transparent' : 'var(--bg-panel-ghost)',
+                        }}
+                      >
                       {/* Student */}
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-3">
@@ -795,7 +873,7 @@ export function PaymentsPage() {
                         <p className="text-lg font-bold font-mono" style={{ color: 'var(--text-primary)' }}>
                           {formatCurrency(payment.dueAmount)}
                         </p>
-                        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>лв</p>
+                        <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>€</p>
                       </td>
 
                       {/* Paid Amount */}
@@ -949,16 +1027,32 @@ export function PaymentsPage() {
                                     Профил на курсиста
                                   </span>
                                 </button>
+                                {canDeletePayments && (
+                                  <>
+                                    <div className="h-px" style={{ background: 'var(--ghost-border)' }} />
+                                    <button
+                                      onClick={() => void handleDeletePayment(payment.id)}
+                                      className="w-full px-4 py-3 flex items-center gap-3 transition-all hover:bg-opacity-50 text-left"
+                                      style={{ background: 'transparent' }}
+                                    >
+                                      <Trash2 size={16} style={{ color: 'var(--status-error)' }} />
+                                      <span className="text-sm" style={{ color: 'var(--status-error)' }}>
+                                        Изтрий плащането
+                                      </span>
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             )}
                           </div>
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             {/* Table Footer */}
             <div 
@@ -1017,6 +1111,18 @@ export function PaymentsPage() {
           title="Редакция на плащане"
           footer={
             <>
+              {canDeletePayments && (
+                <Button
+                  variant="danger"
+                  onClick={() =>
+                    selectedPayment
+                      ? void handleDeletePayment(selectedPayment.id)
+                      : undefined
+                  }
+                >
+                  Изтрий
+                </Button>
+              )}
               <Button variant="secondary" onClick={() => setIsEditPaymentOpen(false)}>Отказ</Button>
               <Button variant="primary" onClick={handleSaveSelectedPayment}>Запази промените</Button>
             </>
@@ -1101,6 +1207,132 @@ function exportPaymentsCsv(payments: Payment[]) {
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(downloadUrl);
+}
+
+function PaymentMobileCard({
+  payment,
+  formatCurrency,
+  onOpen,
+  onEdit,
+  onMarkAsPaid,
+  onOpenStudent,
+  onDelete,
+  canDelete,
+}: {
+  payment: Payment;
+  formatCurrency: (amount: number) => string;
+  onOpen: () => void;
+  onEdit: () => void;
+  onMarkAsPaid: () => void;
+  onOpenStudent: () => void;
+  onDelete: () => void;
+  canDelete: boolean;
+}) {
+  return (
+    <div
+      className="rounded-2xl p-4 space-y-4"
+      style={{ background: 'var(--bg-panel)', border: '1px solid var(--ghost-border)' }}
+    >
+      <button onClick={onOpen} className="w-full text-left">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-base font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+              {payment.student}
+            </p>
+            <p className="text-xs font-mono mt-1" style={{ color: 'var(--text-tertiary)' }}>
+              {payment.paymentNumber} · {payment.date}
+            </p>
+          </div>
+          <Badge variant={getPaymentStatusVariant(payment.paymentStatus)} size="sm">
+            {getPaymentStatusLabel(payment.paymentStatus)}
+          </Badge>
+        </div>
+      </button>
+
+      <div className="grid grid-cols-3 gap-3">
+        <MoneyInfo label="Дължи" value={`${formatCurrency(payment.dueAmount)} €`} tone="default" />
+        <MoneyInfo label="Платено" value={`${formatCurrency(payment.paidAmount)} €`} tone="success" />
+        <MoneyInfo
+          label="Остават"
+          value={payment.remainingAmount > 0 ? `${formatCurrency(payment.remainingAmount)} €` : '0.00 €'}
+          tone={payment.remainingAmount > 0 ? 'error' : 'muted'}
+        />
+      </div>
+
+      <div className="space-y-2 text-sm">
+        <div className="flex items-center justify-between gap-3">
+          <span style={{ color: 'var(--text-secondary)' }}>Пакет</span>
+          <span className="text-right" style={{ color: 'var(--text-primary)' }}>
+            {payment.packageType}
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span style={{ color: 'var(--text-secondary)' }}>Метод</span>
+          <span style={{ color: 'var(--text-primary)' }}>{payment.paymentMethod}</span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span style={{ color: 'var(--text-secondary)' }}>Фактура</span>
+          <span style={{ color: 'var(--text-primary)' }}>
+            {payment.invoiceNumber ?? getInvoiceStatusLabel(payment.invoiceStatus)}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="secondary" onClick={onEdit}>
+          Редакция
+        </Button>
+        <Button variant="secondary" onClick={onOpenStudent}>
+          Профил
+        </Button>
+        <Button variant="primary" onClick={onOpen}>
+          Детайли
+        </Button>
+        <Button
+          variant={payment.paymentStatus === 'paid' ? 'success' : 'secondary'}
+          onClick={onMarkAsPaid}
+          disabled={payment.paymentStatus === 'paid'}
+        >
+          {payment.paymentStatus === 'paid' ? 'Платено' : 'Маркирай платено'}
+        </Button>
+        {canDelete && (
+          <Button variant="danger" onClick={onDelete}>
+            Изтрий
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MoneyInfo({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone: 'default' | 'success' | 'error' | 'muted';
+}) {
+  const color =
+    tone === 'success'
+      ? 'var(--status-success)'
+      : tone === 'error'
+        ? 'var(--status-error)'
+        : tone === 'muted'
+          ? 'var(--text-tertiary)'
+          : 'var(--text-primary)';
+
+  return (
+    <div className="rounded-xl p-3" style={{ background: 'var(--bg-card)' }}>
+      <p className="text-[11px] uppercase tracking-[0.16em]" style={{ color: 'var(--text-tertiary)' }}>
+        {label}
+      </p>
+      <p className="mt-2 text-sm font-semibold font-mono" style={{ color }}>
+        {value}
+      </p>
+    </div>
+  );
 }
 
 function calculateSafePercent(value: number, total: number) {

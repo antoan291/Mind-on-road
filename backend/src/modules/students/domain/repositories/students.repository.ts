@@ -124,6 +124,10 @@ export interface StudentsRepository {
     studentId: string;
     student: StudentWriteInput;
   }): Promise<StudentProfileRecord | null>;
+  deleteByTenantAndId(params: {
+    tenantId: string;
+    studentId: string;
+  }): Promise<boolean>;
   listDeterminatorSessionsByTenant(params: {
     tenantId: string;
     studentId?: string;

@@ -46,6 +46,20 @@ export class PrismaExpensesRepository implements ExpensesRepository {
       select: expenseSelection
     });
   }
+
+  public async deleteByTenantAndId(params: {
+    tenantId: string;
+    expenseId: string;
+  }): Promise<boolean> {
+    const deletedRows = await this.prisma.expenseRecord.deleteMany({
+      where: {
+        id: params.expenseId,
+        tenantId: params.tenantId
+      }
+    });
+
+    return deletedRows.count > 0;
+  }
 }
 
 const expenseSelection = {

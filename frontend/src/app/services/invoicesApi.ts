@@ -140,6 +140,13 @@ export async function updateInvoiceRecord(
   return mapBackendInvoice(response);
 }
 
+export async function deleteInvoiceRecord(
+  invoiceId: string,
+  csrfToken: string,
+) {
+  return apiClient.delete<void>(`/invoices/${invoiceId}`, csrfToken);
+}
+
 function mapBackendInvoice(invoice: BackendInvoiceRecord): InvoiceRecordView {
   return {
     id: invoice.id,
