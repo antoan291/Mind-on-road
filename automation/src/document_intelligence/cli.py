@@ -12,9 +12,9 @@ from .pipeline import default_output_path, extract_bulgarian_document_data
 
 def build_parser() -> argparse.ArgumentParser:
   parser = argparse.ArgumentParser(
-    description="Извличане на данни от българска лична карта или шофьорска книжка от PDF файл."
+    description="Извличане на данни от българска лична карта или шофьорска книжка от PDF или изображение."
   )
-  parser.add_argument("pdf", type=Path, help="Път до PDF файла със сканирани страници.")
+  parser.add_argument("document", type=Path, help="Път до PDF или изображение със сканирания документ.")
   parser.add_argument(
     "--output",
     type=Path,
@@ -57,11 +57,11 @@ def main() -> None:
     render_scale=args.render_scale,
   )
 
-  output_path = args.output or default_output_path(args.pdf)
+  output_path = args.output or default_output_path(args.document.name)
 
   try:
     extraction = extract_bulgarian_document_data(
-      pdf_path=args.pdf,
+      pdf_path=args.document,
       output_path=output_path,
       config=config,
     )

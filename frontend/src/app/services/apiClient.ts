@@ -17,6 +17,12 @@ type JsonRequestOptions = {
   body?: unknown;
 };
 
+type BinaryRequestOptions = {
+  csrfToken?: string;
+  body: BodyInit;
+  contentType?: string;
+};
+
 async function requestJson<TResponse>(
   path: string,
   method: string,
@@ -74,5 +80,38 @@ export const apiClient = {
     return requestJson<TResponse>(path, 'DELETE', {
       csrfToken,
     });
+  },
+
+  async postBinary<TResponse>(
+    path: string,
+    options: BinaryRequestOptions,
+  ): Promise<TResponse> {
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+        ...(options.contentType ? { 'Content-Type': options.contentType } : {}),
+        ...(options.csrfToken ? { 'x-csrf-token': options.csrfToken } : {}),
+      },
+      body: options.body,
+    });
+
+    if (response.status === 204) {
+      return undefined as TResponse;
+    }
+
+    const responseBody = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      const message =
+        typeof responseBody?.error === 'string'
+          ? responseBody.error
+          : `Request failed with status ${response.status}`;
+
+      throw new ApiClientError(response.status, message);
+    }
+
+    return responseBody as TResponse;
   },
 };

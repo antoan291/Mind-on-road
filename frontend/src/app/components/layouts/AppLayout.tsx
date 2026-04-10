@@ -31,6 +31,16 @@ import {
 import { useAuthSession } from "../../services/authSession";
 import type { TenantFeatureKey } from "../../services/featureSettings";
 import { useFeatureSettings } from "../../services/featureSettings";
+import { useNotificationsState } from "../../services/notificationsState";
+import {
+  hasAiCenterAccessRole,
+  getPrimaryRoleLabel,
+  hasDeterminatorAccessRole,
+  hasDeveloperRole,
+  hasFullAccessRole,
+  hasInstructorsAccessRole,
+  hasPersonnelAccessRole,
+} from "../../services/roleUtils";
 
 type NavigationItem = {
   path: string;
@@ -39,11 +49,14 @@ type NavigationItem = {
   featureKey?: TenantFeatureKey;
   permissionKey?: string;
   ownerOnly?: boolean;
+  developerOnly?: boolean;
+  visible?: boolean;
 };
 
 export function AppLayout() {
   const { session, logout } = useAuthSession();
   const { isFeatureEnabled } = useFeatureSettings();
+  const { hasUnreadNotifications } = useNotificationsState();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [profileOpen, setProfileOpen] = useState(false);
   const location = useLocation();
@@ -62,6 +75,7 @@ export function AppLayout() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
   const navigationItems: NavigationItem[] = [
     { path: "/", icon: LayoutDashboard, label: "Табло" },
     {
@@ -116,8 +130,15 @@ export function AppLayout() {
       path: "/instructors",
       icon: UserCircle,
       label: "Инструктори",
-      featureKey: "practical",
-      permissionKey: "scheduling.read",
+      permissionKey: "students.read",
+      visible: hasInstructorsAccessRole(session?.user.roleKeys ?? []),
+    },
+    {
+      path: "/personnel",
+      icon: UserCircle,
+      label: "Персонал",
+      permissionKey: "users.manage",
+      visible: hasPersonnelAccessRole(session?.user.roleKeys ?? []),
     },
     {
       path: "/vehicles",
@@ -146,6 +167,7 @@ export function AppLayout() {
       label: "Детерминатор",
       featureKey: "practical",
       permissionKey: "students.manage_register",
+      visible: hasDeterminatorAccessRole(session?.user.roleKeys ?? []),
     },
     {
       path: "/exam-applications",
@@ -178,7 +200,7 @@ export function AppLayout() {
       path: "/settings",
       icon: Settings,
       label: "Настройки",
-      ownerOnly: true,
+      developerOnly: true,
     },
     {
       path: "/ai",
@@ -186,19 +208,20 @@ export function AppLayout() {
       label: "AI Център",
       featureKey: "ai",
       permissionKey: "reports.read",
+      visible: hasAiCenterAccessRole(session?.user.roleKeys ?? []),
     },
   ].filter(
     (item) =>
       (!item.featureKey || isFeatureEnabled(item.featureKey)) &&
       (!item.permissionKey ||
         session?.user.permissionKeys.includes(item.permissionKey) ||
-        session?.user.roleKeys.includes("owner")) &&
-      (!item.ownerOnly || session?.user.roleKeys.includes("owner")),
+        hasFullAccessRole(session?.user.roleKeys ?? [])) &&
+      item.visible !== false &&
+      (!item.ownerOnly || hasFullAccessRole(session?.user.roleKeys ?? [])) &&
+      (!item.developerOnly || hasDeveloperRole(session?.user.roleKeys ?? [])),
   );
   const displayName = session?.user.displayName ?? "Потребител";
-  const roleLabel = session?.user.roleKeys.includes("owner")
-    ? "Owner"
-    : session?.user.roleKeys[0] ?? "Потребител";
+  const roleLabel = getPrimaryRoleLabel(session?.user.roleKeys ?? []);
   const initials = displayName
     .split(" ")
     .filter(Boolean)
@@ -353,10 +376,12 @@ export function AppLayout() {
                 }}
               >
                 <Bell size={18} />
-                <span
-                  className="absolute top-2 right-2 w-2 h-2 rounded-full"
-                  style={{ background: "var(--status-error)" }}
-                />
+                {hasUnreadNotifications ? (
+                  <span
+                    className="absolute top-2 right-2 w-2 h-2 rounded-full"
+                    style={{ background: "var(--status-error)" }}
+                  />
+                ) : null}
               </button>
             </Link>
 

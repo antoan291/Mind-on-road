@@ -1,7 +1,7 @@
 ﻿export type StatusTone = 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'overdue';
 
 export type InstructorRow = {
-  id: number;
+  id: string;
   name: string;
   role: string;
   students: number;
@@ -13,9 +13,21 @@ export type InstructorRow = {
   workload: string;
 };
 
+export type PersonnelSummaryRow = {
+  membershipId: string;
+  displayName: string;
+  email: string;
+  phone: string;
+  roleKeys: string[];
+  roleLabels: string[];
+  assignedStudentsCount: number;
+  mustChangePassword: boolean;
+  joinedAt: string;
+};
+
 export type InstructorStudentRow = {
-  id: number;
-  instructorId: number;
+  id: string | number;
+  instructorId: string | number;
   instructorName: string;
   studentName: string;
   category: string;

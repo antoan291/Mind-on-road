@@ -3,7 +3,8 @@ export type NotificationKind =
   | 'ARRIVAL_REMINDER'
   | 'CATEGORY_B_HOUR_MILESTONE'
   | 'PAYMENT_REMINDER'
-  | 'PARENT_LESSON_REPORT';
+  | 'PARENT_LESSON_REPORT'
+  | 'INSTRUCTOR_DOCUMENT_EXPIRY';
 
 export type NotificationSeverity = 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR';
 

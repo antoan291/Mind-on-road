@@ -330,7 +330,16 @@ def _detect_document_type(joined_text: str) -> str:
   lowered = joined_text.casefold()
   if "\u043b\u0438\u0447\u043d\u0430 \u043a\u0430\u0440\u0442\u0430" in lowered or "identity card" in lowered:
     return "bulgarian_identity_card"
+  if "idbgr" in lowered or ("<<" in joined_text and "bgr" in lowered and EGN_RE.search(joined_text)):
+    return "bulgarian_identity_card"
   if "\u0441\u0432\u0438\u0434\u0435\u0442\u0435\u043b\u0441\u0442\u0432\u043e \u0437\u0430 \u0443\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435" in lowered or "driving licence" in lowered or "driving license" in lowered:
+    return "bulgarian_driving_licence"
+  driving_categories = {match.group(0) for match in DRIVING_CATEGORY_RE.finditer(joined_text.upper())}
+  driving_table_markers = sum(
+    1 for marker in ("9.", "10.", "11.", "12.", "13.", "14.", "(14.)")
+    if marker in joined_text
+  )
+  if len(driving_categories) >= 3 and driving_table_markers >= 2:
     return "bulgarian_driving_licence"
   return "unknown"
 
@@ -679,6 +688,16 @@ def parse_bulgarian_document(lines: Sequence[OCRLine]) -> BulgarianDocumentExtra
   warnings: list[str] = []
   confidences: list[float] = [line.confidence for line in cleaned_lines]
 
+  if document_type == "unknown":
+    warnings.append("Типът на документа не беше разпознат сигурно. Поддържат се само българска лична карта и българска шофьорска книжка.")
+    average_confidence = round(sum(confidences) / len(confidences), 4) if confidences else None
+    return BulgarianDocumentExtraction(
+      document_type="unknown",
+      review_required=True,
+      confidence=average_confidence,
+      warnings=warnings,
+    )
+
   if document_type == "bulgarian_driving_licence":
     first_name, middle_name, last_name, name_confidences = _extract_driving_licence_names(cleaned_lines)
     confidences.extend(name_confidences)
@@ -798,8 +817,6 @@ def parse_bulgarian_document(lines: Sequence[OCRLine]) -> BulgarianDocumentExtra
     confidence=average_confidence,
     warnings=warnings,
   )
-
-
 
 
 

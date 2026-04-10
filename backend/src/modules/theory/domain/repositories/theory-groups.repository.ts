@@ -48,6 +48,20 @@ export interface TheoryGroupRecord {
 
 export interface TheoryGroupsRepository {
   listByTenant(params: { tenantId: string }): Promise<TheoryGroupRecord[]>;
+  createForTenant(params: {
+    tenantId: string;
+    group: {
+      name: string;
+      categoryCode: string;
+      scheduleLabel: string;
+      instructorName: string;
+      daiCode: string;
+      startDate: Date;
+      endDate: Date | null;
+      totalLectures: number;
+      status: TheoryGroupStatus;
+    };
+  }): Promise<TheoryGroupRecord>;
   saveLectureAttendance(params: {
     tenantId: string;
     theoryGroupId: string;

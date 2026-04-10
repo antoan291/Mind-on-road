@@ -20,6 +20,7 @@ services:
     volumes:
       - ../automation/samples:/automation-samples:ro
       - ../automation/output:/automation-output:ro
+      - ./storage:/app/storage
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,9 +42,13 @@ services:
       DOCUMENT_OCR_OUTPUT_DIR: /automation-output
       DOCUMENT_OCR_WORKER_PORT: 8080
       PADDLEOCR_LANGUAGE: cyrillic
+      PADDLE_PDX_MODEL_SOURCE: huggingface
+      PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK: "True"
     volumes:
       - ../automation/samples:/automation-samples:ro
       - ../automation/output:/automation-output
+      - ../test-docs:/test-docs:ro
+      - ocr_model_cache:/root/.paddlex
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3).read()\""]
       interval: 15s
@@ -101,3 +106,4 @@ volumes:
   postgres_data:
   redis_data:
   minio_data:
+  ocr_model_cache:

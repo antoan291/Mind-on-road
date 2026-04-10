@@ -7,13 +7,15 @@ export type NotificationRecordView = {
     | 'ARRIVAL_REMINDER'
     | 'CATEGORY_B_HOUR_MILESTONE'
     | 'PAYMENT_REMINDER'
-    | 'PARENT_LESSON_REPORT';
+    | 'PARENT_LESSON_REPORT'
+    | 'INSTRUCTOR_DOCUMENT_EXPIRY';
   severity: 'info' | 'success' | 'warning' | 'error';
   deliveryStatus: 'PENDING' | 'SENT' | 'FAILED' | 'RESOLVED';
   channelLabel: string;
   title: string;
   message: string;
   audienceLabel: string;
+  actionTarget: string | null;
   eventTimeLabel: string;
   rawEventTime: string;
 };
@@ -27,6 +29,7 @@ type BackendNotificationRecord = {
   title: string;
   message: string;
   audienceLabel: string;
+  actionTarget: string | null;
   eventTime: string;
 };
 
@@ -52,6 +55,7 @@ function mapBackendNotification(
     title: notification.title,
     message: notification.message,
     audienceLabel: notification.audienceLabel,
+    actionTarget: notification.actionTarget,
     eventTimeLabel: formatRelativeNotificationTime(notification.eventTime),
     rawEventTime: notification.eventTime,
   };

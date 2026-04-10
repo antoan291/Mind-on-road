@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { 
-  PageHeader, Badge, Button, Modal, Input, Select, Textarea
+  PageContent, PageHeader, Badge, Button, Modal, Input, Select, Textarea
 } from '../components/shared';
+import { DatePickerInput } from '../components/date/DatePickerInput';
 import { 
   Plus, Download, AlertTriangle, DollarSign, CheckCircle, 
   AlertCircle, Clock, Users, FileText, Search, X,
@@ -22,6 +23,7 @@ import {
 } from '../services/studentsApi';
 import type { StudentOperationalRecord } from '../content/studentOperations';
 import { useAuthSession } from '../services/authSession';
+import { hasFullAccessRole } from '../services/roleUtils';
 import { useIsMobile } from '../components/ui/use-mobile';
 
 type Payment = PaymentRecordView & {
@@ -121,9 +123,10 @@ export function PaymentsPage() {
   const [filterInvoiceStatus, setFilterInvoiceStatus] = useState('all');
   const [filterOverdueOnly, setFilterOverdueOnly] = useState(false);
   const canDeletePayments = Boolean(
-    session?.user.roleKeys.includes('owner') ||
-      session?.user.roleKeys.includes('admin'),
+    hasFullAccessRole(session?.user.roleKeys ?? []) ||
+      session?.user.roleKeys.includes('administration'),
   );
+  const hasStudentsAvailable = students.length > 0;
 
   const filteredPayments = useMemo(
     () =>
@@ -236,6 +239,7 @@ export function PaymentsPage() {
 
   const handleRowClick = (payment: Payment) => {
     setSelectedPayment(payment);
+    setIsEditPaymentOpen(false);
     setOpenMenuId(null);
   };
 
@@ -337,10 +341,13 @@ export function PaymentsPage() {
   };
 
   const handleCreateNewPayment = () => {
+    setSaveError(null);
     const targetStudent = students[0];
 
     if (!targetStudent) {
-      setSaveError('Няма наличен курсист от базата за създаване на плащане.');
+      setSelectedPayment(null);
+      setIsEditPaymentOpen(false);
+      setSaveError('Не може да създадете плащане, преди да има поне един курсист в системата.');
       return;
     }
 
@@ -360,7 +367,7 @@ export function PaymentsPage() {
       paymentStatus: 'pending',
       invoiceStatus: 'none',
       invoiceNumber: undefined,
-      lastUpdatedBy: 'Администратор',
+      lastUpdatedBy: 'Администрация',
       lastUpdatedDate: nowIso,
       wasCorrected: false,
       notes: 'Нов ръчно подготвен payment draft.',
@@ -369,7 +376,7 @@ export function PaymentsPage() {
           type: 'created',
           description: 'Създаден е нов payment draft от бутона "Ново плащане".',
           timestamp: new Date().toLocaleString('bg-BG'),
-          user: 'Администратор',
+          user: 'Администрация',
         },
       ],
     };
@@ -379,16 +386,27 @@ export function PaymentsPage() {
     setIsEditPaymentOpen(true);
   };
 
+  const handleCloseEditPayment = () => {
+    if (selectedPayment && String(selectedPayment.id).startsWith('draft-')) {
+      setPayments((current) =>
+        current.filter((payment) => payment.id !== selectedPayment.id),
+      );
+      setSelectedPayment(null);
+    }
+
+    setIsEditPaymentOpen(false);
+  };
+
   const handleUpdateSelectedPayment = (updates: Partial<Payment>) => {
     setSelectedPayment((current) =>
       current
         ? {
             ...current,
             ...updates,
-            lastUpdatedBy: 'Администратор',
+            lastUpdatedBy: 'Администрация',
             lastUpdatedDate: new Date().toISOString().slice(0, 10),
             wasCorrected: true,
-            correctedBy: 'Администратор',
+            correctedBy: 'Администрация',
           }
         : current,
     );
@@ -416,7 +434,7 @@ export function PaymentsPage() {
           type: 'edited',
           description: 'Плащането е редактирано и запазено от UI модала.',
           timestamp: new Date().toLocaleString('bg-BG'),
-          user: 'Администратор',
+          user: 'Администрация',
         },
         ...(selectedPayment.activity ?? []),
       ],
@@ -459,7 +477,7 @@ export function PaymentsPage() {
                   : payment,
               ),
         );
-        setSelectedPayment(savedPayment as Payment);
+        setSelectedPayment(null);
         setIsEditPaymentOpen(false);
         setSourceStatus('backend');
       } catch (error) {
@@ -547,6 +565,7 @@ export function PaymentsPage() {
               variant="primary" 
               icon={<Plus size={18} />}
               onClick={handleCreateNewPayment}
+              disabled={!hasStudentsAvailable && sourceStatus !== 'loading'}
             >
               Ново плащане
             </Button>
@@ -554,9 +573,21 @@ export function PaymentsPage() {
         }
       />
 
-      <div className="px-4 sm:px-6 lg:px-8 space-y-6">
+      <PageContent className="space-y-6">
+        {saveError && !isEditPaymentOpen ? (
+          <div
+            className="rounded-2xl border px-4 py-3 text-sm"
+            style={{
+              background: 'var(--status-error-bg)',
+              borderColor: 'rgba(239, 68, 68, 0.24)',
+              color: 'var(--status-error)',
+            }}
+          >
+            {saveError}
+          </div>
+        ) : null}
         {/* Summary Telemetry Strip */}
-        <div className="grid grid-cols-2 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
           <TelemetryCard
             icon={<Wallet size={18} />}
             label="Обща дължима сума"
@@ -1096,18 +1127,19 @@ export function PaymentsPage() {
               variant="primary"
               icon={<Plus size={18} />}
               onClick={handleCreateNewPayment}
+              disabled={!hasStudentsAvailable && sourceStatus !== 'loading'}
             >
               Създай първото плащане
             </Button>
           </div>
         )}
-      </div>
+      </PageContent>
 
 
       {selectedPayment && (
         <Modal
           isOpen={isEditPaymentOpen}
-          onClose={() => setIsEditPaymentOpen(false)}
+          onClose={handleCloseEditPayment}
           title="Редакция на плащане"
           footer={
             <>
@@ -1123,7 +1155,7 @@ export function PaymentsPage() {
                   Изтрий
                 </Button>
               )}
-              <Button variant="secondary" onClick={() => setIsEditPaymentOpen(false)}>Отказ</Button>
+              <Button variant="secondary" onClick={handleCloseEditPayment}>Отказ</Button>
               <Button variant="primary" onClick={handleSaveSelectedPayment}>Запази промените</Button>
             </>
           }
@@ -1135,7 +1167,7 @@ export function PaymentsPage() {
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Курсист</label><select value={String(selectedPayment.studentId)} onChange={(event) => { const selectedStudent = students.find((student) => String(student.id) === event.target.value); if (selectedStudent) { handleUpdateSelectedPayment({ studentId: selectedStudent.id, student: selectedStudent.name, category: selectedStudent.category }); } }} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}>{students.length === 0 ? <option value={String(selectedPayment.studentId)}>{selectedPayment.student}</option> : students.map((student) => (<option key={student.id} value={String(student.id)}>{student.name} · Кат. {student.category}</option>))}</select></div>
-              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Дата на плащане</label><input type="date" value={selectedPayment.date} onChange={(event) => handleUpdateSelectedPayment({ date: event.target.value })} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Дата на плащане</label><DatePickerInput value={selectedPayment.date} onChange={(value) => handleUpdateSelectedPayment({ date: value })} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)', border: '1px solid rgba(148, 163, 184, 0.32)' }} /></div>
               <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Дължима сума</label><input type="number" value={selectedPayment.dueAmount} onChange={(event) => handleUpdateSelectedPayment({ dueAmount: Number(event.target.value) })} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
               <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Платена сума</label><input type="number" value={selectedPayment.paidAmount} onChange={(event) => handleUpdateSelectedPayment({ paidAmount: Number(event.target.value) })} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
               <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Метод на плащане</label><select value={selectedPayment.paymentMethod} onChange={(event) => handleUpdateSelectedPayment({ paymentMethod: event.target.value })} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}><option value="В брой">В брой</option><option value="Банков превод">Банков превод</option><option value="Карта">Карта</option></select></div>
@@ -1152,7 +1184,7 @@ export function PaymentsPage() {
       )}
 
       {/* Payment Detail Drawer */}
-      {selectedPayment && (
+      {selectedPayment && !isEditPaymentOpen && (
         <PaymentDetailDrawer
           payment={selectedPayment}
           onClose={() => setSelectedPayment(null)}

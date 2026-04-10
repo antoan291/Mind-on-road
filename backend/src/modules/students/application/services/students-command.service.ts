@@ -88,6 +88,7 @@ export class StudentsCommandService {
   public async createStudent(command: {
     tenantId: string;
     student: StudentWriteInput;
+    portalPassword?: string | null;
   }) {
     const portalIdentity = await this.identityAuthRepository.provisionTenantPortalIdentity(
       {
@@ -97,7 +98,9 @@ export class StudentsCommandService {
         lastName: command.student.lastName,
         displayName: command.student.displayName,
         phone: command.student.phone,
-        email: command.student.email
+        email: command.student.email,
+        password: command.portalPassword ?? null,
+        requirePasswordChangeOnFirstLogin: true
       }
     );
 

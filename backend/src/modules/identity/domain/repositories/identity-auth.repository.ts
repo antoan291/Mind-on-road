@@ -52,6 +52,8 @@ export interface ProvisionTenantPortalIdentityInput {
   displayName: string;
   phone: string;
   email: string | null;
+  password?: string | null;
+  requirePasswordChangeOnFirstLogin?: boolean;
   existingMembershipId?: string | null;
 }
 

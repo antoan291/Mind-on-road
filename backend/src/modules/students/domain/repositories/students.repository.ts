@@ -107,6 +107,14 @@ export interface StudentWriteInput {
   userMembershipId?: string | null;
   status: string;
   enrollment: StudentEnrollmentWriteInput;
+  initialPayment?: {
+    amount: number;
+    paidAmount: number;
+    method: string;
+    status: string;
+    paidAt: Date;
+    note: string | null;
+  } | null;
 }
 
 export interface StudentsRepository {

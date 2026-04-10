@@ -22,6 +22,7 @@ import {
 import { permissionSeeds, roleTemplateSeeds } from './identity-seed-data';
 import { seedPermissions, seedRolesForTenant } from './identity-seed-service';
 import { hashPassword } from '../src/modules/identity/domain/services/password-security';
+import { buildParentAccountSeedData } from '../src/modules/identity/domain/services/seed-account-builders';
 
 const prisma = new PrismaClient();
 
@@ -62,11 +63,11 @@ void main()
   });
 
 async function seedDemoStudents(prismaClient: PrismaClient, tenantId: string) {
-  const adminRole = await prismaClient.role.findUniqueOrThrow({
+  const administrationRole = await prismaClient.role.findUniqueOrThrow({
     where: {
       tenantId_key: {
         tenantId,
-        key: 'admin'
+        key: 'administration'
       }
     },
     select: {
@@ -91,6 +92,18 @@ async function seedDemoStudents(prismaClient: PrismaClient, tenantId: string) {
       tenantId_key: {
         tenantId,
         key: 'student'
+      }
+    },
+    select: {
+      id: true
+    }
+  });
+
+  const parentRole = await prismaClient.role.findUniqueOrThrow({
+    where: {
+      tenantId_key: {
+        tenantId,
+        key: 'parent'
       }
     },
     select: {
@@ -184,13 +197,13 @@ async function seedDemoStudents(prismaClient: PrismaClient, tenantId: string) {
 
   await upsertTenantRoleUser(prismaClient, {
     tenantId,
-    roleId: adminRole.id,
-    firstName: 'Админ',
+    roleId: administrationRole.id,
+    firstName: 'Администрация',
     lastName: 'Операции',
-    displayName: 'Админ Операции',
-    email: 'admin@mindonroad.local',
+    displayName: 'Администрация Операции',
+    email: 'administration@mindonroad.local',
     phone: '0888000001',
-    password: 'MindOnRoadAdmin2026!'
+    password: 'MindOnRoadAdministration2026!'
   });
 
   const seedInstructors = [
@@ -633,10 +646,8 @@ async function seedDemoStudents(prismaClient: PrismaClient, tenantId: string) {
           lastPracticeAt: studentData.lastPracticeAt ?? null
         }
       });
-      continue;
-    }
-
-    await prismaClient.studentEnrollment.create({
+    } else {
+      await prismaClient.studentEnrollment.create({
       data: {
         tenantId,
         studentId: student.id,
@@ -655,9 +666,9 @@ async function seedDemoStudents(prismaClient: PrismaClient, tenantId: string) {
         failedExamAttempts: studentData.failedExamAttempts ?? 0,
         lastPracticeAt: studentData.lastPracticeAt ?? null
       }
-    });
+      });
 
-    await prismaClient.paymentRecord.create({
+      await prismaClient.paymentRecord.create({
       data: {
         tenantId,
         studentId: student.id,
@@ -675,9 +686,9 @@ async function seedDemoStudents(prismaClient: PrismaClient, tenantId: string) {
         paidAt: studentData.paymentDate,
         note: `Тестово плащане за ${studentDisplayName}`
       }
-    });
+      });
 
-    await prismaClient.documentRecord.create({
+      await prismaClient.documentRecord.create({
       data: {
         tenantId,
         studentId: student.id,
@@ -699,9 +710,9 @@ async function seedDemoStudents(prismaClient: PrismaClient, tenantId: string) {
             : `/documents/${documentNo}.pdf`,
         notes: `Тестов документ към досието на ${studentDisplayName}`
       }
-    });
+      });
 
-    await prismaClient.invoiceRecord.create({
+      await prismaClient.invoiceRecord.create({
       data: {
         tenantId,
         studentId: student.id,
@@ -736,9 +747,9 @@ async function seedDemoStudents(prismaClient: PrismaClient, tenantId: string) {
         wasCorrected: false,
         correctionReason: null
       }
-    });
+      });
 
-    await prismaClient.expenseRecord.createMany({
+      await prismaClient.expenseRecord.createMany({
       data: [
         {
           tenantId,
@@ -808,9 +819,9 @@ async function seedDemoStudents(prismaClient: PrismaClient, tenantId: string) {
           )
         }
       ]
-    });
+      });
 
-    await prismaClient.vehicleRecord.create({
+      await prismaClient.vehicleRecord.create({
       data: {
         tenantId,
         vehicleLabel: studentData.vehicleLabel,
@@ -822,9 +833,9 @@ async function seedDemoStudents(prismaClient: PrismaClient, tenantId: string) {
           studentData.lessonStatus === PracticalLessonStatus.SCHEDULED ? 1 : 0,
         operationalNote: `Seed автомобил, вързан към ${studentDisplayName} и ${studentData.assignedInstructorName}.`
       }
-    });
+      });
 
-    const theoryGroup = await prismaClient.theoryGroupRecord.create({
+      const theoryGroup = await prismaClient.theoryGroupRecord.create({
       data: {
         tenantId,
         name: studentData.theoryGroupName,
@@ -848,9 +859,9 @@ async function seedDemoStudents(prismaClient: PrismaClient, tenantId: string) {
       select: {
         id: true
       }
-    });
+      });
 
-    await prismaClient.theoryLectureRecord.create({
+      await prismaClient.theoryLectureRecord.create({
       data: {
         tenantId,
         theoryGroupId: theoryGroup.id,
@@ -865,9 +876,9 @@ async function seedDemoStudents(prismaClient: PrismaClient, tenantId: string) {
         presentCount: studentData.averageAttendance >= 90 ? 1 : 0,
         absentCount: studentData.averageAttendance < 90 ? 1 : 0
       }
-    });
+      });
 
-    await prismaClient.practicalLessonRecord.create({
+      await prismaClient.practicalLessonRecord.create({
       data: {
         tenantId,
         studentId: student.id,
@@ -893,9 +904,9 @@ async function seedDemoStudents(prismaClient: PrismaClient, tenantId: string) {
         createdBy: 'Система',
         updatedBy: 'Система'
       }
-    });
+      });
 
-    await prismaClient.determinatorSession.create({
+      await prismaClient.determinatorSession.create({
       data: {
         tenantId,
         studentId: student.id,
@@ -913,7 +924,8 @@ async function seedDemoStudents(prismaClient: PrismaClient, tenantId: string) {
         overallResult: studentData.determinatorOverallResult,
         instructorNote: studentData.determinatorInstructorNote
       }
-    });
+      });
+    }
 
     await upsertTenantRoleUser(prismaClient, {
       tenantId,
@@ -925,6 +937,25 @@ async function seedDemoStudents(prismaClient: PrismaClient, tenantId: string) {
       phone: studentData.phone,
       password: 'MindOnRoadStudent2026!'
     });
+
+    const parentSeedData = buildParentAccountSeedData({
+      parentName: studentData.parentName ?? null,
+      parentEmail: studentData.parentEmail ?? null,
+      parentPhone: studentData.parentPhone ?? null
+    });
+
+    if (parentSeedData) {
+      await upsertTenantRoleUser(prismaClient, {
+        tenantId,
+        roleId: parentRole.id,
+        firstName: parentSeedData.firstName,
+        lastName: parentSeedData.lastName,
+        displayName: parentSeedData.displayName,
+        email: parentSeedData.email,
+        phone: parentSeedData.phone,
+        password: 'MindOnRoadParent2026!'
+      });
+    }
   }
 }
 

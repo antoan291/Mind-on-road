@@ -1,4 +1,5 @@
 import { ChevronDown } from 'lucide-react';
+import { DatePickerInput } from '../date/DatePickerInput';
 
 interface BaseFieldProps {
   label: string;
@@ -39,23 +40,42 @@ export function InputField({
             {icon}
           </div>
         )}
-        <input
-          type={type}
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange?.(e.target.value)}
-          className={`
-            w-full h-12 rounded-lg px-4 border transition-all
-            focus:outline-none focus:shadow-[var(--glow-indigo)]
-            ${icon ? 'pl-12' : ''}
-            ${error ? 'border-[var(--status-error)]' : ''}
-          `}
-          style={{
-            background: 'var(--bg-panel)',
-            borderColor: error ? 'var(--status-error)' : 'var(--ghost-border-medium)',
-            color: 'var(--text-primary)',
-          }}
-        />
+        {type === 'date' ? (
+          <DatePickerInput
+            value={value ?? ''}
+            onChange={(nextValue) => onChange?.(nextValue)}
+            placeholder={placeholder}
+            icon={icon}
+            className={`
+              w-full h-12 rounded-lg px-4 border transition-all
+              focus:outline-none focus:shadow-[var(--glow-indigo)]
+              ${error ? 'border-[var(--status-error)]' : ''}
+            `}
+            style={{
+              background: 'var(--bg-panel)',
+              borderColor: error ? 'var(--status-error)' : 'var(--ghost-border-medium)',
+              color: 'var(--text-primary)',
+            }}
+          />
+        ) : (
+          <input
+            type={type}
+            placeholder={placeholder}
+            value={value}
+            onChange={(e) => onChange?.(e.target.value)}
+            className={`
+              w-full h-12 rounded-lg px-4 border transition-all
+              focus:outline-none focus:shadow-[var(--glow-indigo)]
+              ${icon ? 'pl-12' : ''}
+              ${error ? 'border-[var(--status-error)]' : ''}
+            `}
+            style={{
+              background: 'var(--bg-panel)',
+              borderColor: error ? 'var(--status-error)' : 'var(--ghost-border-medium)',
+              color: 'var(--text-primary)',
+            }}
+          />
+        )}
       </div>
 
       {error && (

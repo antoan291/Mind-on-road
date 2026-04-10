@@ -1,14 +1,18 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { MobilePageHeader } from '../../components/mobile/MobilePageHeader';
+import { Button } from '../../components/ui-system/Button';
 import { InputField, SelectField, TextareaField } from '../../components/ui-system/FormField';
 import { Alert } from '../../components/ui-system/Alert';
-import { User, Mail, Phone, MapPin, Calendar, BookOpen, FileText, Car } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, BookOpen, FileText, Car, ScanSearch, Upload } from 'lucide-react';
+import { useAuthSession } from '../../services/authSession';
+import { extractStudentAutofillFromDocument, StudentOcrAutofill } from '../../services/studentsApi';
 
 export function MobileStudentFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = !!id;
+  const { session } = useAuthSession();
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -38,6 +42,55 @@ export function MobileStudentFormPage() {
   });
 
   const [showSuccess, setShowSuccess] = useState(false);
+  const [ocrStatus, setOcrStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
+  const [ocrMessage, setOcrMessage] = useState('');
+  const [ocrWarnings, setOcrWarnings] = useState<string[]>([]);
+  const [ocrUploadedFileName, setOcrUploadedFileName] = useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleOcrDocumentSelected = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const selectedFile = event.target.files?.[0];
+
+    if (!selectedFile) {
+      return;
+    }
+
+    if (!session?.csrfToken) {
+      setOcrStatus('error');
+      setOcrMessage('Липсва активна сесия за сканиране на документа.');
+      event.target.value = '';
+      return;
+    }
+
+    setOcrStatus('running');
+    setOcrUploadedFileName(selectedFile.name);
+    setOcrWarnings([]);
+    setOcrMessage(`Сканиране на документа ${selectedFile.name}...`);
+
+    try {
+      const extraction = await extractStudentAutofillFromDocument(
+        selectedFile,
+        session.csrfToken,
+      );
+
+      setFormData((current) => applyMobileOcrAutofill(current, extraction));
+      setOcrWarnings(extraction.warnings);
+      setOcrStatus('success');
+      setOcrMessage(buildMobileOcrSuccessMessage(extraction));
+    } catch (error) {
+      setOcrStatus('error');
+      setOcrWarnings([]);
+      setOcrMessage(
+        error instanceof Error
+          ? error.message
+          : 'Сканирането е неуспешно.',
+      );
+    } finally {
+      event.target.value = '';
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,6 +122,91 @@ export function MobileStudentFormPage() {
           <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
             Основна информация
           </h3>
+
+          <div
+            className="rounded-xl border p-4 mb-4"
+            style={{
+              background: 'var(--bg-panel)',
+              borderColor: 'var(--ghost-border-medium)',
+            }}
+          >
+            <div className="flex items-start gap-3">
+              <ScanSearch size={18} style={{ color: 'var(--text-primary)', flexShrink: 0, marginTop: 2 }} />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+                  Сканиране на документ
+                </p>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  Качи PDF или снимка и попълни автоматично данните на курсиста.
+                </p>
+                {ocrUploadedFileName ? (
+                  <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
+                    Последен файл: {ocrUploadedFileName}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,image/*"
+              className="hidden"
+              onChange={handleOcrDocumentSelected}
+            />
+
+            <div className="mt-4">
+              <Button
+                type="button"
+                variant="secondary"
+                size="small"
+                icon={<Upload size={16} />}
+                disabled={ocrStatus === 'running'}
+                className="w-full"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {ocrStatus === 'running' ? 'Сканиране...' : 'Качи документ'}
+              </Button>
+            </div>
+
+            {ocrMessage ? (
+              <div className="mt-4">
+                <Alert
+                  type={
+                    ocrStatus === 'error'
+                      ? 'error'
+                      : ocrStatus === 'success'
+                        ? 'success'
+                        : 'info'
+                  }
+                  title={
+                    ocrStatus === 'error'
+                      ? 'Сканирането е неуспешно'
+                      : ocrStatus === 'success'
+                        ? 'Сканирането е готово'
+                        : 'Сканиране на документа'
+                  }
+                  message={ocrMessage}
+                />
+              </div>
+            ) : null}
+
+            {ocrWarnings.length > 0 ? (
+              <div
+                className="mt-3 rounded-lg px-4 py-3"
+                style={{ background: 'rgba(245, 158, 11, 0.12)' }}
+              >
+                <p className="text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                  Провери попълнените данни
+                </p>
+                <ul className="text-sm space-y-1" style={{ color: 'var(--text-secondary)' }}>
+                  {ocrWarnings.map((warning) => (
+                    <li key={warning}>• {warning}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
 
           <div className="space-y-4">
             <InputField
@@ -358,4 +496,63 @@ export function MobileStudentFormPage() {
       </div>
     </div>
   );
+}
+
+function applyMobileOcrAutofill(
+  current: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    idNumber: string;
+    educationLevel: string;
+    category: string;
+    studentType: string;
+    previousLicenseCategory: string;
+    instructor: string;
+    startDate: string;
+    expectedArrivalDate: string;
+    groupNumber: string;
+    recordMode: string;
+    insuranceStatus: string;
+    extraHours: string;
+    failedExamAttempts: string;
+    courseOutcome: string;
+    parentName: string;
+    parentPhone: string;
+    parentEmail: string;
+    parentFeedbackEnabled: string;
+    address: string;
+    notes: string;
+  },
+  extraction: StudentOcrAutofill,
+) {
+  return {
+    ...current,
+    firstName: extraction.firstName ?? current.firstName,
+    lastName: extraction.lastName ?? current.lastName,
+    idNumber: extraction.nationalId ?? current.idNumber,
+    address: extraction.address ?? current.address,
+    previousLicenseCategory:
+      extraction.previousLicenseCategory ?? current.previousLicenseCategory,
+    studentType:
+      extraction.previousLicenseCategory && !current.studentType
+        ? 'licensed-manual-hours'
+        : current.studentType,
+  };
+}
+
+function buildMobileOcrSuccessMessage(extraction: StudentOcrAutofill) {
+  const filledFields = [
+    extraction.firstName ? 'име' : null,
+    extraction.lastName ? 'фамилия' : null,
+    extraction.nationalId ? 'ЕГН' : null,
+    extraction.address ? 'адрес' : null,
+    extraction.previousLicenseCategory ? 'предходна категория' : null,
+  ].filter(Boolean);
+
+  const fieldsLabel =
+    filledFields.length > 0 ? filledFields.join(', ') : 'няма сигурно разпознати полета';
+
+  return `Разпознат документ: ${extraction.documentType}. Попълнени: ${fieldsLabel}.`;
 }

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { 
-  PageHeader, Badge, Button, Modal
+  PageContent, PageHeader, Badge, Button, Modal
 } from '../components/shared';
+import { DatePickerInput } from '../components/date/DatePickerInput';
 import { 
   Plus, Download, AlertTriangle, FileText, CheckCircle, 
   AlertCircle, Clock, Users, Receipt, Search, X,
@@ -26,6 +27,7 @@ import {
   type PaymentRecordView,
 } from '../services/paymentsApi';
 import { useAuthSession } from '../services/authSession';
+import { hasFullAccessRole } from '../services/roleUtils';
 import { useIsMobile } from '../components/ui/use-mobile';
 
 type Invoice = InvoiceRecordView & {
@@ -167,8 +169,8 @@ export function InvoicesPage() {
   const [filterNoPaymentLink, setFilterNoPaymentLink] = useState(false);
   const [filterCorrectedOnly, setFilterCorrectedOnly] = useState(false);
   const canDeleteInvoices = Boolean(
-    session?.user.roleKeys.includes('owner') ||
-      session?.user.roleKeys.includes('admin'),
+    hasFullAccessRole(session?.user.roleKeys ?? []) ||
+      session?.user.roleKeys.includes('administration'),
   );
 
   useEffect(() => {
@@ -492,9 +494,9 @@ export function InvoicesPage() {
         }
       />
 
-      <div className="px-4 sm:px-6 lg:px-8 space-y-6">
+      <PageContent className="space-y-6">
         {/* Summary Telemetry Strip */}
-        <div className="grid grid-cols-2 xl:grid-cols-7 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-7">
           <TelemetryCard
             icon={<FileText size={18} />}
             label="Всички фактури"
@@ -557,7 +559,7 @@ export function InvoicesPage() {
         >
           <div className="flex flex-col lg:flex-row gap-4">
             {/* Search */}
-            <div className="flex-1 grid grid-cols-2 gap-3">
+            <div className="grid flex-1 grid-cols-1 gap-3 md:grid-cols-2">
               <div className="relative">
                 <Search 
                   size={18} 
@@ -1140,7 +1142,7 @@ export function InvoicesPage() {
             </Button>
           </div>
         )}
-      </div>
+      </PageContent>
 
       {selectedInvoice && (
         <Modal
@@ -1183,7 +1185,7 @@ export function InvoicesPage() {
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Номер на фактура</label><input value={selectedInvoice.invoiceNumber} readOnly className="h-11 w-full rounded-xl px-4 text-sm outline-none opacity-80" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
-              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Дата на фактура</label><input type="date" value={invoiceEditDraft.invoiceDate} onChange={(event) => setInvoiceEditDraft((current) => ({ ...current, invoiceDate: event.target.value }))} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
+              <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Дата на фактура</label><DatePickerInput value={invoiceEditDraft.invoiceDate} onChange={(value) => setInvoiceEditDraft((current) => ({ ...current, invoiceDate: value }))} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)', border: '1px solid rgba(148, 163, 184, 0.32)' }} /></div>
               <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Курсист</label><input value={invoiceEditDraft.student} onChange={(event) => setInvoiceEditDraft((current) => ({ ...current, student: event.target.value }))} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
               <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Сума</label><input type="number" value={invoiceEditDraft.totalAmount} onChange={(event) => setInvoiceEditDraft((current) => ({ ...current, totalAmount: event.target.value }))} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }} /></div>
               <div><label className="mb-2 block text-sm font-medium" style={{ color: 'var(--text-primary)' }}>Статус</label><select value={invoiceEditDraft.invoiceStatus} onChange={(event) => setInvoiceEditDraft((current) => ({ ...current, invoiceStatus: event.target.value as Invoice['invoiceStatus'] }))} className="h-11 w-full rounded-xl px-4 text-sm outline-none" style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}><option value="draft">Чернова</option><option value="issued">Издадена</option><option value="corrected">Коригирана</option><option value="canceled">Анулирана</option><option value="overdue">Просрочена</option></select></div>

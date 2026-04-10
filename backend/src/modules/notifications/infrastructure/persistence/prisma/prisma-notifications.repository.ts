@@ -33,55 +33,67 @@ export class PrismaNotificationsRepository implements NotificationsRepository {
     tenantId: string;
     notifications: NotificationWriteInput[];
   }): Promise<void> {
-    if (params.notifications.length === 0) {
-      return;
-    }
+    const signalKeys = params.notifications.map((notification) => notification.signalKey);
 
     await this.prisma.$transaction(
-      params.notifications.map((notification) =>
-        this.prisma.notificationRecord.upsert({
+      [
+        this.prisma.notificationRecord.deleteMany({
           where: {
-            tenantId_signalKey: {
-              tenantId: params.tenantId,
-              signalKey: notification.signalKey
-            }
-          },
-          create: {
             tenantId: params.tenantId,
-            signalKey: notification.signalKey,
-            kind: notification.kind,
-            severity: notification.severity,
-            deliveryStatus: notification.deliveryStatus,
-            channel: notification.channel,
-            title: notification.title,
-            message: notification.message,
-            audienceLabel: notification.audienceLabel,
-            actionLabel: notification.actionLabel ?? null,
-            actionTarget: notification.actionTarget ?? null,
-            studentId: notification.studentId ?? null,
-            practicalLessonId: notification.practicalLessonId ?? null,
-            eventTime: notification.eventTime,
-            metadata: (notification.metadata ??
-              Prisma.JsonNull) as Prisma.InputJsonValue
-          },
-          update: {
-            kind: notification.kind,
-            severity: notification.severity,
-            deliveryStatus: notification.deliveryStatus,
-            channel: notification.channel,
-            title: notification.title,
-            message: notification.message,
-            audienceLabel: notification.audienceLabel,
-            actionLabel: notification.actionLabel ?? null,
-            actionTarget: notification.actionTarget ?? null,
-            studentId: notification.studentId ?? null,
-            practicalLessonId: notification.practicalLessonId ?? null,
-            eventTime: notification.eventTime,
-            metadata: (notification.metadata ??
-              Prisma.JsonNull) as Prisma.InputJsonValue
+            ...(signalKeys.length > 0
+              ? {
+                  signalKey: {
+                    notIn: signalKeys
+                  }
+                }
+              : {})
           }
-        })
-      )
+        }),
+        ...params.notifications.map((notification) =>
+          this.prisma.notificationRecord.upsert({
+            where: {
+              tenantId_signalKey: {
+                tenantId: params.tenantId,
+                signalKey: notification.signalKey
+              }
+            },
+            create: {
+              tenantId: params.tenantId,
+              signalKey: notification.signalKey,
+              kind: notification.kind,
+              severity: notification.severity,
+              deliveryStatus: notification.deliveryStatus,
+              channel: notification.channel,
+              title: notification.title,
+              message: notification.message,
+              audienceLabel: notification.audienceLabel,
+              actionLabel: notification.actionLabel ?? null,
+              actionTarget: notification.actionTarget ?? null,
+              studentId: notification.studentId ?? null,
+              practicalLessonId: notification.practicalLessonId ?? null,
+              eventTime: notification.eventTime,
+              metadata: (notification.metadata ??
+                Prisma.JsonNull) as Prisma.InputJsonValue
+            },
+            update: {
+              kind: notification.kind,
+              severity: notification.severity,
+              deliveryStatus: notification.deliveryStatus,
+              channel: notification.channel,
+              title: notification.title,
+              message: notification.message,
+              audienceLabel: notification.audienceLabel,
+              actionLabel: notification.actionLabel ?? null,
+              actionTarget: notification.actionTarget ?? null,
+              studentId: notification.studentId ?? null,
+              practicalLessonId: notification.practicalLessonId ?? null,
+              eventTime: notification.eventTime,
+              metadata: (notification.metadata ??
+                Prisma.JsonNull) as Prisma.InputJsonValue
+            }
+          })
+        )
+      ]
     );
   }
 

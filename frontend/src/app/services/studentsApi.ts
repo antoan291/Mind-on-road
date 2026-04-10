@@ -1,5 +1,5 @@
 import type { StudentOperationalRecord } from '../content/studentOperations';
-import { apiClient } from './apiClient';
+import { ApiClientError, apiClient } from './apiClient';
 
 type BackendStudentEnrollmentSummary = {
   id: string;
@@ -94,6 +94,7 @@ export type StudentMutationPayload = {
   lastName: string;
   phone: string;
   email: string | null;
+  portalPassword?: string | null;
   nationalId: string | null;
   birthDate: string | null;
   address: string | null;
@@ -120,6 +121,38 @@ export type StudentMutationPayload = {
     lastPracticeAt: string | null;
     notes: string | null;
   };
+  initialPayment?: {
+    amount: number;
+    paidAmount: number;
+    method: string;
+    status: 'PAID' | 'PARTIAL' | 'OVERDUE' | 'PENDING' | 'CANCELED';
+    paidAt: string;
+    note: string | null;
+  } | null;
+};
+
+export type StudentOcrAutofill = {
+  documentType: string;
+  firstName: string | null;
+  middleName: string | null;
+  lastName: string | null;
+  nationalId: string | null;
+  birthDate: string | null;
+  address: string | null;
+  documentNumber: string | null;
+  previousLicenseCategory: string | null;
+  manualReviewRequired: boolean;
+  confidence: number | null;
+  warnings: string[];
+  rawData: Record<string, unknown>;
+};
+
+export type AssignableInstructorOption = {
+  membershipId: string;
+  displayName: string;
+  roleKeys: string[];
+  roleLabels: string[];
+  assignedStudentsCount: number;
 };
 
 export async function createStudentRecord(
@@ -146,6 +179,65 @@ export async function deleteStudentRecord(
   csrfToken: string,
 ) {
   return apiClient.delete<void>(`/students/${studentId}`, csrfToken);
+}
+
+export async function extractStudentAutofillFromDocument(
+  file: File,
+  csrfToken: string,
+) {
+  const fileName = encodeURIComponent(file.name);
+  const fileBuffer = await file.arrayBuffer();
+  const requestPath = `/students/ocr-autofill?fileName=${fileName}`;
+  const requestOptions = {
+    body: fileBuffer,
+    contentType: file.type || 'application/octet-stream',
+    csrfToken,
+  };
+
+  try {
+    return await apiClient.postBinary<StudentOcrAutofill>(
+      requestPath,
+      requestOptions,
+    );
+  } catch (error) {
+    if (error instanceof ApiClientError && error.statusCode === 403) {
+      try {
+        const refreshedSession = await apiClient.get<{ csrfToken: string }>('/auth/me');
+
+        return await apiClient.postBinary<StudentOcrAutofill>(
+          requestPath,
+          {
+            ...requestOptions,
+            csrfToken: refreshedSession.csrfToken,
+          },
+        );
+      } catch {
+        throw new Error('Сканирането е неуспешно.');
+      }
+    }
+
+    if (error instanceof ApiClientError) {
+      if (error.statusCode === 429) {
+        throw new Error('Твърде много опити за сканиране. Изчакайте малко и опитайте пак.');
+      }
+
+      if (error.statusCode === 400) {
+        throw new Error('Сканирането е неуспешно.');
+      }
+
+      throw new Error('Сканирането е неуспешно.');
+    }
+
+    throw new Error('Сканирането е неуспешно.');
+  }
+}
+
+export async function fetchAssignableInstructorOptions() {
+  const response = await apiClient.get<{
+    items: AssignableInstructorOption[];
+  }>('/students/instructor-options');
+
+  return response.items;
 }
 
 function mapStudentSummaryToOperationalRecord(
@@ -201,7 +293,7 @@ function mapStudentSummaryToOperationalRecord(
     previousLicenseCategory: enrollment?.previousLicenseCategory ?? '',
     hoursEntryPolicy:
       enrollment?.trainingMode === 'LICENSED_MANUAL_HOURS'
-        ? 'Часовете се добавят ръчно от администратор или инструктор, защото курсистът вече има книжка.'
+        ? 'Часовете се добавят ръчно от администрация или инструктор, защото курсистът вече има книжка.'
         : 'Автоматично намаляване от платен пакет след отчетен час.',
     examOutcome: mapExamOutcome(student.status, enrollment?.status ?? null),
     examOutcomeLabel: mapExamOutcomeLabel(
@@ -268,7 +360,7 @@ function buildNeutralStudentFallback(
       student.enrollment?.previousLicenseCategory ?? '',
     hoursEntryPolicy:
       student.enrollment?.trainingMode === 'LICENSED_MANUAL_HOURS'
-        ? 'Часовете се добавят ръчно от администратор или инструктор, защото курсистът вече има книжка.'
+        ? 'Часовете се добавят ръчно от администрация или инструктор, защото курсистът вече има книжка.'
         : 'Автоматично намаляване от платен пакет след отчетен час.',
     examOutcome: 'active',
     examOutcomeLabel: 'Активен курс',

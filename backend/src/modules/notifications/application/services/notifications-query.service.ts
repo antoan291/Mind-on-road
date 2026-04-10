@@ -1,3 +1,4 @@
+import type { DocumentsQueryService } from '../../../documents/application/services/documents-query.service';
 import type { PracticalLessonsQueryService } from '../../../practice/application/services/practical-lessons-query.service';
 import type { StudentsQueryService } from '../../../students/application/services/students-query.service';
 import type {
@@ -12,18 +13,21 @@ export class NotificationsQueryService {
   public constructor(
     private readonly notificationsRepository: NotificationsRepository,
     private readonly studentsQueryService: StudentsQueryService,
-    private readonly practicalLessonsQueryService: PracticalLessonsQueryService
+    private readonly practicalLessonsQueryService: PracticalLessonsQueryService,
+    private readonly documentsQueryService: DocumentsQueryService
   ) {}
 
   public async listNotifications(params: { tenantId: string }) {
-    const [students, lessons] = await Promise.all([
+    const [students, lessons, documents] = await Promise.all([
       this.studentsQueryService.listStudents({ tenantId: params.tenantId }),
-      this.practicalLessonsQueryService.listLessons({ tenantId: params.tenantId })
+      this.practicalLessonsQueryService.listLessons({ tenantId: params.tenantId }),
+      this.documentsQueryService.listDocuments({ tenantId: params.tenantId })
     ]);
 
     const notifications = buildSystemNotifications({
       students,
       lessons,
+      documents,
       now: new Date()
     });
 
@@ -43,6 +47,7 @@ export class NotificationsQueryService {
 function buildSystemNotifications(params: {
   students: Awaited<ReturnType<StudentsQueryService['listStudents']>>;
   lessons: Awaited<ReturnType<PracticalLessonsQueryService['listLessons']>>;
+  documents: Awaited<ReturnType<DocumentsQueryService['listDocuments']>>;
   now: Date;
 }): NotificationWriteInput[] {
   const todayStart = new Date(params.now);
@@ -73,7 +78,7 @@ function buildSystemNotifications(params: {
           channel: 'SYSTEM',
           title: `Над 30 дни без практика · ${student.name}`,
           message: `${student.name} не е карал ${daysWithoutPractice} дни. Последна практика: ${enrollment.lastPracticeAt.slice(0, 10)}.`,
-          audienceLabel: 'Администратор',
+          audienceLabel: 'Администрация',
           studentId: student.id,
           eventTime: new Date(enrollment.lastPracticeAt),
           metadata: {
@@ -100,7 +105,7 @@ function buildSystemNotifications(params: {
           channel: 'SYSTEM',
           title: `Ранно записване · ${student.name}`,
           message: `${student.name} трябва да бъде потърсен до датата на идване ${enrollment.expectedArrivalDate}. Остават ${daysUntilArrival} дни.`,
-          audienceLabel: 'Администратор',
+          audienceLabel: 'Администрация',
           studentId: student.id,
           eventTime: arrivalDate,
           metadata: {
@@ -127,7 +132,7 @@ function buildSystemNotifications(params: {
         message: `${student.name} достигна ${enrollment.completedHours} часа по категория B. Остават ${enrollment.remainingHours} часа.`,
         audienceLabel: student.parentContactEnabled
           ? `Родител на ${student.name}`
-          : 'Администратор',
+          : 'Администрация',
         studentId: student.id,
         eventTime: params.now,
         metadata: {
@@ -193,7 +198,58 @@ function buildSystemNotifications(params: {
     return notifications;
   });
 
-  return [...studentNotifications, ...lessonNotifications];
+  const instructorDocumentNotifications = params.documents.flatMap<NotificationWriteInput>((document) => {
+    if (document.ownerType !== 'INSTRUCTOR') {
+      return [];
+    }
+
+    if (
+      document.status !== 'EXPIRING_SOON' &&
+      document.status !== 'EXPIRED'
+    ) {
+      return [];
+    }
+
+    const isExpired = document.status === 'EXPIRED';
+    const expiryDate = document.expiryDate ?? document.issueDate;
+    const normalizedDaysLeft = Math.max(document.daysUntilExpiry, 0);
+
+    return [
+      {
+        signalKey: `instructor-document-expiry:${document.id}:${document.status}`,
+        kind: 'INSTRUCTOR_DOCUMENT_EXPIRY',
+        severity: isExpired ? 'ERROR' : 'WARNING',
+        deliveryStatus: 'PENDING',
+        channel: 'SYSTEM',
+        title: `${isExpired ? 'Изтекъл документ' : 'Изтичащ документ'} · ${document.ownerName}`,
+        message: isExpired
+          ? `${document.name} на ${document.ownerName} е изтекъл на ${expiryDate}.`
+          : `${document.name} на ${document.ownerName} изтича на ${expiryDate}. Остават ${normalizedDaysLeft} дни.`,
+        audienceLabel: 'Администрация и собственик',
+        actionLabel: 'Отвори инструктор',
+        actionTarget: document.ownerRef
+          ? `/instructors/${document.ownerRef}`
+          : '/instructors',
+        eventTime: new Date(`${expiryDate}T00:00:00`),
+        metadata: {
+          ownerType: document.ownerType,
+          ownerName: document.ownerName,
+          ownerRef: document.ownerRef,
+          documentId: document.id,
+          documentName: document.name,
+          documentStatus: document.status,
+          expiryDate: document.expiryDate,
+          daysUntilExpiry: document.daysUntilExpiry
+        }
+      }
+    ];
+  });
+
+  return [
+    ...studentNotifications,
+    ...lessonNotifications,
+    ...instructorDocumentNotifications
+  ];
 }
 
 function toNotificationResponse(record: NotificationRecord) {

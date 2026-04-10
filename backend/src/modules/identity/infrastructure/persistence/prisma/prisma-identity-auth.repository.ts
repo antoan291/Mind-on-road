@@ -16,6 +16,43 @@ import {
   hashPassword
 } from '../../../domain/services/password-security';
 
+const loginMembershipSelect = {
+  id: true,
+  tenantId: true,
+  tenant: {
+    select: {
+      slug: true
+    }
+  },
+  user: {
+    select: {
+      id: true,
+      email: true,
+      passwordHash: true,
+      displayName: true,
+      mustChangePassword: true
+    }
+  },
+  roles: {
+    select: {
+      role: {
+        select: {
+          key: true,
+          permissions: {
+            select: {
+              permission: {
+                select: {
+                  key: true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+} as const;
+
 export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
   public constructor(private readonly prisma: PrismaClient) {}
 
@@ -25,82 +62,21 @@ export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
   }): Promise<LoginIdentityRecord | null> {
     const normalizedIdentifier = params.email.trim();
 
-    const membership = await this.prisma.tenantMembership.findFirst({
-      where: {
-        status: TenantMembershipStatus.ACTIVE,
-        tenant: {
-          slug: params.tenantSlug
-        },
-        user: {
-          OR: [
-            {
-              email: normalizedIdentifier
-            },
-            {
-              phone: normalizedIdentifier
-            }
-          ],
-          status: UserStatus.ACTIVE
-        }
-      },
-      select: {
-        id: true,
-        tenantId: true,
-        tenant: {
-          select: {
-            slug: true
-          }
-        },
-        user: {
-          select: {
-            id: true,
-            email: true,
-            passwordHash: true,
-            displayName: true,
-            mustChangePassword: true
-          }
-        },
-        roles: {
-          select: {
-            role: {
-              select: {
-                key: true,
-                permissions: {
-                  select: {
-                    permission: {
-                      select: {
-                        key: true
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    });
+    const membership =
+      (await this.findTenantMembershipByIdentifier({
+        tenantSlug: params.tenantSlug,
+        normalizedIdentifier
+      })) ??
+      (await this.ensureDeveloperTenantMembership({
+        tenantSlug: params.tenantSlug,
+        normalizedIdentifier
+      }));
 
     if (!membership) {
       return null;
     }
 
-    return {
-      userId: membership.user.id,
-      userEmail: membership.user.email,
-      passwordHash: membership.user.passwordHash,
-      displayName: membership.user.displayName,
-      membershipId: membership.id,
-      tenantId: membership.tenantId,
-      tenantSlug: membership.tenant.slug,
-      roleKeys: membership.roles.map((membershipRole) => membershipRole.role.key),
-      permissionKeys: membership.roles.flatMap((membershipRole) =>
-        membershipRole.role.permissions.map(
-          (rolePermission) => rolePermission.permission.key
-        )
-      ),
-      mustChangePassword: membership.user.mustChangePassword
-    };
+    return this.mapLoginIdentity(membership);
   }
 
   public async findAuthenticatedSessionByTokenHash(
@@ -271,6 +247,7 @@ export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
     const normalizedEmail =
       input.email?.trim().toLowerCase() ??
       buildSyntheticPortalEmail(input.tenantId, normalizedPhone);
+    const loginIdentifier = input.email ? normalizedEmail : normalizedPhone;
 
     const role = await this.prisma.role.findUniqueOrThrow({
       where: {
@@ -311,6 +288,14 @@ export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
             lastName: input.lastName,
             displayName: input.displayName,
             phone: normalizedPhone,
+            ...(input.password
+              ? {
+                  passwordHash: hashPassword(input.password),
+                  mustChangePassword:
+                    input.requirePasswordChangeOnFirstLogin ?? false,
+                  passwordChangedAt: new Date()
+                }
+              : {}),
             ...(shouldReplaceEmail(existingMembership.user.email, input.email)
               ? { email: normalizedEmail }
               : {}),
@@ -335,31 +320,33 @@ export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
         return {
           userId: existingMembership.user.id,
           membershipId: existingMembership.id,
-          loginIdentifier: normalizedPhone,
+          loginIdentifier,
           temporaryPassword: null,
           status: 'updated_existing'
         };
       }
     }
 
-    const existingUser = await this.prisma.user.findFirst({
-      where: {
-        OR: [{ email: normalizedEmail }, { phone: normalizedPhone }]
-      },
-      select: {
-        id: true,
-        email: true,
-        memberships: {
+    const existingUser = input.email
+      ? await this.prisma.user.findFirst({
           where: {
-            tenantId: input.tenantId
+            email: normalizedEmail
           },
           select: {
-            id: true
-          },
-          take: 1
-        }
-      }
-    });
+            id: true,
+            email: true,
+            memberships: {
+              where: {
+                tenantId: input.tenantId
+              },
+              select: {
+                id: true
+              },
+              take: 1
+            }
+          }
+        })
+      : null;
 
     if (existingUser) {
       await this.prisma.user.update({
@@ -371,6 +358,14 @@ export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
           lastName: input.lastName,
           displayName: input.displayName,
           phone: normalizedPhone,
+          ...(input.password
+            ? {
+                passwordHash: hashPassword(input.password),
+                mustChangePassword:
+                  input.requirePasswordChangeOnFirstLogin ?? false,
+                passwordChangedAt: new Date()
+              }
+            : {}),
           ...(shouldReplaceEmail(existingUser.email, input.email)
             ? { email: normalizedEmail }
             : {}),
@@ -417,7 +412,7 @@ export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
       return {
         userId: existingUser.id,
         membershipId: membership.id,
-        loginIdentifier: normalizedPhone,
+        loginIdentifier,
         temporaryPassword: null,
         status: existingUser.memberships[0]
           ? 'already_linked'
@@ -425,17 +420,20 @@ export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
       };
     }
 
-    const temporaryPassword = generateSessionToken();
+    const temporaryPassword = input.password ? null : generateSessionToken();
     const createdUser = await this.prisma.user.create({
       data: {
         email: normalizedEmail,
-        passwordHash: hashPassword(temporaryPassword),
+        passwordHash: hashPassword(input.password ?? temporaryPassword!),
         firstName: input.firstName,
         lastName: input.lastName,
         displayName: input.displayName,
         phone: normalizedPhone,
         status: UserStatus.ACTIVE,
-        mustChangePassword: true
+        mustChangePassword:
+          input.password
+            ? input.requirePasswordChangeOnFirstLogin ?? false
+            : true
       },
       select: {
         id: true
@@ -464,9 +462,169 @@ export class PrismaIdentityAuthRepository implements IdentityAuthRepository {
     return {
       userId: createdUser.id,
       membershipId: membership.id,
-      loginIdentifier: normalizedPhone,
+      loginIdentifier,
       temporaryPassword,
       status: 'created'
+    };
+  }
+  private async findTenantMembershipByIdentifier(params: {
+    tenantSlug: string;
+    normalizedIdentifier: string;
+  }) {
+    return this.prisma.tenantMembership.findFirst({
+      where: {
+        status: TenantMembershipStatus.ACTIVE,
+        tenant: {
+          slug: params.tenantSlug
+        },
+        user: {
+          OR: [
+            {
+              email: params.normalizedIdentifier
+            },
+            {
+              phone: params.normalizedIdentifier
+            }
+          ],
+          status: UserStatus.ACTIVE
+        }
+      },
+      select: loginMembershipSelect
+    });
+  }
+
+  private async ensureDeveloperTenantMembership(params: {
+    tenantSlug: string;
+    normalizedIdentifier: string;
+  }) {
+    const developerUser = await this.prisma.user.findFirst({
+      where: {
+        OR: [
+          {
+            email: params.normalizedIdentifier
+          },
+          {
+            phone: params.normalizedIdentifier
+          }
+        ],
+        status: UserStatus.ACTIVE,
+        memberships: {
+          some: {
+            status: TenantMembershipStatus.ACTIVE,
+            roles: {
+              some: {
+                role: {
+                  key: 'developer'
+                }
+              }
+            }
+          }
+        }
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (!developerUser) {
+      return null;
+    }
+
+    const tenant = await this.prisma.tenant.findUnique({
+      where: {
+        slug: params.tenantSlug
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (!tenant) {
+      return null;
+    }
+
+    const developerRole = await this.prisma.role.findUnique({
+      where: {
+        tenantId_key: {
+          tenantId: tenant.id,
+          key: 'developer'
+        }
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (!developerRole) {
+      return null;
+    }
+
+    const membership = await this.prisma.tenantMembership.upsert({
+      where: {
+        tenantId_userId: {
+          tenantId: tenant.id,
+          userId: developerUser.id
+        }
+      },
+      update: {
+        status: TenantMembershipStatus.ACTIVE,
+        joinedAt: new Date()
+      },
+      create: {
+        tenantId: tenant.id,
+        userId: developerUser.id,
+        status: TenantMembershipStatus.ACTIVE,
+        joinedAt: new Date()
+      },
+      select: {
+        id: true
+      }
+    });
+
+    await this.prisma.membershipRole.upsert({
+      where: {
+        membershipId_roleId: {
+          membershipId: membership.id,
+          roleId: developerRole.id
+        }
+      },
+      update: {},
+      create: {
+        membershipId: membership.id,
+        roleId: developerRole.id
+      }
+    });
+
+    return this.findTenantMembershipByIdentifier({
+      tenantSlug: params.tenantSlug,
+      normalizedIdentifier: params.normalizedIdentifier
+    });
+  }
+
+  private mapLoginIdentity(
+    membership: Awaited<
+      ReturnType<PrismaIdentityAuthRepository['findTenantMembershipByIdentifier']>
+    >
+  ): LoginIdentityRecord | null {
+    if (!membership) {
+      return null;
+    }
+
+    return {
+      userId: membership.user.id,
+      userEmail: membership.user.email,
+      passwordHash: membership.user.passwordHash,
+      displayName: membership.user.displayName,
+      membershipId: membership.id,
+      tenantId: membership.tenantId,
+      tenantSlug: membership.tenant.slug,
+      roleKeys: membership.roles.map((membershipRole) => membershipRole.role.key),
+      permissionKeys: membership.roles.flatMap((membershipRole) =>
+        membershipRole.role.permissions.map(
+          (rolePermission) => rolePermission.permission.key
+        )
+      ),
+      mustChangePassword: membership.user.mustChangePassword
     };
   }
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Upload } from "lucide-react";
 import { Button, Input, Modal, Select, Textarea } from "../../components/shared";
+import { DatePickerInput } from "../../components/date/DatePickerInput";
 
 export type QuickActionKey =
   | "newStudent"
@@ -366,7 +367,7 @@ export function DashboardQuickActionDialog({
           <Select label="Курсист" value={formState.student} onChange={(value) => updateField("student", value)} options={studentOptions} placeholder="Изберете курсист" required />
           <Select label="Инструктор" value={formState.instructor} onChange={(value) => updateField("instructor", value)} options={instructorOptions} placeholder="Изберете инструктор" required />
           <Select label="Автомобил" value={formState.vehicle} onChange={(value) => updateField("vehicle", value)} options={vehicleOptions} placeholder="Изберете автомобил" required />
-          <Input label="Дата" value={formState.lessonDate} onChange={(value) => updateField("lessonDate", value)} type="date" required />
+          <DateField label="Дата" value={formState.lessonDate} onChange={(value) => updateField("lessonDate", value)} required />
           <Input label="Час" value={formState.lessonTime} onChange={(value) => updateField("lessonTime", value)} type="time" required />
           <Select
             label="Продължителност"
@@ -400,8 +401,8 @@ export function DashboardQuickActionDialog({
           <Select label="Тип документ" value={formState.documentType} onChange={(value) => updateField("documentType", value)} options={selectOptions.documentType} placeholder="Изберете тип документ" required />
           <Select label="Курсист" value={formState.student} onChange={(value) => updateField("student", value)} options={studentOptions} placeholder="Изберете курсист" required />
           <Input label="Номер на документа" value={formState.documentNumber} onChange={(value) => updateField("documentNumber", value)} placeholder="Ако има номер" />
-          <Input label="Дата на издаване" value={formState.issueDate} onChange={(value) => updateField("issueDate", value)} type="date" />
-          <Input label="Валиден до" value={formState.expiryDate} onChange={(value) => updateField("expiryDate", value)} type="date" />
+          <DateField label="Дата на издаване" value={formState.issueDate} onChange={(value) => updateField("issueDate", value)} />
+          <DateField label="Валиден до" value={formState.expiryDate} onChange={(value) => updateField("expiryDate", value)} />
           <div className="space-y-2 md:col-span-2">
             <label className="block text-sm font-medium" style={{ color: "var(--text-primary)" }}>
               Качи файл
@@ -424,7 +425,7 @@ export function DashboardQuickActionDialog({
         <Select label="Курсист" value={formState.student} onChange={(value) => updateField("student", value)} options={studentOptions} placeholder="Изберете курсист" required />
         <Input label="Сума" value={formState.amount} onChange={(value) => updateField("amount", value)} placeholder="Например: 250" type="number" required />
         <Select label="Метод на плащане" value={formState.paymentMethod} onChange={(value) => updateField("paymentMethod", value)} options={selectOptions.paymentMethod} placeholder="Изберете метод" required />
-        <Input label="Дата на плащане" value={formState.paymentDate} onChange={(value) => updateField("paymentDate", value)} type="date" required />
+        <DateField label="Дата на плащане" value={formState.paymentDate} onChange={(value) => updateField("paymentDate", value)} required />
         <Input label="Референция" value={formState.reference} onChange={(value) => updateField("reference", value)} placeholder="Квитанция, превод или фактура" />
         <div className="md:col-span-2">
           <Textarea label="Бележка" value={formState.paymentNote} onChange={(value) => updateField("paymentNote", value)} placeholder="Допълнителна информация за плащането" rows={4} />
@@ -479,5 +480,38 @@ export function DashboardQuickActionDialog({
         {renderFields()}
       </div>
     </Modal>
+  );
+}
+
+function DateField({
+  label,
+  value,
+  onChange,
+  required = false,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  required?: boolean;
+}) {
+  return (
+    <div className="w-full">
+      <label className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+        {label}
+        {required && <span style={{ color: 'var(--status-error)' }}> *</span>}
+      </label>
+      <DatePickerInput
+        value={value}
+        onChange={onChange}
+        className="w-full h-11 rounded-xl px-4 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+        style={{
+          background: 'rgba(15, 23, 42, 0.22)',
+          color: 'var(--text-primary)',
+          border: '1px solid rgba(148, 163, 184, 0.32)',
+          boxShadow:
+            'inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 24px rgba(15, 23, 42, 0.08)',
+        }}
+      />
+    </div>
   );
 }

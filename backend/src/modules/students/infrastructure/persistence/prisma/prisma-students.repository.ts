@@ -68,6 +68,28 @@ export class PrismaStudentsRepository implements StudentsRepository {
           )
         });
 
+        if (params.student.initialPayment) {
+          await transaction.paymentRecord.create({
+            data: {
+              tenantId: params.tenantId,
+              studentId: createdStudent.id,
+              studentName: params.student.displayName,
+              paymentNumber: buildInitialPaymentNumber(),
+              amount: params.student.initialPayment.amount,
+              paidAmount: params.student.initialPayment.paidAmount,
+              method: params.student.initialPayment.method,
+              status: params.student.initialPayment.status as
+                | 'PAID'
+                | 'PARTIAL'
+                | 'OVERDUE'
+                | 'PENDING'
+                | 'CANCELED',
+              paidAt: params.student.initialPayment.paidAt,
+              note: params.student.initialPayment.note
+            }
+          });
+        }
+
         return transaction.student.findFirstOrThrow({
           where: {
             id: createdStudent.id,
@@ -275,6 +297,13 @@ export class PrismaStudentsRepository implements StudentsRepository {
       });
     });
   }
+}
+
+function buildInitialPaymentNumber() {
+  return `PAY-${new Date()
+    .toISOString()
+    .slice(0, 10)
+    .replace(/-/g, '')}-${Date.now().toString().slice(-6)}`;
 }
 
 const studentSelection = {

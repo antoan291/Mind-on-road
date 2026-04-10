@@ -129,8 +129,14 @@ export function StudentPortalProfilePage() {
     totalHours > 0 ? Math.min(100, Math.round((usedHours / totalHours) * 100)) : 0;
   const circumference = 2 * Math.PI * 76;
   const strokeOffset = circumference * (1 - progressPercent / 100);
-  const paidAmount = payments.reduce((sum, payment) => sum + payment.paidAmount, 0);
-  const remainingAmount = payments.reduce(
+  const studentPayments = payments.filter(
+    (payment) => String(payment.studentId) === String(student?.id ?? ''),
+  );
+  const paidAmount = studentPayments.reduce(
+    (sum, payment) => sum + payment.paidAmount,
+    0,
+  );
+  const remainingAmount = studentPayments.reduce(
     (sum, payment) => sum + payment.remainingAmount,
     0,
   );

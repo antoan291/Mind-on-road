@@ -27,6 +27,15 @@ import { useState } from "react";
 import { useAuthSession } from "../../services/authSession";
 import type { TenantFeatureKey } from "../../services/featureSettings";
 import { useFeatureSettings } from "../../services/featureSettings";
+import {
+  hasAiCenterAccessRole,
+  getPrimaryRoleLabel,
+  hasDeterminatorAccessRole,
+  hasDeveloperRole,
+  hasFullAccessRole,
+  hasInstructorsAccessRole,
+  hasPersonnelAccessRole,
+} from "../../services/roleUtils";
 
 type MobileMenuItem = {
   path: string;
@@ -37,6 +46,8 @@ type MobileMenuItem = {
   featureKey?: TenantFeatureKey;
   permissionKey?: string;
   ownerOnly?: boolean;
+  developerOnly?: boolean;
+  visible?: boolean;
 };
 
 export function MobileLayout() {
@@ -45,9 +56,7 @@ export function MobileLayout() {
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const displayName = session?.user.displayName ?? "Потребител";
-  const roleLabel = session?.user.roleKeys.includes("owner")
-    ? "Owner"
-    : session?.user.roleKeys[0] ?? "Потребител";
+  const roleLabel = getPrimaryRoleLabel(session?.user.roleKeys ?? []);
   const initials = displayName
     .split(" ")
     .filter(Boolean)
@@ -136,8 +145,17 @@ export function MobileLayout() {
       icon: <UserCircle size={20} />,
       shortLabel: "Инструктори",
       section: "training",
-      featureKey: "practical",
-      permissionKey: "scheduling.read",
+      permissionKey: "students.read",
+      visible: hasInstructorsAccessRole(session?.user.roleKeys ?? []),
+    },
+    {
+      path: "/personnel",
+      label: "Персонал",
+      icon: <UserCircle size={20} />,
+      shortLabel: "Персонал",
+      section: "training",
+      permissionKey: "users.manage",
+      visible: hasPersonnelAccessRole(session?.user.roleKeys ?? []),
     },
     {
       path: "/vehicles",
@@ -174,6 +192,7 @@ export function MobileLayout() {
       section: "operations",
       featureKey: "practical",
       permissionKey: "students.manage_register",
+      visible: hasDeterminatorAccessRole(session?.user.roleKeys ?? []),
     },
     {
       path: "/exam-applications",
@@ -210,6 +229,7 @@ export function MobileLayout() {
       section: "system",
       featureKey: "ai",
       permissionKey: "reports.read",
+      visible: hasAiCenterAccessRole(session?.user.roleKeys ?? []),
     },
     {
       path: "/settings",
@@ -217,15 +237,17 @@ export function MobileLayout() {
       icon: <Settings size={20} />,
       shortLabel: "Настройки",
       section: "system",
-      ownerOnly: true,
+      developerOnly: true,
     },
   ].filter(
     (item) =>
       (!item.featureKey || isFeatureEnabled(item.featureKey)) &&
       (!item.permissionKey ||
         session?.user.permissionKeys.includes(item.permissionKey) ||
-        session?.user.roleKeys.includes("owner")) &&
-      (!item.ownerOnly || session?.user.roleKeys.includes("owner")),
+        hasFullAccessRole(session?.user.roleKeys ?? [])) &&
+      item.visible !== false &&
+      (!item.ownerOnly || hasFullAccessRole(session?.user.roleKeys ?? [])) &&
+      (!item.developerOnly || hasDeveloperRole(session?.user.roleKeys ?? [])),
   );
 
   const visibleBottomNavItems = bottomNavItems.filter(
@@ -236,7 +258,7 @@ export function MobileLayout() {
       (!('permissionKey' in item) ||
         !item.permissionKey ||
         session?.user.permissionKeys.includes(item.permissionKey) ||
-        session?.user.roleKeys.includes("owner")),
+        hasFullAccessRole(session?.user.roleKeys ?? [])),
   );
   const currentPageLabel =
     [...visibleBottomNavItems, ...menuItems].find((item) =>
@@ -306,23 +328,11 @@ export function MobileLayout() {
               className="text-sm font-semibold truncate"
               style={{ color: "var(--text-primary)" }}
             >
-              {currentPageLabel}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setMenuOpen(true)}
-            className="w-9 h-9 rounded-lg flex items-center justify-center"
-            style={{
-              background: "var(--bg-card)",
-              color: "var(--text-secondary)",
-            }}
-          >
-            <Menu size={18} />
-          </button>
-        </div>
+      
       </header>
 
       <main className="flex-1 overflow-auto pb-24">

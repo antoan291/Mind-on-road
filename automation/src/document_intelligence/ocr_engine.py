@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import inspect
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -72,16 +73,31 @@ def _load_paddle_ocr(config: ExtractionConfig):
       "PaddleOCR не е инсталиран. Инсталирай първо `paddlepaddle` и `paddleocr`."
     ) from exc
 
-  kwargs = {
-    "use_angle_cls": True,
+  kwargs = _build_paddle_ocr_kwargs(PaddleOCR, config)
+  return PaddleOCR(**kwargs)
+
+
+def _build_paddle_ocr_kwargs(
+  paddle_ocr_class: type[object],
+  config: ExtractionConfig,
+) -> dict[str, object]:
+  parameters = inspect.signature(paddle_ocr_class.__init__).parameters
+  kwargs: dict[str, object] = {
     "lang": config.ocr_language,
     "ocr_version": config.ocr_version,
   }
 
-  try:
-    return PaddleOCR(**kwargs)
-  except TypeError:
-    return PaddleOCR(**kwargs)
+  if "use_textline_orientation" in parameters:
+    kwargs["use_textline_orientation"] = True
+  elif "use_angle_cls" in parameters:
+    kwargs["use_angle_cls"] = True
+
+  if "use_gpu" in parameters:
+    kwargs["use_gpu"] = config.use_gpu
+  elif "device" in parameters and config.use_gpu:
+    kwargs["device"] = "gpu"
+
+  return kwargs
 
 
 def extract_ocr_lines(page_images: list[bytes], config: ExtractionConfig) -> list[OCRLine]:

@@ -2,7 +2,7 @@
 
 Тази папка съдържа automation и document-intelligence слоя на проекта.
 
-Първият модул е offline OCR pipeline за български документи:
+Първият модул е offline OCR pipeline и HTTP service за български документи:
 
 - българска лична карта
 - българска шофьорска книжка
@@ -19,11 +19,12 @@
 
 ## Текущ модул
 
-- `src/document_intelligence` — reusable Python package за PDF rendering, PaddleOCR и rule-based extraction
+- `src/document_intelligence` — reusable Python package за PDF/image rendering, PaddleOCR и rule-based extraction
 - `scripts/extract_bg_document.py` — CLI script за локално изпълнение
 - `output/` — JSON резултати
 - `samples/` — примерни входни файлове
 - `tmp/` — временни файлове за debug и OCR inspection
+- `tests/` — тестове за parser и upload worker API
 
 ## Архитектурна позиция
 
@@ -31,7 +32,8 @@
 
 Моделът е:
 
-- PDF render до изображения
+- PDF или image input
+- render/normalize до изображения
 - локален OCR чрез PaddleOCR
 - rule-based parser за българските полета
 - human review преди официално записване
@@ -49,13 +51,14 @@
 - Постоянен адрес
 - Категории и дати при шофьорска книжка
 
-Резултатът се записва с български ключове в UTF-8 JSON.
+Резултатът се записва с български ключове в UTF-8 JSON и се връща и като HTTP response.
 
 ## Изисквания
 
 - `Python 3.11+`
 - `PaddlePaddle 3.2.0`
 - `PaddleOCR 3.3.3`
+- `Pillow`
 
 ## Инсталация
 
@@ -92,6 +95,8 @@ python -m pip install -e .
 - `PADDLEOCR_VERSION=PP-OCRv5`
 - `PADDLEOCR_USE_GPU=false`
 - `PADDLEOCR_MIN_TEXT_CONFIDENCE=0.35`
+- `DOCUMENT_OCR_OUTPUT_DIR=./output`
+- `DOCUMENT_OCR_WORKER_PORT=8080`
 
 ## Изпълнение
 
@@ -105,6 +110,12 @@ python -m document_intelligence.cli "C:\path\to\document.pdf"
 
 ```bash
 python scripts\extract_bg_document.py "C:\path\to\document.pdf"
+```
+
+Поддържат се и изображения:
+
+```bash
+python -m document_intelligence.cli "C:\path\to\id-card.jpg"
 ```
 
 ### Конкретен пример с твоя файл
@@ -150,8 +161,55 @@ python -m document_intelligence.cli "C:\AD\work\My company\school\test-docs\car-
 По подразбиране output файлът се записва в:
 
 ```text
-automation/output/<име-на-pdf>.json
+automation/output/<име-на-файла>.json
 ```
+
+Може и изрично да подадеш къде да се запише JSON:
+
+```bash
+python -m document_intelligence.cli "C:\path\to\license.png" --output "D:\exports\license-data.json"
+```
+
+## HTTP Service
+
+Стартиране:
+
+```bash
+python -m document_intelligence.worker
+```
+
+Health check:
+
+```bash
+GET /health
+```
+
+Upload endpoint:
+
+```bash
+POST /ocr/extract-upload
+Content-Type: multipart/form-data
+```
+
+Формата е:
+
+- `file` — PDF, PNG, JPG, JPEG, WEBP, BMP, TIF, TIFF
+- `outputFileName` — по избор, например `student-123.json`
+
+Пример с `curl`:
+
+```bash
+curl -X POST "http://127.0.0.1:8080/ocr/extract-upload" \
+  -F "file=@C:\docs\id-card.jpg" \
+  -F "outputFileName=student-id.json"
+```
+
+Service-ът:
+
+- приема директен upload от твоята програма;
+- връща extracted JSON в response;
+- записва JSON и във `DOCUMENT_OCR_OUTPUT_DIR`;
+- отказва непознати типове документи вместо да ги третира като лична карта.
 
 ## Ограничения
 
@@ -159,6 +217,7 @@ automation/output/<име-на-pdf>.json
 - При първо пускане PaddleOCR може да изтегли локално официалните OCR модели и след това да ги кешира.
 - Качеството зависи от скана, осветлението, изрязването и резолюцията.
 - При шофьорска книжка някои полета може да липсват по самия документ и ще бъдат `null`.
+- Ако документът не бъде разпознат сигурно като лична карта или шофьорска книжка, service-ът връща `неразпознат документ`.
 - `нужен_ръчен_преглед` остава `true` по подразбиране.
 
 ## Security note

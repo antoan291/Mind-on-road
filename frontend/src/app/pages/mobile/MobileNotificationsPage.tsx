@@ -8,9 +8,9 @@ import {
 } from 'lucide-react';
 import { MobilePageHeader } from '../../components/mobile/MobilePageHeader';
 import {
-  fetchNotificationRecords,
   type NotificationRecordView,
 } from '../../services/notificationsApi';
+import { useNotificationsState } from '../../services/notificationsState';
 
 type MobileNotificationItem = {
   id: string;
@@ -23,33 +23,21 @@ type MobileNotificationItem = {
 };
 
 export function MobileNotificationsPage() {
+  const {
+    notifications: backendNotifications,
+    refreshNotifications,
+  } = useNotificationsState();
   const [notifications, setNotifications] = useState<MobileNotificationItem[]>(
     [],
   );
 
   useEffect(() => {
-    let isMounted = true;
+    void refreshNotifications();
+  }, [refreshNotifications]);
 
-    fetchNotificationRecords()
-      .then((records) => {
-        if (!isMounted) {
-          return;
-        }
-
-        setNotifications(buildBackendNotifications(records));
-      })
-      .catch(() => {
-        if (!isMounted) {
-          return;
-        }
-
-        setNotifications([]);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  useEffect(() => {
+    setNotifications(buildBackendNotifications(backendNotifications));
+  }, [backendNotifications]);
 
   const unreadCount = useMemo(
     () =>
@@ -202,6 +190,7 @@ function resolveNotificationIcon(notification: NotificationRecordView) {
       return notification.deliveryStatus === 'SENT' ? MessageSquare : User;
     case 'PRACTICE_INACTIVITY':
     case 'PAYMENT_REMINDER':
+    case 'INSTRUCTOR_DOCUMENT_EXPIRY':
       return AlertCircle;
     default:
       return CheckCircle;

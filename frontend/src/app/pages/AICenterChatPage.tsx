@@ -116,7 +116,7 @@ export function AICenterChatPage() {
       ...current,
       {
         role: 'user',
-        title: session?.user.displayName ?? 'Администратор',
+        title: session?.user.displayName ?? 'Администрация',
         text: question,
         meta: 'Въпрос към AI върху текущия tenant',
       },

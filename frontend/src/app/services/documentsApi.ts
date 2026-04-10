@@ -107,6 +107,20 @@ export async function runDocumentOcrExtraction(
   });
 }
 
+export async function uploadDocumentFile(file: File, csrfToken: string) {
+  const fileName = encodeURIComponent(file.name);
+  const fileBuffer = await file.arrayBuffer();
+
+  return apiClient.postBinary<{ fileName: string; fileUrl: string }>(
+    `/documents/upload?fileName=${fileName}`,
+    {
+      body: fileBuffer,
+      contentType: file.type || 'application/octet-stream',
+      csrfToken,
+    },
+  );
+}
+
 export async function createDocumentRecord(
   payload: DocumentWritePayload,
   csrfToken: string,

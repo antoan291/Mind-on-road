@@ -15,17 +15,17 @@ interface PageHeaderProps {
 export function PageHeader({ title, description, breadcrumbs, actions }: PageHeaderProps) {
   return (
     <div className="border-b" style={{ borderColor: 'var(--ghost-border)' }}>
-      <div className="px-6 lg:px-8 py-6">
+      <div className="px-4 py-6 sm:px-6 lg:px-8">
         {/* Breadcrumbs */}
         {breadcrumbs && breadcrumbs.length > 0 && (
-          <div className="flex items-center gap-2 mb-3">
+          <div className="mb-3 flex flex-wrap items-center gap-2 overflow-x-auto pb-1">
             {breadcrumbs.map((crumb, index) => (
-              <div key={index} className="flex items-center gap-2">
+              <div key={index} className="flex min-w-0 items-center gap-2">
                 {index > 0 && (
                   <ChevronRight size={14} style={{ color: 'var(--text-dim)' }} />
                 )}
                 <span 
-                  className="text-sm"
+                  className="max-w-full truncate text-sm"
                   style={{ 
                     color: index === breadcrumbs.length - 1 
                       ? 'var(--text-secondary)' 
@@ -40,17 +40,17 @@ export function PageHeader({ title, description, breadcrumbs, actions }: PageHea
         )}
 
         {/* Title and Actions */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1">
             <h1 style={{ color: 'var(--text-primary)' }}>{title}</h1>
             {description && (
-              <p className="text-sm mt-2" style={{ color: 'var(--text-secondary)' }}>
+              <p className="mt-2 max-w-3xl text-sm leading-6" style={{ color: 'var(--text-secondary)' }}>
                 {description}
               </p>
             )}
           </div>
           {actions && (
-            <div className="flex items-center gap-3">
+            <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap lg:w-auto lg:justify-end">
               {actions}
             </div>
           )}

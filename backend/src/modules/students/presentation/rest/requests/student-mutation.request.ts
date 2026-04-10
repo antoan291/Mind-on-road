@@ -16,6 +16,7 @@ export const studentMutationRequestSchema = z.object({
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().min(1).max(100),
   phone: z.string().trim().min(3).max(50),
+  portalPassword: z.string().trim().min(8).max(64).nullable().optional(),
   email: z
     .string()
     .trim()
@@ -38,6 +39,17 @@ export const studentMutationRequestSchema = z.object({
     .optional(),
   parentContactStatus: z.enum(['ENABLED', 'DISABLED']).default('DISABLED'),
   status: z.enum(['ACTIVE', 'PAUSED', 'COMPLETED', 'WITHDRAWN']).default('ACTIVE'),
+  initialPayment: z
+    .object({
+      amount: z.coerce.number().int().min(1).max(10_000_000),
+      paidAmount: z.coerce.number().int().min(0).max(10_000_000),
+      method: z.string().trim().min(1).max(50),
+      status: z.enum(['PAID', 'PARTIAL', 'OVERDUE', 'PENDING', 'CANCELED']).default('PAID'),
+      paidAt: isoDateSchema,
+      note: z.string().trim().max(500).nullable().optional()
+    })
+    .nullable()
+    .optional(),
   enrollment: z.object({
     categoryCode: z.string().trim().min(1).max(10).transform((value) => value.toUpperCase()),
     status: z.enum(['ACTIVE', 'FAILED_EXAM', 'PASSED', 'PAUSED', 'WITHDRAWN']).default('ACTIVE'),
@@ -84,6 +96,25 @@ export const studentMutationRequestSchema = z.object({
       code: z.ZodIssueCode.custom,
       path: ['enrollment', 'previousLicenseCategory'],
       message: 'Previous license category is required for licensed-manual-hours students.'
+    });
+  }
+
+  if (
+    value.initialPayment &&
+    value.initialPayment.paidAmount > value.initialPayment.amount
+  ) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['initialPayment', 'paidAmount'],
+      message: 'Paid amount cannot exceed payment amount.'
+    });
+  }
+
+  if (value.portalPassword !== undefined && value.portalPassword !== null && value.portalPassword.trim().length === 0) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['portalPassword'],
+      message: 'Portal password cannot be empty.'
     });
   }
 });

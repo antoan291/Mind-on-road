@@ -1,9 +1,10 @@
-import type { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma, type PrismaClient } from '@prisma/client';
 
 import type {
   TheoryGroupRecord,
   TheoryGroupsRepository
 } from '../../../domain/repositories/theory-groups.repository';
+import { TheoryGroupDuplicateDaiCodeError } from '../../../domain/theory-groups.errors';
 
 const theoryGroupSelect = {
   id: true,
@@ -74,6 +75,50 @@ export class PrismaTheoryGroupsRepository implements TheoryGroupsRepository {
     });
 
     return groups.map((group) => mapTheoryGroupRow(group));
+  }
+
+  public async createForTenant(params: {
+    tenantId: string;
+    group: {
+      name: string;
+      categoryCode: string;
+      scheduleLabel: string;
+      instructorName: string;
+      daiCode: string;
+      startDate: Date;
+      endDate: Date | null;
+      totalLectures: number;
+      status: 'ACTIVE' | 'COMPLETED' | 'UPCOMING';
+    };
+  }): Promise<TheoryGroupRecord> {
+    try {
+      const createdGroup = await this.prisma.theoryGroupRecord.create({
+        data: {
+          tenantId: params.tenantId,
+          name: params.group.name,
+          categoryCode: params.group.categoryCode,
+          scheduleLabel: params.group.scheduleLabel,
+          instructorName: params.group.instructorName,
+          daiCode: params.group.daiCode,
+          startDate: params.group.startDate,
+          endDate: params.group.endDate,
+          totalLectures: params.group.totalLectures,
+          status: params.group.status
+        },
+        select: theoryGroupSelect
+      });
+
+      return mapTheoryGroupRow(createdGroup);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new TheoryGroupDuplicateDaiCodeError();
+      }
+
+      throw error;
+    }
   }
 
   public async saveLectureAttendance(params: {

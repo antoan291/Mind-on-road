@@ -7,6 +7,10 @@ import {
 } from 'lucide-react';
 import type { StudentOperationalRecord } from '../../content/studentOperations';
 import { fetchStudentOperationalDetail } from '../../services/studentsApi';
+import {
+  fetchPaymentRecords,
+  type PaymentRecordView,
+} from '../../services/paymentsApi';
 
 export function MobileStudentProfile() {
   const navigate = useNavigate();
@@ -15,6 +19,7 @@ export function MobileStudentProfile() {
   const [activeTab, setActiveTab] = useState<'overview' | 'lessons' | 'payments' | 'documents'>('overview');
   const [studentRecord, setStudentRecord] =
     useState<StudentOperationalRecord | null>(null);
+  const [paymentRecords, setPaymentRecords] = useState<PaymentRecordView[]>([]);
   const [studentSourceStatus, setStudentSourceStatus] = useState<'loading' | 'backend' | 'fallback' | 'invalid'>('loading');
 
   useEffect(() => {
@@ -27,13 +32,30 @@ export function MobileStudentProfile() {
     let isMounted = true;
     setStudentSourceStatus('loading');
 
-    fetchStudentOperationalDetail(routeStudentId)
-      .then((record) => {
+    Promise.allSettled([
+      fetchStudentOperationalDetail(routeStudentId),
+      fetchPaymentRecords(),
+    ])
+      .then(([recordResult, paymentsResult]) => {
         if (!isMounted) {
           return;
         }
 
-        setStudentRecord(record);
+        if (recordResult.status !== 'fulfilled') {
+          setStudentRecord(null);
+          setPaymentRecords([]);
+          setStudentSourceStatus('fallback');
+          return;
+        }
+
+        setStudentRecord(recordResult.value);
+        setPaymentRecords(
+          paymentsResult.status === 'fulfilled'
+            ? paymentsResult.value.filter(
+                (payment) => String(payment.studentId) === routeStudentId,
+              )
+            : [],
+        );
         setStudentSourceStatus('backend');
       })
       .catch(() => {
@@ -42,6 +64,7 @@ export function MobileStudentProfile() {
         }
 
         setStudentRecord(null);
+        setPaymentRecords([]);
         setStudentSourceStatus('fallback');
       });
 
@@ -150,14 +173,18 @@ export function MobileStudentProfile() {
     statusLabel: string;
   }> = [];
 
-  const payments: Array<{
-    id: number;
-    date: string;
-    amount: string;
-    type: string;
-    status: string;
-    statusLabel: string;
-  }> = [];
+  const payments = paymentRecords.map((payment) => ({
+    id: payment.id,
+    date: payment.date,
+    amount: `${payment.paidAmount.toFixed(0)} €`,
+    type: payment.paymentReason || 'Плащане',
+    status: payment.paymentStatus,
+    statusLabel: mapMobilePaymentStatusLabel(payment.paymentStatus),
+  }));
+  const remainingAmount = paymentRecords.reduce(
+    (sum, payment) => sum + payment.remainingAmount,
+    0,
+  );
 
   const documents: Array<{
     id: number;
@@ -364,7 +391,7 @@ export function MobileStudentProfile() {
                 Остатък за плащане
               </div>
               <div className="text-3xl font-semibold mb-3" style={{ color: 'var(--status-warning)' }}>
-                0 €
+                {remainingAmount.toFixed(0)} €
               </div>
               <button
                 className="w-full h-12 rounded-xl font-medium transition-all active:scale-95"
@@ -470,6 +497,21 @@ export function MobileStudentProfile() {
       </div>
     </div>
   );
+}
+
+function mapMobilePaymentStatusLabel(status: PaymentRecordView['paymentStatus']) {
+  switch (status) {
+    case 'paid':
+      return 'Платено';
+    case 'partial':
+      return 'Частично';
+    case 'overdue':
+      return 'Просрочено';
+    case 'canceled':
+      return 'Отказано';
+    default:
+      return 'Очаква';
+  }
 }
 
 function TabButton({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {

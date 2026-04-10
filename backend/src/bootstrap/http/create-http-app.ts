@@ -2,8 +2,8 @@ import express = require('express');
 import cookie = require('cookie');
 import cors = require('cors');
 import { createHash } from 'node:crypto';
-import { readdir, readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { extname, resolve } from 'node:path';
 import { z } from 'zod';
 
 import { appConfig } from '../../config/app.config';
@@ -54,6 +54,11 @@ import {
 import { PrismaIdentityAuthRepository } from '../../modules/identity/infrastructure/persistence/prisma/prisma-identity-auth.repository';
 import { changePasswordRequestSchema } from '../../modules/identity/presentation/rest/requests/change-password.request';
 import { loginRequestSchema } from '../../modules/identity/presentation/rest/requests/login.request';
+import {
+  personnelIdParamsSchema,
+  personnelRoleKeys,
+  personnelWriteRequestSchema
+} from '../../modules/identity/presentation/rest/requests/personnel.request';
 import type { LoginResponse } from '../../modules/identity/presentation/rest/responses/login.response';
 import { InvoicesCommandService } from '../../modules/invoicing/application/services/invoices-command.service';
 import { InvoicesQueryService } from '../../modules/invoicing/application/services/invoices-query.service';
@@ -98,17 +103,21 @@ import {
   determinatorSessionRequestSchema,
   determinatorSessionsQuerySchema
 } from '../../modules/students/presentation/rest/requests/determinator-session.request';
+import { studentOcrAutofillQuerySchema } from '../../modules/students/presentation/rest/requests/student-ocr-autofill.request';
 import { studentMutationRequestSchema } from '../../modules/students/presentation/rest/requests/student-mutation.request';
+import { mapOcrDataToStudentAutofillResponse } from '../../modules/students/presentation/rest/responses/student-ocr-autofill.response';
 import { TenantFeatureSettingsService } from '../../modules/settings/application/services/tenant-feature-settings.service';
 import { PrismaTenantFeatureSettingsRepository } from '../../modules/settings/infrastructure/persistence/prisma/prisma-tenant-feature-settings.repository';
 import { tenantFeatureSettingsRequestSchema } from '../../modules/settings/presentation/rest/requests/tenant-feature-settings.request';
 import { TheoryGroupsCommandService } from '../../modules/theory/application/services/theory-groups-command.service';
 import { TheoryGroupsQueryService } from '../../modules/theory/application/services/theory-groups-query.service';
+import { TheoryGroupDuplicateDaiCodeError } from '../../modules/theory/domain/theory-groups.errors';
 import { PrismaTheoryGroupsRepository } from '../../modules/theory/infrastructure/persistence/prisma/prisma-theory-groups.repository';
 import {
   theoryAttendanceSaveParamsSchema,
   theoryAttendanceSaveRequestSchema
 } from '../../modules/theory/presentation/rest/requests/theory-attendance-save.request';
+import { theoryGroupCreateRequestSchema } from '../../modules/theory/presentation/rest/requests/theory-group-create.request';
 import { VehiclesCommandService } from '../../modules/vehicles/application/services/vehicles-command.service';
 import { VehiclesQueryService } from '../../modules/vehicles/application/services/vehicles-query.service';
 import { PrismaVehiclesRepository } from '../../modules/vehicles/infrastructure/persistence/prisma/prisma-vehicles.repository';
@@ -158,15 +167,16 @@ const practicalLessonsQueryService = new PracticalLessonsQueryService(
 const practicalLessonsCommandService = new PracticalLessonsCommandService(
   practicalLessonsRepository
 );
-const notificationsQueryService = new NotificationsQueryService(
-  new PrismaNotificationsRepository(prismaClient),
-  studentsQueryService,
-  practicalLessonsQueryService
-);
 const documentsRepository = new PrismaDocumentsRepository(prismaClient);
 const documentsQueryService = new DocumentsQueryService(documentsRepository);
 const documentsCommandService = new DocumentsCommandService(
   documentsRepository
+);
+const notificationsQueryService = new NotificationsQueryService(
+  new PrismaNotificationsRepository(prismaClient),
+  studentsQueryService,
+  practicalLessonsQueryService,
+  documentsQueryService
 );
 const examApplicationsRepository = new PrismaExamApplicationsRepository(
   prismaClient
@@ -205,13 +215,17 @@ const businessAssistantService = new BusinessAssistantService(
 );
 const rateLimit = rateLimitModule.rateLimit ?? rateLimitModule.default;
 const helmet = helmetModule.default;
+const documentFileUploadQuerySchema = z.object({
+  fileName: z.string().trim().min(1).max(255)
+});
+const localDocumentUploadRoot = resolve(process.cwd(), 'storage', 'uploads');
 const loginRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 5,
+  limit: appConfig.env === 'production' ? 10 : 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    error: 'Too many login attempts. Try again later.'
+    error: 'Твърде много опити за вход. Изчакайте малко и опитайте пак.'
   }
 });
 const changePasswordRateLimiter = rateLimit({
@@ -234,11 +248,11 @@ const aiAssistantRateLimiter = rateLimit({
 });
 const ocrRunRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: appConfig.env === 'production' ? 30 : 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: {
-    error: 'Too many OCR requests. Try again later.'
+    error: 'Твърде много опити за сканиране. Изчакайте малко и опитайте пак.'
   }
 });
 const globalMutationRateLimiter = rateLimit({
@@ -269,9 +283,17 @@ const lessonIdParamsSchema = z.object({
 });
 
 const TENANT_CACHE_TTL_SECONDS = 20;
+const staffRoleKeys = personnelRoleKeys;
+const fullAccessRoleKeys = ['owner', 'developer'] as const;
+const tenantWideAccessRoleKeys = [
+  ...fullAccessRoleKeys,
+  'administration',
+  'accountant'
+] as const;
 
 export function createHttpApp() {
   const app = express();
+  void mkdir(localDocumentUploadRoot, { recursive: true });
 
   if (appConfig.env === 'production' || appConfig.env === 'staging') {
     app.set('trust proxy', 1);
@@ -321,6 +343,7 @@ export function createHttpApp() {
   );
   app.use(express.json({ limit: '16kb' }));
   app.use(express.urlencoded({ extended: false, limit: '16kb' }));
+  app.use('/uploads', express.static(localDocumentUploadRoot));
 
   app.get('/health', (_request, response) => {
     response.json({
@@ -413,7 +436,7 @@ export function createHttpApp() {
   app.put(
     '/settings/features',
     requireAuthenticatedSession,
-    requireOwnerRole,
+    requireDeveloperRole,
     requireCsrfProtection,
     async (request: AuthenticatedRequest, response) => {
       const parsedRequest = tenantFeatureSettingsRequestSchema.safeParse(
@@ -463,6 +486,437 @@ export function createHttpApp() {
   );
 
   app.get(
+    '/personnel',
+    requireAuthenticatedSession,
+    requireAnyRole(['owner', 'developer']),
+    async (request: AuthenticatedRequest, response) => {
+      const items = await prismaClient.tenantMembership.findMany({
+        where: {
+          tenantId: request.auth!.tenantId,
+          status: {
+            in: ['ACTIVE', 'INVITED']
+          },
+          roles: {
+            some: {
+              role: {
+                key: {
+                  in: staffRoleKeys
+                }
+              }
+            }
+          }
+        },
+        orderBy: {
+          user: {
+            displayName: 'asc'
+          }
+        },
+        select: {
+          id: true,
+          status: true,
+          joinedAt: true,
+          invitedAt: true,
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              displayName: true,
+              phone: true,
+              status: true,
+              mustChangePassword: true
+            }
+          },
+          roles: {
+            select: {
+              role: {
+                select: {
+                  key: true,
+                  displayName: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      const assignedStudentsCountByInstructorName =
+        await listAssignedStudentsCountByInstructorName({
+          tenantId: request.auth!.tenantId,
+          instructorNames: items.map((item) => item.user.displayName)
+        });
+
+      response.status(200).json({
+        items: items.map((item) => ({
+          membershipId: item.id,
+          userId: item.user.id,
+          firstName: item.user.firstName,
+          lastName: item.user.lastName,
+          displayName: item.user.displayName,
+          email: item.user.email,
+          phone: item.user.phone,
+          userStatus: item.user.status,
+          membershipStatus: item.status,
+          mustChangePassword: item.user.mustChangePassword,
+          joinedAt:
+            item.joinedAt?.toISOString() ??
+            item.invitedAt.toISOString(),
+          roleKeys: item.roles.map((membershipRole) => membershipRole.role.key),
+          roleLabels: item.roles.map(
+            (membershipRole) => membershipRole.role.displayName
+          ),
+          assignedStudentsCount:
+            assignedStudentsCountByInstructorName.get(item.user.displayName) ?? 0
+        }))
+      });
+    }
+  );
+
+  app.post(
+    '/personnel',
+    requireAuthenticatedSession,
+    requireAnyRole(['owner', 'developer']),
+    requireCsrfProtection,
+    async (request: AuthenticatedRequest, response) => {
+      const parsedRequest = personnelWriteRequestSchema.safeParse(request.body);
+
+      if (!parsedRequest.success) {
+        response.status(400).json({
+          error: 'Invalid personnel payload.',
+          details: parsedRequest.error.flatten()
+        });
+        return;
+      }
+
+      const existingMembership = await prismaClient.tenantMembership.findFirst({
+        where: {
+          tenantId: request.auth!.tenantId,
+          user: {
+            OR: [
+              { email: parsedRequest.data.email },
+              { phone: parsedRequest.data.phone }
+            ]
+          }
+        },
+        select: {
+          id: true,
+          roles: {
+            select: {
+              role: {
+                select: {
+                  key: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (
+        existingMembership?.roles.some(
+          (membershipRole) => membershipRole.role.key === 'owner'
+        )
+      ) {
+        response.status(409).json({
+          error: 'Owner profile cannot be converted to personnel.'
+        });
+        return;
+      }
+
+      if (!parsedRequest.data.password) {
+        response.status(400).json({
+          error: 'Password is required when creating personnel.'
+        });
+        return;
+      }
+
+      let latestProvisionResult: Awaited<
+        ReturnType<typeof identityAuthRepository.provisionTenantPortalIdentity>
+      > | null = null;
+      let membershipId = existingMembership?.id ?? null;
+
+      for (const roleKey of parsedRequest.data.roleKeys) {
+        latestProvisionResult =
+          await identityAuthRepository.provisionTenantPortalIdentity({
+            tenantId: request.auth!.tenantId,
+            roleKey,
+            firstName: parsedRequest.data.firstName,
+            lastName: parsedRequest.data.lastName,
+            displayName: `${parsedRequest.data.firstName} ${parsedRequest.data.lastName}`,
+            phone: parsedRequest.data.phone,
+            email: parsedRequest.data.email,
+            password: parsedRequest.data.password,
+            existingMembershipId: membershipId
+          });
+        membershipId = latestProvisionResult.membershipId;
+      }
+
+      if (!membershipId || !latestProvisionResult) {
+        response.status(500).json({
+          error: 'Personnel provisioning failed.'
+        });
+        return;
+      }
+
+      await syncPersonnelRoles({
+        membershipId,
+        tenantId: request.auth!.tenantId,
+        roleKeys: parsedRequest.data.roleKeys
+      });
+
+      const staffRecord = await findPersonnelByMembershipId({
+        tenantId: request.auth!.tenantId,
+        membershipId
+      });
+
+      await recordMutationAudit(request, 'personnel.create', {
+        membershipId,
+        roleKeys: parsedRequest.data.roleKeys
+      });
+
+      response.status(201).json({
+        item: staffRecord,
+        portalAccess: {
+          loginIdentifier: latestProvisionResult.loginIdentifier,
+          temporaryPassword: latestProvisionResult.temporaryPassword,
+          status: latestProvisionResult.status
+        }
+      });
+    }
+  );
+
+  app.put(
+    '/personnel/:membershipId',
+    requireAuthenticatedSession,
+    requireAnyRole(['owner', 'developer']),
+    requireCsrfProtection,
+    async (request: AuthenticatedRequest, response) => {
+      const parsedParams = personnelIdParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        response.status(400).json({
+          error: 'Invalid personnel id.'
+        });
+        return;
+      }
+
+      const parsedRequest = personnelWriteRequestSchema.safeParse(request.body);
+
+      if (!parsedRequest.success) {
+        response.status(400).json({
+          error: 'Invalid personnel payload.',
+          details: parsedRequest.error.flatten()
+        });
+        return;
+      }
+
+      const targetMembership = await prismaClient.tenantMembership.findFirst({
+        where: {
+          id: parsedParams.data.membershipId,
+          tenantId: request.auth!.tenantId
+        },
+        select: {
+          id: true,
+          roles: {
+            select: {
+              role: {
+                select: {
+                  key: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!targetMembership) {
+        response.status(404).json({
+          error: 'Personnel member not found.'
+        });
+        return;
+      }
+
+      if (
+        targetMembership.roles.some(
+          (membershipRole) => membershipRole.role.key === 'owner'
+        )
+      ) {
+        response.status(403).json({
+          error: 'Owner profile cannot be edited from personnel.'
+        });
+        return;
+      }
+
+      if (parsedRequest.data.password) {
+        response.status(400).json({
+          error: 'Паролата се сменя от самия служител след вход.'
+        });
+        return;
+      }
+
+      let latestProvisionResult: Awaited<
+        ReturnType<typeof identityAuthRepository.provisionTenantPortalIdentity>
+      > | null = null;
+
+      for (const roleKey of parsedRequest.data.roleKeys) {
+        latestProvisionResult =
+          await identityAuthRepository.provisionTenantPortalIdentity({
+            tenantId: request.auth!.tenantId,
+            roleKey,
+            firstName: parsedRequest.data.firstName,
+            lastName: parsedRequest.data.lastName,
+            displayName: `${parsedRequest.data.firstName} ${parsedRequest.data.lastName}`,
+            phone: parsedRequest.data.phone,
+            email: parsedRequest.data.email,
+            existingMembershipId: targetMembership.id
+          });
+      }
+
+      await syncPersonnelRoles({
+        membershipId: targetMembership.id,
+        tenantId: request.auth!.tenantId,
+        roleKeys: parsedRequest.data.roleKeys
+      });
+
+      const staffRecord = await findPersonnelByMembershipId({
+        tenantId: request.auth!.tenantId,
+        membershipId: targetMembership.id
+      });
+
+      await recordMutationAudit(request, 'personnel.update', {
+        membershipId: targetMembership.id,
+        roleKeys: parsedRequest.data.roleKeys
+      });
+
+      response.status(200).json({
+        item: staffRecord,
+        portalAccess: latestProvisionResult
+          ? {
+              loginIdentifier: latestProvisionResult.loginIdentifier,
+              temporaryPassword: latestProvisionResult.temporaryPassword,
+              status: latestProvisionResult.status
+            }
+          : null
+      });
+    }
+  );
+
+  app.delete(
+    '/personnel/:membershipId',
+    requireAuthenticatedSession,
+    requireAnyRole(['owner', 'developer']),
+    requireCsrfProtection,
+    async (request: AuthenticatedRequest, response) => {
+      const parsedParams = personnelIdParamsSchema.safeParse(request.params);
+      if (!parsedParams.success) {
+        response.status(400).json({
+          error: 'Invalid personnel id.'
+        });
+        return;
+      }
+
+      const targetMembership = await prismaClient.tenantMembership.findFirst({
+        where: {
+          id: parsedParams.data.membershipId,
+          tenantId: request.auth!.tenantId,
+          roles: {
+            some: {
+              role: {
+                key: {
+                  in: staffRoleKeys
+                }
+              }
+            }
+          }
+        },
+        select: {
+          id: true,
+          userId: true,
+          user: {
+            select: {
+              email: true
+            }
+          },
+          roles: {
+            select: {
+              role: {
+                select: {
+                  key: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!targetMembership) {
+        response.status(404).json({
+          error: 'Personnel member not found.'
+        });
+        return;
+      }
+
+      if (
+        targetMembership.roles.some((membershipRole) =>
+          fullAccessRoleKeys.includes(
+            membershipRole.role.key as (typeof fullAccessRoleKeys)[number]
+          )
+        )
+      ) {
+        response.status(403).json({
+          error: 'Owner or developer profile cannot be deleted from personnel.'
+        });
+        return;
+      }
+
+      const otherMembershipsCount = await prismaClient.tenantMembership.count({
+        where: {
+          userId: targetMembership.userId,
+          id: {
+            not: targetMembership.id
+          }
+        }
+      });
+
+      await prismaClient.$transaction(async (tx) => {
+        await tx.userSession.updateMany({
+          where: {
+            tenantMembershipId: targetMembership.id,
+            status: 'ACTIVE'
+          },
+          data: {
+            status: 'REVOKED',
+            revokedAt: new Date()
+          }
+        });
+
+        await tx.tenantMembership.delete({
+          where: {
+            id: targetMembership.id
+          }
+        });
+
+        if (otherMembershipsCount === 0) {
+          await tx.user.delete({
+            where: {
+              id: targetMembership.userId
+            }
+          });
+        }
+      });
+
+      await recordMutationAudit(request, 'personnel.delete', {
+        membershipId: targetMembership.id,
+        deletedUserId: targetMembership.userId,
+        deletedEmail: targetMembership.user.email,
+        removedLoginAccess: otherMembershipsCount === 0
+      });
+
+      response.status(204).send();
+    }
+  );
+
+  app.get(
     '/students',
     requireAuthenticatedSession,
     requirePermission('students.read'),
@@ -493,6 +947,73 @@ export function createHttpApp() {
 
       response.status(200).json({
         items
+      });
+    }
+  );
+
+  app.get(
+    '/students/instructor-options',
+    requireAuthenticatedSession,
+    requireAnyRole(['owner', 'developer', 'administration']),
+    async (request: AuthenticatedRequest, response) => {
+      const items = await prismaClient.tenantMembership.findMany({
+        where: {
+          tenantId: request.auth!.tenantId,
+          status: {
+            in: ['ACTIVE', 'INVITED']
+          },
+          roles: {
+            some: {
+              role: {
+                key: {
+                  in: ['instructor', 'simulator_instructor']
+                }
+              }
+            }
+          }
+        },
+        orderBy: {
+          user: {
+            displayName: 'asc'
+          }
+        },
+        select: {
+          id: true,
+          user: {
+            select: {
+              displayName: true
+            }
+          },
+          roles: {
+            select: {
+              role: {
+                select: {
+                  key: true,
+                  displayName: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      const assignedStudentsCountByInstructorName =
+        await listAssignedStudentsCountByInstructorName({
+          tenantId: request.auth!.tenantId,
+          instructorNames: items.map((item) => item.user.displayName)
+        });
+
+      response.status(200).json({
+        items: items.map((item) => ({
+          membershipId: item.id,
+          displayName: item.user.displayName,
+          roleKeys: item.roles.map((membershipRole) => membershipRole.role.key),
+          roleLabels: item.roles.map(
+            (membershipRole) => membershipRole.role.displayName
+          ),
+          assignedStudentsCount:
+            assignedStudentsCountByInstructorName.get(item.user.displayName) ?? 0
+        }))
       });
     }
   );
@@ -530,6 +1051,62 @@ export function createHttpApp() {
   );
 
   app.post(
+    '/students/ocr-autofill',
+    requireAuthenticatedSession,
+    requirePermission('students.create'),
+    ocrRunRateLimiter,
+    requireCsrfProtection,
+    express.raw({
+      type: ['application/pdf', 'application/octet-stream', 'image/*'],
+      limit: '10mb'
+    }),
+    async (request: AuthenticatedRequest, response) => {
+      const parsedQuery = studentOcrAutofillQuerySchema.safeParse(request.query);
+
+      if (!parsedQuery.success) {
+        response.status(400).json({
+          error: 'Invalid OCR upload query.',
+          details: parsedQuery.error.flatten()
+        });
+        return;
+      }
+
+      if (!Buffer.isBuffer(request.body) || request.body.length === 0) {
+        response.status(400).json({
+          error: 'OCR upload body is required.'
+        });
+        return;
+      }
+
+      try {
+        const extraction = await runDocumentOcrUploadExtraction({
+          fileName: parsedQuery.data.fileName,
+          fileBuffer: request.body
+        });
+        const autofill = mapOcrDataToStudentAutofillResponse(extraction.data);
+
+        await recordMutationAudit(request, 'students.ocr_autofill', {
+          sourceFileName: parsedQuery.data.fileName,
+          documentType: autofill.documentType,
+          documentNumber: autofill.documentNumber,
+          manualReviewRequired: autofill.manualReviewRequired
+        });
+
+        response.status(200).json(autofill);
+      } catch (error) {
+        const statusCode = mapOcrWorkerErrorStatusCode(error);
+
+        response.status(statusCode).json({
+          error:
+            statusCode === 400
+              ? 'The provided file is invalid for OCR processing.'
+              : 'OCR processing failed. Please try again later.'
+        });
+      }
+    }
+  );
+
+  app.post(
     '/students',
     requireAuthenticatedSession,
     requirePermission('students.create'),
@@ -545,17 +1122,26 @@ export function createHttpApp() {
         return;
       }
 
+      if (!parsedRequest.data.portalPassword) {
+        response.status(400).json({
+          error: 'Паролата за portal профила е задължителна при създаване на курсист.'
+        });
+        return;
+      }
+
       try {
         const student = await studentsCommandService.createStudent({
           tenantId: request.auth!.tenantId,
-          student: toStudentWriteInput(parsedRequest.data)
+          student: toStudentWriteInput(parsedRequest.data),
+          portalPassword: parsedRequest.data.portalPassword
         });
 
         await recordMutationAudit(request, 'students.create', {
           studentId: student.id,
           studentName: student.name,
           categoryCode: student.enrollment?.categoryCode ?? null,
-          portalAccessStatus: student.portalAccess?.status ?? null
+          portalAccessStatus: student.portalAccess?.status ?? null,
+          initialPaymentAmount: parsedRequest.data.initialPayment?.amount ?? null
         });
         await deleteTenantReadCaches(request.auth!.tenantId);
 
@@ -596,6 +1182,13 @@ export function createHttpApp() {
         response.status(400).json({
           error: 'Invalid student payload.',
           details: parsedRequest.error.flatten()
+        });
+        return;
+      }
+
+      if (parsedRequest.data.portalPassword) {
+        response.status(400).json({
+          error: 'Паролата се сменя от самия курсист след вход.'
         });
         return;
       }
@@ -653,7 +1246,7 @@ export function createHttpApp() {
   app.delete(
     '/students/:studentId',
     requireAuthenticatedSession,
-    requireAnyRole(['owner', 'admin']),
+    requireAnyRole(['owner', 'developer', 'administration']),
     requireCsrfProtection,
     async (request: AuthenticatedRequest, response) => {
       const parsedParams = studentIdParamsSchema.safeParse(request.params);
@@ -689,7 +1282,7 @@ export function createHttpApp() {
   app.get(
     '/determinator/sessions',
     requireAuthenticatedSession,
-    requirePermission('students.read'),
+    requireAnyRole(['owner', 'developer', 'administration']),
     async (request: AuthenticatedRequest, response) => {
       const parsedQuery = determinatorSessionsQuerySchema.safeParse(
         request.query
@@ -914,7 +1507,7 @@ export function createHttpApp() {
   app.delete(
     '/payments/:paymentId',
     requireAuthenticatedSession,
-    requireAnyRole(['owner', 'admin']),
+    requireAnyRole(['owner', 'developer', 'administration']),
     requireCsrfProtection,
     async (request: AuthenticatedRequest, response) => {
       const parsedParams = paymentIdParamsSchema.safeParse(request.params);
@@ -1029,7 +1622,7 @@ export function createHttpApp() {
   app.delete(
     '/expenses/:expenseId',
     requireAuthenticatedSession,
-    requireAnyRole(['owner', 'admin']),
+    requireAnyRole(['owner', 'developer', 'administration']),
     requireCsrfProtection,
     async (request: AuthenticatedRequest, response) => {
       const parsedParams = expenseIdParamsSchema.safeParse(request.params);
@@ -1094,6 +1687,53 @@ export function createHttpApp() {
       response.status(200).json({
         items
       });
+    }
+  );
+
+  app.post(
+    '/theory/groups',
+    requireAuthenticatedSession,
+    requireCsrfProtection,
+    requirePermission('scheduling.manage'),
+    async (request: AuthenticatedRequest, response) => {
+      const parsedRequest = theoryGroupCreateRequestSchema.safeParse(request.body);
+
+      if (!parsedRequest.success) {
+        response.status(400).json({
+          error: 'Invalid theory group payload.',
+          issues: parsedRequest.error.flatten()
+        });
+        return;
+      }
+
+      try {
+        const group = await theoryGroupsCommandService.createGroup({
+          tenantId: request.auth!.tenantId,
+          group: {
+            ...parsedRequest.data,
+            endDate: parsedRequest.data.endDate ?? null
+          }
+        });
+
+        await recordMutationAudit(request, 'theory.groups.create', {
+          theoryGroupId: group.id,
+          daiCode: group.daiCode
+        });
+        await deleteTenantReadCaches(request.auth!.tenantId);
+
+        response.status(201).json({
+          item: group
+        });
+      } catch (error) {
+        if (error instanceof TheoryGroupDuplicateDaiCodeError) {
+          response.status(409).json({
+            error: 'Вече има теоретична група с този ДАИ код.'
+          });
+          return;
+        }
+
+        throw error;
+      }
     }
   );
 
@@ -1711,6 +2351,58 @@ export function createHttpApp() {
   );
 
   app.post(
+    '/documents/upload',
+    requireAuthenticatedSession,
+    requirePermission('documents.manage'),
+    requireCsrfProtection,
+    express.raw({
+      type: ['application/pdf', 'application/octet-stream', 'image/*'],
+      limit: '15mb'
+    }),
+    async (request: AuthenticatedRequest, response) => {
+      const parsedQuery = documentFileUploadQuerySchema.safeParse(request.query);
+
+      if (!parsedQuery.success) {
+        response.status(400).json({
+          error: 'Invalid document upload query.',
+          details: parsedQuery.error.flatten()
+        });
+        return;
+      }
+
+      if (!Buffer.isBuffer(request.body) || request.body.length === 0) {
+        response.status(400).json({
+          error: 'Document file body is required.'
+        });
+        return;
+      }
+
+      const originalFileName = parsedQuery.data.fileName.trim();
+      const fileExt = extname(originalFileName).toLowerCase() || '.bin';
+      const safeBaseName = originalFileName
+        .replace(/\.[^.]+$/, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 80) || 'document';
+      const contentHash = createHash('sha256')
+        .update(request.body)
+        .digest('hex')
+        .slice(0, 16);
+      const relativePath = `documents/${request.auth!.tenantId}/${Date.now()}-${contentHash}-${safeBaseName}${fileExt}`;
+      const absolutePath = resolve(localDocumentUploadRoot, relativePath);
+
+      await mkdir(resolve(absolutePath, '..'), { recursive: true });
+      await writeFile(absolutePath, request.body);
+
+      response.status(201).json({
+        fileName: originalFileName,
+        fileUrl: `/uploads/${relativePath}`
+      });
+    }
+  );
+
+  app.post(
     '/documents/ocr-extractions/run',
     requireAuthenticatedSession,
     requirePermission('documents.manage'),
@@ -1890,7 +2582,7 @@ export function createHttpApp() {
   app.delete(
     '/documents/:documentId',
     requireAuthenticatedSession,
-    requireAnyRole(['owner', 'admin']),
+    requireAnyRole(['owner', 'developer', 'administration']),
     requireCsrfProtection,
     async (request: AuthenticatedRequest, response) => {
       const parsedParams = documentIdParamsSchema.safeParse(request.params);
@@ -2274,7 +2966,7 @@ export function createHttpApp() {
   app.delete(
     '/invoices/:invoiceId',
     requireAuthenticatedSession,
-    requireAnyRole(['owner', 'admin']),
+    requireAnyRole(['owner', 'developer', 'administration']),
     requireCsrfProtection,
     async (request: AuthenticatedRequest, response) => {
       const parsedParams = invoiceIdParamsSchema.safeParse(request.params);
@@ -2448,7 +3140,7 @@ export function createHttpApp() {
   app.post(
     '/ai/business-assistant',
     requireAuthenticatedSession,
-    requirePermission('reports.read'),
+    requireAnyRole(['owner', 'developer']),
     aiAssistantRateLimiter,
     requireCsrfProtection,
     async (request: AuthenticatedRequest, response) => {
@@ -2520,7 +3212,7 @@ export function createHttpApp() {
   app.post(
     '/determinator/sessions',
     requireAuthenticatedSession,
-    requirePermission('students.manage_register'),
+    requireAnyRole(['owner', 'developer', 'administration']),
     requireCsrfProtection,
     async (request: AuthenticatedRequest, response) => {
       const parsedRequest = determinatorSessionRequestSchema.safeParse(
@@ -2670,6 +3362,126 @@ export function createHttpApp() {
   return app;
 }
 
+async function findPersonnelByMembershipId(params: {
+  tenantId: string;
+  membershipId: string;
+}) {
+  const item = await prismaClient.tenantMembership.findFirstOrThrow({
+    where: {
+      id: params.membershipId,
+      tenantId: params.tenantId
+    },
+    select: {
+      id: true,
+      status: true,
+      joinedAt: true,
+      invitedAt: true,
+      user: {
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          displayName: true,
+          phone: true,
+          status: true,
+          mustChangePassword: true
+        }
+      },
+      roles: {
+        where: {
+          role: {
+            key: {
+              in: staffRoleKeys
+            }
+          }
+        },
+        select: {
+          role: {
+            select: {
+              key: true,
+              displayName: true
+            }
+          }
+        }
+      }
+    }
+  });
+
+  const assignedStudentsCount = await prismaClient.studentEnrollment.count({
+    where: {
+      tenantId: params.tenantId,
+      assignedInstructorName: item.user.displayName
+    }
+  });
+
+  return {
+    membershipId: item.id,
+    userId: item.user.id,
+    firstName: item.user.firstName,
+    lastName: item.user.lastName,
+    displayName: item.user.displayName,
+    email: item.user.email,
+    phone: item.user.phone,
+    userStatus: item.user.status,
+    membershipStatus: item.status,
+    mustChangePassword: item.user.mustChangePassword,
+    joinedAt: item.joinedAt?.toISOString() ?? item.invitedAt.toISOString(),
+    roleKeys: item.roles.map((membershipRole) => membershipRole.role.key),
+    roleLabels: item.roles.map((membershipRole) => membershipRole.role.displayName),
+    assignedStudentsCount
+  };
+}
+
+async function syncPersonnelRoles(params: {
+  tenantId: string;
+  membershipId: string;
+  roleKeys: string[];
+}) {
+  await prismaClient.membershipRole.deleteMany({
+    where: {
+      membershipId: params.membershipId,
+      role: {
+        tenantId: params.tenantId,
+        key: {
+          in: staffRoleKeys.filter((roleKey) => !params.roleKeys.includes(roleKey))
+        }
+      }
+    }
+  });
+}
+
+async function listAssignedStudentsCountByInstructorName(params: {
+  tenantId: string;
+  instructorNames: string[];
+}) {
+  if (params.instructorNames.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const rows = await prismaClient.studentEnrollment.groupBy({
+    by: ['assignedInstructorName'],
+    where: {
+      tenantId: params.tenantId,
+      assignedInstructorName: {
+        in: params.instructorNames
+      }
+    },
+    _count: {
+      assignedInstructorName: true
+    }
+  });
+
+  return new Map(
+    rows
+      .filter(
+        (row): row is typeof rows[number] & { assignedInstructorName: string } =>
+          row.assignedInstructorName !== null
+      )
+      .map((row) => [row.assignedInstructorName, row._count.assignedInstructorName])
+  );
+}
+
 function toStudentWriteInput(
   studentRequest: z.infer<typeof studentMutationRequestSchema>
 ): StudentWriteInput {
@@ -2716,7 +3528,17 @@ function toStudentWriteInput(
         ? new Date(studentRequest.enrollment.lastPracticeAt)
         : null,
       notes: studentRequest.enrollment.notes ?? null
-    }
+    },
+    initialPayment: studentRequest.initialPayment
+      ? {
+          amount: studentRequest.initialPayment.amount,
+          paidAmount: studentRequest.initialPayment.paidAmount,
+          method: studentRequest.initialPayment.method,
+          status: studentRequest.initialPayment.status,
+          paidAt: new Date(`${studentRequest.initialPayment.paidAt}T00:00:00.000Z`),
+          note: studentRequest.initialPayment.note ?? null
+        }
+      : null
   };
 }
 
@@ -2752,9 +3574,7 @@ async function resolveReadAccessScope(
   const roleKeys = new Set(auth.user.roleKeys);
 
   if (
-    roleKeys.has('owner') ||
-    roleKeys.has('admin') ||
-    roleKeys.has('accountant')
+    tenantWideAccessRoleKeys.some((roleKey) => roleKeys.has(roleKey))
   ) {
     return {
       mode: 'tenant',
@@ -2768,7 +3588,7 @@ async function resolveReadAccessScope(
     tenantId: auth.tenantId
   });
 
-  if (roleKeys.has('instructor')) {
+  if (roleKeys.has('instructor') || roleKeys.has('simulator_instructor')) {
     const instructorName = auth.user.displayName;
 
     return {
@@ -2959,10 +3779,29 @@ function filterVehiclesForScope<
 }
 
 function filterNotificationsForScope<
-  TItem extends { studentId: string | null }
+  TItem extends {
+    studentId: string | null;
+    metadata?: Record<string, unknown> | null;
+  }
 >(items: TItem[], accessScope: ReadAccessScope) {
   if (accessScope.mode === 'tenant') {
     return items;
+  }
+
+  if (accessScope.mode === 'instructor') {
+    return items.filter((item) => {
+      if (item.studentId && accessScope.studentIds.has(item.studentId)) {
+        return true;
+      }
+
+      const metadata =
+        item.metadata && typeof item.metadata === 'object' ? item.metadata : null;
+
+      return (
+        metadata?.ownerType === 'INSTRUCTOR' &&
+        metadata?.ownerName === accessScope.instructorName
+      );
+    });
   }
 
   return items.filter(
@@ -3120,6 +3959,54 @@ async function runDocumentOcrExtraction(sourceFileName: string) {
   };
 }
 
+async function runDocumentOcrUploadExtraction(params: {
+  fileName: string;
+  fileBuffer: Buffer;
+}) {
+  const formData = new FormData();
+  formData.set(
+    'file',
+    new Blob([params.fileBuffer]),
+    params.fileName
+  );
+
+  const workerResponse = await fetch(
+    `${appConfig.documentOcrWorkerUrl.replace(/\/$/, '')}/ocr/extract-upload`,
+    {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json'
+      },
+      body: formData
+    }
+  );
+
+  const responseBody = (await workerResponse.json().catch(() => null)) as {
+    fileName?: string;
+    outputFileName?: string;
+    data?: Record<string, unknown>;
+    detail?: string;
+  } | null;
+
+  if (!workerResponse.ok) {
+    const message =
+      typeof responseBody?.detail === 'string'
+        ? responseBody.detail
+        : `OCR worker failed with status ${workerResponse.status}.`;
+
+    const error = new Error(message);
+    error.name = `OcrWorkerHttp${workerResponse.status}`;
+    throw error;
+  }
+
+  return {
+    fileName: responseBody?.fileName ?? params.fileName,
+    outputFileName:
+      responseBody?.outputFileName ?? `${params.fileName}.json`,
+    data: responseBody?.data ?? {}
+  };
+}
+
 function extractOcrField(
   data: Record<string, unknown>,
   key: string
@@ -3241,13 +4128,41 @@ function requireOwnerRole(
 ) {
   const roleKeys = request.auth?.user.roleKeys ?? [];
 
-  if (!roleKeys.includes('owner')) {
+  if (!fullAccessRoleKeys.some((roleKey) => roleKeys.includes(roleKey))) {
     void authAuditService.record({
       tenantId: request.auth?.tenantId,
       userId: request.auth?.user.id,
       sessionId: request.auth?.sessionId,
       actorType: 'USER',
       actionKey: 'authz.owner_role_denied',
+      outcome: 'FAILURE',
+      ipAddress: request.ip,
+      userAgent: request.get('user-agent') ?? undefined,
+      metadata: { path: request.path }
+    });
+    response.status(403).json({
+      error: 'Forbidden.'
+    });
+    return;
+  }
+
+  next();
+}
+
+function requireDeveloperRole(
+  request: AuthenticatedRequest,
+  response: express.Response,
+  next: express.NextFunction
+) {
+  const roleKeys = request.auth?.user.roleKeys ?? [];
+
+  if (!roleKeys.includes('developer')) {
+    void authAuditService.record({
+      tenantId: request.auth?.tenantId,
+      userId: request.auth?.user.id,
+      sessionId: request.auth?.sessionId,
+      actorType: 'USER',
+      actionKey: 'authz.developer_role_denied',
       outcome: 'FAILURE',
       ipAddress: request.ip,
       userAgent: request.get('user-agent') ?? undefined,

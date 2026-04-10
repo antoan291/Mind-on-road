@@ -34,9 +34,17 @@ import {
 } from "../content/studentOperations";
 import { useAuthSession } from "../services/authSession";
 import {
+  hasDeterminatorAccessRole,
+  hasFullAccessRole,
+} from "../services/roleUtils";
+import {
   deleteStudentRecord,
   fetchStudentOperationalDetail,
 } from "../services/studentsApi";
+import {
+  fetchPaymentRecords,
+  type PaymentRecordView,
+} from "../services/paymentsApi";
 
 export function StudentDetailPage() {
   const { id } = useParams();
@@ -45,6 +53,7 @@ export function StudentDetailPage() {
   const routeStudentId = id ?? "";
   const [studentRecord, setStudentRecord] =
     useState<StudentOperationalRecord | null>(null);
+  const [paymentRecords, setPaymentRecords] = useState<PaymentRecordView[]>([]);
   const [studentSourceStatus, setStudentSourceStatus] = useState<
     "loading" | "backend" | "invalid" | "fallback"
   >("loading");
@@ -53,8 +62,11 @@ export function StudentDetailPage() {
     "Няма изпратен отчет",
   );
   const canDeleteStudent = Boolean(
-    session?.user.roleKeys.includes("owner") ||
-      session?.user.roleKeys.includes("admin"),
+    hasFullAccessRole(session?.user.roleKeys ?? []) ||
+      session?.user.roleKeys.includes("administration"),
+  );
+  const canAccessDeterminator = hasDeterminatorAccessRole(
+    session?.user.roleKeys ?? [],
   );
 
   useEffect(() => {
@@ -70,14 +82,32 @@ export function StudentDetailPage() {
     let isMounted = true;
     setStudentSourceStatus("loading");
 
-    fetchStudentOperationalDetail(routeStudentId)
-      .then((record) => {
+    Promise.allSettled([
+      fetchStudentOperationalDetail(routeStudentId),
+      fetchPaymentRecords(),
+    ])
+      .then(([recordResult, paymentsResult]) => {
         if (!isMounted) {
           return;
         }
 
-        setStudentRecord(record);
-        setParentReportStatus(record.latestParentFeedbackStatus);
+        if (recordResult.status !== "fulfilled") {
+          setStudentRecord(null);
+          setPaymentRecords([]);
+          setParentReportStatus("Няма изпратен отчет");
+          setStudentSourceStatus("fallback");
+          return;
+        }
+
+        setStudentRecord(recordResult.value);
+        setPaymentRecords(
+          paymentsResult.status === "fulfilled"
+            ? paymentsResult.value.filter(
+                (payment) => String(payment.studentId) === routeStudentId,
+              )
+            : [],
+        );
+        setParentReportStatus(recordResult.value.latestParentFeedbackStatus);
         setStudentSourceStatus("backend");
       })
       .catch(() => {
@@ -86,6 +116,7 @@ export function StudentDetailPage() {
         }
 
         setStudentRecord(null);
+        setPaymentRecords([]);
         setParentReportStatus("Няма изпратен отчет");
         setStudentSourceStatus("fallback");
       });
@@ -162,7 +193,7 @@ export function StudentDetailPage() {
     practicalCompletedAt: studentRecord.practicalCompletedAt || "Няма",
     practicalExamAt: studentRecord.practicalExamAt || "Няма",
     extraHours: studentRecord.extraHours,
-    paidLessons: studentRecord.maxTrainingHours,
+    totalLessons: studentRecord.maxTrainingHours,
     usedLessons: studentRecord.used,
     remainingLessons: studentRecord.remaining,
     progress: studentRecord.progress,
@@ -200,16 +231,24 @@ export function StudentDetailPage() {
     parentFeedbackEnabled: studentRecord.parentFeedbackEnabled,
   };
 
-  const payments: Array<{
-    id: number;
-    date: string;
-    type: string;
-    amount: string;
-    method: string;
-    status: string;
-    statusLabel: string;
-    invoiceNumber: string;
-  }> = [];
+  const payments = paymentRecords.map((payment) => ({
+    id: payment.id,
+    date: payment.date,
+    type: payment.paymentReason || "Плащане",
+    amount: `${payment.paidAmount.toFixed(0)} €`,
+    method: payment.paymentMethod,
+    status: payment.paymentStatus,
+    statusLabel: mapPaymentStatusLabel(payment.paymentStatus),
+    invoiceNumber: payment.invoiceNumber || "Няма",
+  }));
+  const paidAmountTotal = paymentRecords.reduce(
+    (sum, payment) => sum + payment.paidAmount,
+    0,
+  );
+  const remainingAmountTotal = paymentRecords.reduce(
+    (sum, payment) => sum + payment.remainingAmount,
+    0,
+  );
 
   const lessons: Array<{
     id: number;
@@ -253,7 +292,7 @@ export function StudentDetailPage() {
             id: 100,
             type: "practice",
             title: "Над 30 дни без практика",
-            message: `Последен час: ${student.lastPracticeDate}. Нужно е админът или инструкторът да се свърже с курсиста.`,
+            message: `Последен час: ${student.lastPracticeDate}. Нужно е служител от администрация или инструкторът да се свърже с курсиста.`,
             date: "03.04.2026",
             status: "warning",
           },
@@ -263,7 +302,7 @@ export function StudentDetailPage() {
       ? [
           {
             id: 101,
-            type: "admin",
+            type: "administration",
             title: "Напомняне за ранно записване",
             message: `Курсистът трябва да бъде потърсен 10 дни преди датата на идване: ${student.expectedArrivalDate}.`,
             date: "03.04.2026",
@@ -276,7 +315,9 @@ export function StudentDetailPage() {
   const tabs = [
     { id: "overview", label: "Преглед" },
     { id: "lessons", label: "Практика" },
-    { id: "determinator", label: "Детерминатор" },
+    ...(canAccessDeterminator
+      ? [{ id: "determinator", label: "Детерминатор" }]
+      : []),
     { id: "payments", label: "Плащания" },
     { id: "documents", label: "Документи" },
     { id: "notes", label: "Бележки" },
@@ -479,7 +520,7 @@ export function StudentDetailPage() {
                 >
                   Статус
                 </h4>
-                <StatusBadge status={student.status as any} size="medium">
+                <StatusBadge status={mapStudentStatusTone(student.status)} size="medium">
                   {student.statusLabel}
                 </StatusBadge>
                 <div className="mt-3">
@@ -612,12 +653,12 @@ export function StudentDetailPage() {
                 <h3 style={{ color: "var(--text-primary)" }}>Часове</h3>
               </div>
               <div className="p-6">
-                <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <LessonStat
-                    label="Платени"
-                    value={student.paidLessons}
+                    label="Закупени"
+                    value={student.totalLessons}
                     icon={
-                      <DollarSign
+                      <BookOpen
                         size={18}
                         style={{ color: "var(--status-success)" }}
                       />
@@ -660,7 +701,7 @@ export function StudentDetailPage() {
                       className="text-sm font-semibold"
                       style={{ color: "var(--text-primary)" }}
                     >
-                      {student.usedLessons} / {student.paidLessons}
+                      {student.usedLessons} / {student.totalLessons}
                     </span>
                   </div>
                   <div
@@ -670,12 +711,37 @@ export function StudentDetailPage() {
                     <div
                       className="h-full rounded-full"
                       style={{
-                        width: `${student.paidLessons > 0 ? (student.usedLessons / student.paidLessons) * 100 : 0}%`,
+                        width: `${student.totalLessons > 0 ? (student.usedLessons / student.totalLessons) * 100 : 0}%`,
                         background:
                           "linear-gradient(135deg, var(--primary-accent), var(--primary-accent-dim))",
                       }}
                     />
                   </div>
+                </div>
+
+                <div
+                  className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"
+                >
+                  <LessonStat
+                    label="Платено"
+                    value={`${paidAmountTotal.toFixed(0)} €`}
+                    icon={
+                      <DollarSign
+                        size={18}
+                        style={{ color: "var(--status-success)" }}
+                      />
+                    }
+                  />
+                  <LessonStat
+                    label="Остават"
+                    value={`${remainingAmountTotal.toFixed(0)} €`}
+                    icon={
+                      <Clock
+                        size={18}
+                        style={{ color: "var(--text-secondary)" }}
+                      />
+                    }
+                  />
                 </div>
               </div>
             </div>
@@ -937,7 +1003,7 @@ export function StudentDetailPage() {
                         >
                           {lesson.type}
                         </p>
-                        <StatusBadge status={lesson.status as any} size="small">
+                        <StatusBadge status={mapLessonStatusTone(lesson.status)} size="small">
                           {lesson.statusLabel}
                         </StatusBadge>
                       </div>
@@ -997,7 +1063,7 @@ export function StudentDetailPage() {
                     key: "status",
                     label: "Статус",
                     render: (value: string, row: any) => (
-                      <StatusBadge status={value as any} size="small">
+                      <StatusBadge status={mapPaymentStatusTone(value)} size="small">
                         {row.statusLabel}
                       </StatusBadge>
                     ),
@@ -1022,7 +1088,7 @@ export function StudentDetailPage() {
           </div>
         )}
 
-        {activeTab === "determinator" && (
+        {canAccessDeterminator && activeTab === "determinator" && (
           <div className="rounded-xl" style={{ background: "var(--bg-card)" }}>
             <div
               className="p-6 border-b"
@@ -1128,7 +1194,7 @@ export function StudentDetailPage() {
                     key: "status",
                     label: "Статус",
                     render: (value: string, row: any) => (
-                      <StatusBadge status={value as any} size="small">
+                      <StatusBadge status={mapDocumentStatusTone(value)} size="small">
                         {row.statusLabel}
                       </StatusBadge>
                     ),
@@ -1190,7 +1256,7 @@ export function StudentDetailPage() {
                             {doc.type}
                           </p>
                         </div>
-                        <StatusBadge status={doc.status as any} size="small">
+                        <StatusBadge status={mapDocumentStatusTone(doc.status)} size="small">
                           {doc.statusLabel}
                         </StatusBadge>
                       </div>
@@ -1365,7 +1431,7 @@ export function StudentDetailPage() {
                   theory: <BookOpen size={20} />,
                   payment: <DollarSign size={20} />,
                   practice: <TriangleAlert size={20} />,
-                  admin: <AlertCircle size={20} />,
+                  administration: <AlertCircle size={20} />,
                 };
 
                 const icon = iconMap[notif.type as keyof typeof iconMap] || (
@@ -1440,7 +1506,7 @@ function LessonStat({
   icon,
 }: {
   label: string;
-  value: number;
+  value: string | number;
   icon: React.ReactNode;
 }) {
   return (
@@ -1457,6 +1523,92 @@ function LessonStat({
       </p>
     </div>
   );
+}
+
+function mapPaymentStatusLabel(status: PaymentRecordView["paymentStatus"]) {
+  switch (status) {
+    case "paid":
+      return "Платено";
+    case "partial":
+      return "Частично";
+    case "overdue":
+      return "Просрочено";
+    case "canceled":
+      return "Отказано";
+    default:
+      return "Изчаква";
+  }
+}
+
+function mapPaymentStatusTone(
+  status: PaymentRecordView["paymentStatus"] | string,
+): "success" | "warning" | "error" | "overdue" | "info" | "neutral" {
+  switch (status) {
+    case "paid":
+      return "success";
+    case "partial":
+      return "warning";
+    case "overdue":
+      return "overdue";
+    case "canceled":
+      return "error";
+    case "pending":
+      return "info";
+    default:
+      return "neutral";
+  }
+}
+
+function mapStudentStatusTone(
+  status: string,
+): "success" | "warning" | "error" | "overdue" | "info" | "neutral" {
+  switch (status) {
+    case "active":
+    case "completed":
+      return "success";
+    case "paused":
+      return "warning";
+    case "withdrawn":
+      return "error";
+    default:
+      return "info";
+  }
+}
+
+function mapLessonStatusTone(
+  status: string,
+): "success" | "warning" | "error" | "overdue" | "info" | "neutral" {
+  switch (status) {
+    case "completed":
+      return "success";
+    case "scheduled":
+    case "in-progress":
+      return "info";
+    case "late":
+      return "warning";
+    case "missed":
+    case "canceled":
+      return "error";
+    default:
+      return "neutral";
+  }
+}
+
+function mapDocumentStatusTone(
+  status: string,
+): "success" | "warning" | "error" | "overdue" | "info" | "neutral" {
+  switch (status) {
+    case "valid":
+      return "success";
+    case "expiring-soon":
+      return "warning";
+    case "expired":
+      return "error";
+    case "missing":
+      return "neutral";
+    default:
+      return "info";
+  }
 }
 
 function InfoRow({

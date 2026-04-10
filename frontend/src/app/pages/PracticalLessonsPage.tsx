@@ -22,6 +22,7 @@ import {
   updatePracticalLessonRecord,
 } from '../services/practicalLessonsApi';
 import { useAuthSession } from '../services/authSession';
+import { hasFullAccessRole } from '../services/roleUtils';
 import {
   type StudentOperationalRecord,
   studentOperationalRecords,
@@ -327,7 +328,7 @@ export function PracticalLessonsPage() {
     session?.user.roleKeys.includes('parent'),
   );
   const canManagePracticalLessons = Boolean(
-    session?.user.roleKeys.includes('owner') ||
+    hasFullAccessRole(session?.user.roleKeys ?? []) ||
       session?.user.permissionKeys.includes('scheduling.manage'),
   );
   const [searchValue, setSearchValue] = useState('');
@@ -939,8 +940,8 @@ export function PracticalLessonsPage() {
       />
 
       {/* Summary Cards */}
-      <div className="px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
+      <div className="px-4 py-6 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
           {/* Today's Lessons */}
           <button
             onClick={() => addFilter('today')}

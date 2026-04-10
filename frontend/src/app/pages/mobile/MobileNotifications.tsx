@@ -12,9 +12,9 @@ import {
   X,
 } from 'lucide-react';
 import {
-  fetchNotificationRecords,
   type NotificationRecordView,
 } from '../../services/notificationsApi';
+import { useNotificationsState } from '../../services/notificationsState';
 
 type MobileOperationalNotification = {
   id: string;
@@ -28,34 +28,22 @@ type MobileOperationalNotification = {
 
 export function MobileNotifications() {
   const navigate = useNavigate();
+  const {
+    notifications: backendNotifications,
+    refreshNotifications,
+  } = useNotificationsState();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [notifications, setNotifications] = useState<
     MobileOperationalNotification[]
   >([]);
 
   useEffect(() => {
-    let isMounted = true;
+    void refreshNotifications();
+  }, [refreshNotifications]);
 
-    fetchNotificationRecords()
-      .then((records) => {
-        if (!isMounted) {
-          return;
-        }
-
-        setNotifications(buildBackendMobileNotifications(records));
-      })
-      .catch(() => {
-        if (!isMounted) {
-          return;
-        }
-
-        setNotifications([]);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  useEffect(() => {
+    setNotifications(buildBackendMobileNotifications(backendNotifications));
+  }, [backendNotifications]);
 
   const filteredNotifications = useMemo(
     () =>
@@ -295,6 +283,7 @@ function resolveNotificationIcon(notification: NotificationRecordView) {
     case 'ARRIVAL_REMINDER':
       return Clock;
     case 'PRACTICE_INACTIVITY':
+    case 'INSTRUCTOR_DOCUMENT_EXPIRY':
       return AlertCircle;
     case 'CATEGORY_B_HOUR_MILESTONE':
       return FileText;

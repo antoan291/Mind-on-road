@@ -13,9 +13,11 @@ import {
 } from 'lucide-react';
 import {
   fetchTheoryGroups,
+  createTheoryGroup,
   saveTheoryLectureAttendance,
 } from '../services/theoryApi';
 import { useAuthSession } from '../services/authSession';
+import { fetchAssignableInstructorOptions } from '../services/studentsApi';
 
 type AttendanceStatus = 'present' | 'absent' | 'excused' | 'late';
 type RecoveryStatus = 'not-required' | 'required' | 'in-progress' | 'completed';
@@ -103,6 +105,21 @@ const getGroupStatusInfo = (status: TheoryGroup['status']) => {
 export function TheoryPage() {
   const { session } = useAuthSession();
   const navigate = useNavigate();
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    categoryCode: 'B',
+    scheduleLabel: '',
+    instructorName: '',
+    daiCode: '',
+    startDate: '',
+    endDate: '',
+    totalLectures: '0',
+  });
+  const [createFormError, setCreateFormError] = useState<string | null>(null);
+  const [isCreateSubmitting, setIsCreateSubmitting] = useState(false);
+  const [instructorOptions, setInstructorOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
   const [searchValue, setSearchValue] = useState('');
   const [activeFilters, setActiveFilters] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -133,29 +150,123 @@ export function TheoryPage() {
   useEffect(() => {
     let isMounted = true;
 
-    fetchTheoryGroups()
-      .then((groups) => {
+    Promise.allSettled([
+      fetchTheoryGroups(),
+      fetchAssignableInstructorOptions(),
+    ])
+      .then(([groupsResult, instructorsResult]) => {
         if (!isMounted) {
           return;
         }
 
-        setTheoryGroups(groups);
-        setSourceStatus('backend');
+        if (groupsResult.status === 'fulfilled') {
+          setTheoryGroups(groupsResult.value);
+          setSourceStatus('backend');
+        } else {
+          setTheoryGroups([]);
+          setSourceStatus('fallback');
+          setActionMessage('Неуспешно зареждане на теория групите от базата.');
+        }
+
+        if (instructorsResult.status === 'fulfilled') {
+          setInstructorOptions(
+            instructorsResult.value.map((instructor) => ({
+              value: instructor.displayName,
+              label: instructor.displayName,
+            })),
+          );
+        } else {
+          setInstructorOptions([]);
+        }
       })
-      .catch(() => {
-        if (!isMounted) {
-          return;
-        }
-
-        setTheoryGroups([]);
-        setSourceStatus('fallback');
-        setActionMessage('Неуспешно зареждане на теория групите от базата.');
-      });
+      .catch(() => undefined);
 
     return () => {
       isMounted = false;
     };
   }, []);
+
+  const resetCreateForm = () => {
+    setCreateForm({
+      name: '',
+      categoryCode: 'B',
+      scheduleLabel: '',
+      instructorName: '',
+      daiCode: '',
+      startDate: '',
+      endDate: '',
+      totalLectures: '0',
+    });
+    setCreateFormError(null);
+  };
+
+  const handleCloseCreateModal = () => {
+    if (isCreateSubmitting) {
+      return;
+    }
+
+    setIsCreateModalOpen(false);
+    resetCreateForm();
+  };
+
+  const handleCreateGroup = async () => {
+    if (!session?.csrfToken) {
+      setCreateFormError('Липсва активна сесия за създаване на теория група.');
+      return;
+    }
+
+    const totalLectures = Number(createForm.totalLectures);
+
+    if (
+      !createForm.name.trim() ||
+      !createForm.scheduleLabel.trim() ||
+      !createForm.instructorName.trim() ||
+      !createForm.daiCode.trim() ||
+      !createForm.startDate
+    ) {
+      setCreateFormError('Попълни всички задължителни полета.');
+      return;
+    }
+
+    if (!Number.isInteger(totalLectures) || totalLectures < 0) {
+      setCreateFormError('Броят лекции трябва да е цяло число 0 или повече.');
+      return;
+    }
+
+    setIsCreateSubmitting(true);
+    setCreateFormError(null);
+
+    try {
+      const createdGroup = await createTheoryGroup(
+        {
+          name: createForm.name.trim(),
+          categoryCode: createForm.categoryCode,
+          scheduleLabel: createForm.scheduleLabel.trim(),
+          instructorName: createForm.instructorName.trim(),
+          daiCode: createForm.daiCode.trim(),
+          startDate: createForm.startDate,
+          endDate: createForm.endDate || undefined,
+          totalLectures,
+        },
+        session.csrfToken,
+      );
+
+      setTheoryGroups((current) => [createdGroup, ...current]);
+      setActionMessage(
+        `Теоретична група ${createdGroup.name} е създадена успешно.`,
+      );
+      setIsCreateModalOpen(false);
+      resetCreateForm();
+    } catch (error) {
+      setCreateFormError(
+        error instanceof Error
+          ? error.message
+          : 'Неуспешно създаване на теория група.',
+      );
+    } finally {
+      setIsCreateSubmitting(false);
+    }
+  };
 
   // Calculate summary statistics
   const filteredGroups = theoryGroups.filter((group) => {
@@ -1241,24 +1352,200 @@ export function TheoryPage() {
       {isCreateModalOpen && (
         <Modal
           isOpen={isCreateModalOpen}
-          onClose={() => setIsCreateModalOpen(false)}
+          onClose={handleCloseCreateModal}
           title="Нова теоретична група"
           maxWidth="2xl"
         >
           <div className="space-y-6 p-6">
-            <div
-              className="rounded-xl p-12 text-center"
-              style={{ background: 'var(--bg-primary)' }}
-            >
-              <p style={{ color: 'var(--text-tertiary)' }}>
-                Форма за създаване на нова група ще бъде добавена
-              </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label
+                  className="mb-2 block text-sm font-medium"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  Име на групата
+                </label>
+                <Input
+                  value={createForm.name}
+                  onChange={(value) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      name: value,
+                    }))
+                  }
+                  placeholder="Например: Теория B - Май 2026"
+                />
+              </div>
+
+              <div>
+                <label
+                  className="mb-2 block text-sm font-medium"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  Категория
+                </label>
+                <Select
+                  value={createForm.categoryCode}
+                  onChange={(value) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      categoryCode: value,
+                    }))
+                  }
+                  options={[
+                    { value: 'A', label: 'Категория A' },
+                    { value: 'B', label: 'Категория B' },
+                    { value: 'C', label: 'Категория C' },
+                    { value: 'C+E', label: 'Категория C+E' },
+                    { value: 'D', label: 'Категория D' },
+                  ]}
+                />
+              </div>
+
+              <div>
+                <label
+                  className="mb-2 block text-sm font-medium"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  ДАИ код
+                </label>
+                <Input
+                  value={createForm.daiCode}
+                  onChange={(value) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      daiCode: value,
+                    }))
+                  }
+                  placeholder="Например: T-001"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label
+                  className="mb-2 block text-sm font-medium"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  График
+                </label>
+                <Input
+                  value={createForm.scheduleLabel}
+                  onChange={(value) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      scheduleLabel: value,
+                    }))
+                  }
+                  placeholder="Например: Понеделник и сряда, 18:00 - 20:00"
+                />
+              </div>
+
+              <div>
+                <label
+                  className="mb-2 block text-sm font-medium"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  Инструктор
+                </label>
+                <Select
+                  value={createForm.instructorName}
+                  onChange={(value) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      instructorName: value,
+                    }))
+                  }
+                  options={
+                    instructorOptions.length > 0
+                      ? instructorOptions
+                      : [{ value: '', label: 'Няма налични инструктори' }]
+                  }
+                  placeholder="Избери инструктор"
+                />
+              </div>
+
+              <div>
+                <label
+                  className="mb-2 block text-sm font-medium"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  Общ брой лекции
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={createForm.totalLectures}
+                  onChange={(value) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      totalLectures: value,
+                    }))
+                  }
+                  placeholder="0"
+                />
+              </div>
+
+              <div>
+                <label
+                  className="mb-2 block text-sm font-medium"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  Начална дата
+                </label>
+                <Input
+                  type="date"
+                  value={createForm.startDate}
+                  onChange={(value) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      startDate: value,
+                    }))
+                  }
+                />
+              </div>
+
+              <div>
+                <label
+                  className="mb-2 block text-sm font-medium"
+                  style={{ color: 'var(--text-primary)' }}
+                >
+                  Крайна дата
+                </label>
+                <Input
+                  type="date"
+                  value={createForm.endDate}
+                  onChange={(value) =>
+                    setCreateForm((current) => ({
+                      ...current,
+                      endDate: value,
+                    }))
+                  }
+                />
+              </div>
             </div>
+
+            {createFormError ? (
+              <div
+                className="rounded-xl px-4 py-3 text-sm"
+                style={{
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  color: 'var(--status-error)',
+                  border: '1px solid rgba(239, 68, 68, 0.18)',
+                }}
+              >
+                {createFormError}
+              </div>
+            ) : null}
+
             <div className="flex gap-3 justify-end">
-              <Button variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
+              <Button variant="secondary" onClick={handleCloseCreateModal}>
                 Отказ
               </Button>
-              <Button variant="primary">
+              <Button
+                variant="primary"
+                onClick={handleCreateGroup}
+                disabled={isCreateSubmitting}
+              >
                 Създай група
               </Button>
             </div>

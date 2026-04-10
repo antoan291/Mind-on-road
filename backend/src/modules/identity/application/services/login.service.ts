@@ -280,9 +280,9 @@ export class SessionService {
 }
 
 function validatePasswordPolicy(password: string) {
-  if (password.length < 15) {
+  if (password.length < 8) {
     throw new PasswordPolicyError(
-      'Password must be at least 15 characters long.'
+      'Password must be at least 8 characters long.'
     );
   }
 

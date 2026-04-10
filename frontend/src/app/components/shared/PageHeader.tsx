@@ -35,7 +35,7 @@ export function PageHeader({
   };
 
   return (
-    <div className="mb-6">
+    <div className="mb-6 px-4 sm:px-6 lg:px-8">
       {backButton && (
         <button
           onClick={() => backPath ? navigate(backPath) : navigate(-1)}
@@ -46,16 +46,16 @@ export function PageHeader({
           Назад
         </button>
       )}
-      
+
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 mb-2">
-            <h1 className="text-2xl font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+        <div className="min-w-0 flex-1">
+          <div className="mb-2 flex items-center gap-3">
+            <h1 className="truncate text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>
               {title}
             </h1>
             {badge && (
               <span
-                className="px-3 py-1 rounded-lg text-sm font-medium whitespace-nowrap"
+                className="whitespace-nowrap rounded-lg px-3 py-1 text-sm font-medium"
                 style={{
                   background: `${getBadgeColor(badge.variant)}15`,
                   color: getBadgeColor(badge.variant),

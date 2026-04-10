@@ -23,6 +23,8 @@ COPY src ./src
 RUN pip install --upgrade pip \
   && pip install .
 
+COPY scripts ./scripts
+
 EXPOSE 8080
 
 CMD ["python", "-m", "document_intelligence.worker"]

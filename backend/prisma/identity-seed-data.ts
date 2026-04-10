@@ -102,14 +102,20 @@ export const permissionSeeds: PermissionSeedDefinition[] = [
 export const roleTemplateSeeds: RoleTemplateSeedDefinition[] = [
   {
     key: 'owner',
-    displayName: 'Owner',
-    description: 'Full tenant access including identity, finance, and audit.',
+    displayName: 'Собственик',
+    description: 'Собственик на школата с пълен tenant достъп.',
     permissionKeys: permissionSeeds.map((permission) => permission.key)
   },
   {
-    key: 'admin',
-    displayName: 'Administrator',
-    description: 'Manage operations, staff, and student data for the tenant.',
+    key: 'developer',
+    displayName: 'Разработчик',
+    description: 'Разработчик с пълен достъп до всички екрани и настройки.',
+    permissionKeys: permissionSeeds.map((permission) => permission.key)
+  },
+  {
+    key: 'administration',
+    displayName: 'Администрация',
+    description: 'Офис екипът на школата с широк оперативен достъп.',
     permissionKeys: [
       'students.read',
       'students.create',
@@ -123,14 +129,27 @@ export const roleTemplateSeeds: RoleTemplateSeedDefinition[] = [
       'documents.read',
       'documents.manage',
       'scheduling.read',
-      'scheduling.manage',
-      'users.manage'
+      'scheduling.manage'
     ]
   },
   {
     key: 'instructor',
-    displayName: 'Instructor',
-    description: 'Manage training progress and operational student records.',
+    displayName: 'Инструктор',
+    description: 'Практически инструктор за работа с курсисти и графици.',
+    permissionKeys: [
+      'students.read',
+      'students.update',
+      'students.manage_register',
+      'documents.read',
+      'vehicles.read',
+      'scheduling.read',
+      'scheduling.manage'
+    ]
+  },
+  {
+    key: 'simulator_instructor',
+    displayName: 'Инструктор симулатор',
+    description: 'Инструктор за работа със симулатор и свързаните графици.',
     permissionKeys: [
       'students.read',
       'students.update',
@@ -143,8 +162,8 @@ export const roleTemplateSeeds: RoleTemplateSeedDefinition[] = [
   },
   {
     key: 'student',
-    displayName: 'Student',
-    description: 'Student portal access limited to own records.',
+    displayName: 'Курсист',
+    description: 'Portal достъп само до собствените записи.',
     permissionKeys: [
       'students.read',
       'payments.read',
@@ -155,8 +174,8 @@ export const roleTemplateSeeds: RoleTemplateSeedDefinition[] = [
   },
   {
     key: 'parent',
-    displayName: 'Parent',
-    description: 'Parent portal access limited to own child lesson history and allowed documents.',
+    displayName: 'Родител',
+    description: 'Portal достъп само до позволените данни на детето.',
     permissionKeys: [
       'students.read',
       'documents.read',
@@ -165,8 +184,8 @@ export const roleTemplateSeeds: RoleTemplateSeedDefinition[] = [
   },
   {
     key: 'accountant',
-    displayName: 'Accountant',
-    description: 'Handle tuition, installments, and reporting visibility.',
+    displayName: 'Счетоводство',
+    description: 'Достъп до плащания, фактури и финансови справки.',
     permissionKeys: [
       'students.read',
       'payments.read',

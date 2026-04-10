@@ -8,6 +8,7 @@
   Wallet,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { DatePickerInput } from '../components/date/DatePickerInput';
 import { Button } from '../components/ui-system/Button';
 import { FilterBar } from '../components/ui-system/FilterBar';
 import { Modal } from '../components/ui-system/Modal';
@@ -27,6 +28,7 @@ import {
   type DashboardReportEntry,
 } from './secondary/reportingData';
 import { useAuthSession } from '../services/authSession';
+import { hasFullAccessRole } from '../services/roleUtils';
 import {
   createExpenseRecord,
   deleteExpenseRecord,
@@ -143,8 +145,8 @@ export function ExpensesPage() {
     'loading' | 'backend' | 'fallback'
   >('loading');
   const canDeleteExpenses = Boolean(
-    session?.user.roleKeys.includes('owner') ||
-      session?.user.roleKeys.includes('admin'),
+    hasFullAccessRole(session?.user.roleKeys ?? []) ||
+      session?.user.roleKeys.includes('administration'),
   );
 
   useEffect(() => {
@@ -419,11 +421,10 @@ export function ExpensesPage() {
                 >
                   Ден
                 </span>
-                <input
-                  type="date"
+                <DatePickerInput
                   value={selectedDate}
-                  onChange={(event) => {
-                    setSelectedDate(event.target.value);
+                  onChange={(value) => {
+                    setSelectedDate(value);
                     setPeriodFilter('day');
                   }}
                   className="h-11 w-full rounded-xl px-4 text-sm outline-none focus:ring-2 focus:ring-sky-500/20"

@@ -27,10 +27,7 @@ import {
   fetchInvoiceRecords,
   type InvoiceRecordView,
 } from '../services/invoicesApi';
-import {
-  fetchNotificationRecords,
-  type NotificationRecordView,
-} from '../services/notificationsApi';
+import { useNotificationsState } from '../services/notificationsState';
 import {
   fetchPaymentRecords,
   type PaymentRecordView,
@@ -46,14 +43,12 @@ import {
 
 export function PortalDashboardPage() {
   const { session } = useAuthSession();
+  const { notifications, refreshNotifications } = useNotificationsState();
   const navigate = useNavigate();
   const isParentPortal = Boolean(session?.user.roleKeys.includes('parent'));
   const [students, setStudents] = useState<StudentOperationalRecord[]>([]);
   const [lessons, setLessons] = useState<PracticalLessonView[]>([]);
   const [documents, setDocuments] = useState<DocumentRecordView[]>([]);
-  const [notifications, setNotifications] = useState<NotificationRecordView[]>(
-    [],
-  );
   const [payments, setPayments] = useState<PaymentRecordView[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRecordView[]>([]);
   const [sourceStatus, setSourceStatus] = useState<
@@ -63,11 +58,10 @@ export function PortalDashboardPage() {
   useEffect(() => {
     let isMounted = true;
 
-    Promise.all([
+        Promise.all([
       fetchStudentOperations(),
       fetchPracticalLessonRecords(),
       fetchDocumentRecords(),
-      fetchNotificationRecords(),
       isParentPortal ? Promise.resolve([]) : fetchPaymentRecords(),
       isParentPortal ? Promise.resolve([]) : fetchInvoiceRecords(),
     ])
@@ -76,7 +70,6 @@ export function PortalDashboardPage() {
           studentRows,
           practicalLessonRows,
           documentRows,
-          notificationRows,
           paymentRows,
           invoiceRows,
         ]) => {
@@ -87,7 +80,6 @@ export function PortalDashboardPage() {
           setStudents(studentRows);
           setLessons(practicalLessonRows);
           setDocuments(documentRows);
-          setNotifications(notificationRows);
           setPayments(paymentRows);
           setInvoices(invoiceRows);
           setSourceStatus('backend');
@@ -101,7 +93,6 @@ export function PortalDashboardPage() {
         setStudents([]);
         setLessons([]);
         setDocuments([]);
-        setNotifications([]);
         setPayments([]);
         setInvoices([]);
         setSourceStatus('fallback');
@@ -111,6 +102,10 @@ export function PortalDashboardPage() {
       isMounted = false;
     };
   }, [isParentPortal]);
+
+  useEffect(() => {
+    void refreshNotifications();
+  }, [refreshNotifications]);
 
   const primaryStudent = students[0] ?? null;
   const upcomingLessons = useMemo(

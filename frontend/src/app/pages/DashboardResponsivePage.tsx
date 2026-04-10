@@ -1,12 +1,9 @@
-﻿import { useIsMobile } from '../components/ui/use-mobile';
-import { useAuthSession } from '../services/authSession';
+﻿import { useAuthSession } from '../services/authSession';
 import { DashboardPage } from './DashboardPage';
 import { PortalDashboardPage } from './PortalDashboardPage';
-import { MobileDashboard } from './mobile/MobileDashboard';
 
 export function DashboardResponsivePage() {
   const { session } = useAuthSession();
-  const isMobile = useIsMobile();
 
   if (
     session?.user.roleKeys.includes('student') ||
@@ -15,5 +12,5 @@ export function DashboardResponsivePage() {
     return <PortalDashboardPage />;
   }
 
-  return isMobile ? <MobileDashboard /> : <DashboardPage />;
+  return <DashboardPage />;
 }

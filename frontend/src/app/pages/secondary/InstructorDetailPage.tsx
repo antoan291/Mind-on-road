@@ -1,18 +1,23 @@
-﻿import { ArrowLeft, Car, Clock3, TriangleAlert, UserCircle, Users } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+﻿import { ArrowLeft, Car, Clock3, Plus, TriangleAlert, Upload, UserCircle, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { Button } from '../../components/ui-system/Button';
+import { DatePickerInput } from '../../components/date/DatePickerInput';
+import { Modal } from '../../components/ui-system/Modal';
 import { PageHeader } from '../../components/ui-system/PageHeader';
 import { StatusBadge } from '../../components/ui-system/StatusBadge';
 import {
-  buildInstructorRows,
-  buildInstructorStudentRows,
+  fetchInstructorDetailRows,
 } from '../../services/instructorsApi';
 import {
-  type StudentOperationalRecord,
-} from '../../content/studentOperations';
-import { fetchStudentOperations } from '../../services/studentsApi';
+  createDocumentRecord,
+  uploadDocumentFile,
+  type DocumentRecordView,
+} from '../../services/documentsApi';
+import { useAuthSession } from '../../services/authSession';
+import { hasFullAccessRole } from '../../services/roleUtils';
 import {
+  type InstructorRow,
   type InstructorStudentRow,
 } from './secondaryData';
 import { DataTableLayout, InfoLine, MetricCard, MetricGrid, PageSection, Panel } from './secondaryShared';
@@ -20,42 +25,39 @@ import { DataTableLayout, InfoLine, MetricCard, MetricGrid, PageSection, Panel }
 export function InstructorDetailPage() {
   const navigate = useNavigate();
   const { id } = useParams();
-  const instructorId = Number(id);
-  const [instructors, setInstructors] = useState(
-    [] as ReturnType<typeof buildInstructorRows>,
-  );
-  const [studentRecords, setStudentRecords] = useState<StudentOperationalRecord[]>(
-    [],
-  );
+  const { session } = useAuthSession();
+  const instructorId = id ?? '';
+  const [instructor, setInstructor] = useState<InstructorRow | null>(null);
+  const [students, setStudents] = useState<InstructorStudentRow[]>([]);
+  const [documents, setDocuments] = useState<DocumentRecordView[]>([]);
   const [sourceStatus, setSourceStatus] = useState<'loading' | 'backend' | 'fallback'>('loading');
-
-  const instructor = useMemo(
-    () => instructors.find((item) => item.id === instructorId) ?? null,
-    [instructorId, instructors],
+  const [isDocumentModalOpen, setIsDocumentModalOpen] = useState(false);
+  const [documentSaveError, setDocumentSaveError] = useState<string | null>(null);
+  const [documentForm, setDocumentForm] = useState({
+    name: '',
+    issueDate: '',
+    expiryDate: '',
+    notes: '',
+  });
+  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [documentFileName, setDocumentFileName] = useState('');
+  const canManageDocuments = Boolean(
+    hasFullAccessRole(session?.user.roleKeys ?? []) ||
+      session?.user.roleKeys.includes('administration'),
   );
-  const students = useMemo<InstructorStudentRow[]>(() => {
-    if (!instructor) {
-      return [];
-    }
-
-    if (studentRecords.length > 0) {
-      return buildInstructorStudentRows(instructor, studentRecords);
-    }
-
-    return [];
-  }, [instructor, studentRecords]);
 
   useEffect(() => {
     let isMounted = true;
 
-    fetchStudentOperations()
-      .then((records) => {
+    fetchInstructorDetailRows(instructorId)
+      .then((result) => {
         if (!isMounted) {
           return;
         }
 
-        setInstructors(buildInstructorRows(records));
-        setStudentRecords(records);
+        setInstructor(result.instructor);
+        setStudents(result.students);
+        setDocuments(result.documents);
         setSourceStatus('backend');
       })
       .catch(() => {
@@ -63,19 +65,74 @@ export function InstructorDetailPage() {
           return;
         }
 
-        setInstructors([]);
-        setStudentRecords([]);
+        setInstructor(null);
+        setStudents([]);
+        setDocuments([]);
         setSourceStatus('fallback');
       });
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [instructorId]);
 
   const totalMaximumHours = students.reduce((sum, item) => sum + item.maximumHours, 0);
   const totalCompletedHours = students.reduce((sum, item) => sum + item.completedHours, 0);
   const totalRemainingHours = students.reduce((sum, item) => sum + item.remainingHours, 0);
+
+  const handleCreateDocument = async () => {
+    if (!session?.csrfToken || !instructor) {
+      return;
+    }
+
+    if (!documentFile) {
+      setDocumentSaveError('Избери файл от компютъра.');
+      return;
+    }
+
+    setDocumentSaveError(null);
+
+    try {
+      const uploadedFile = await uploadDocumentFile(
+        documentFile,
+        session.csrfToken,
+      );
+      const createdDocument = await createDocumentRecord(
+        {
+          name: documentForm.name,
+          ownerType: 'INSTRUCTOR',
+          ownerName: instructor.name,
+          ownerRef: String(instructor.id),
+          category: documentForm.name,
+          issueDate: documentForm.issueDate,
+          expiryDate: documentForm.expiryDate || null,
+          status: documentForm.expiryDate
+            ? resolveDocumentStatus(documentForm.expiryDate)
+            : 'VALID',
+          fileUrl: uploadedFile.fileUrl,
+          notes: documentForm.notes || null,
+        },
+        session.csrfToken,
+      );
+
+      setDocuments((current) => [createdDocument, ...current]);
+      setDocumentForm({
+        name: '',
+        issueDate: '',
+        expiryDate: '',
+        notes: '',
+      });
+      setDocumentFile(null);
+      setDocumentFileName('');
+      setIsDocumentModalOpen(false);
+    } catch (error) {
+      setDocumentSaveError(
+        error instanceof Error
+          ? error.message
+          : 'Документът не беше добавен.',
+      );
+    }
+  };
 
   if (!instructor && sourceStatus === 'loading') {
     return (
@@ -166,6 +223,61 @@ export function InstructorDetailPage() {
                   Този инструктор е вързан към {instructor.vehicle} и графикът му се планира спрямо този автомобил.
                 </p>
               </div>
+
+              <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid var(--ghost-border)' }}>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Досие на инструктора</p>
+                    <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      Документите на този инструктор се поддържат отделно от персоналния регистър.
+                    </p>
+                  </div>
+                  {canManageDocuments ? (
+                    <Button
+                      variant="secondary"
+                      icon={<Upload size={16} />}
+                      onClick={() => setIsDocumentModalOpen(true)}
+                    >
+                      Добави документ
+                    </Button>
+                  ) : null}
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {documents.length === 0 ? (
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                      Няма добавени документи в досието на инструктора.
+                    </p>
+                  ) : (
+                    documents.map((document) => (
+                      <div
+                        key={String(document.id)}
+                        className="rounded-2xl p-4"
+                        style={{ background: 'rgba(255,255,255,0.03)' }}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-medium" style={{ color: 'var(--text-primary)' }}>
+                              {document.name}
+                            </p>
+                            <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                              {document.category} · Валиден до {document.expiryDate}
+                            </p>
+                          </div>
+                          <StatusBadge status={document.status === 'valid' ? 'success' : document.status === 'expiring-soon' ? 'warning' : 'error'}>
+                            {document.statusLabel}
+                          </StatusBadge>
+                        </div>
+                        {document.notes ? (
+                          <p className="mt-3 text-sm leading-6" style={{ color: 'var(--text-secondary)' }}>
+                            {document.notes}
+                          </p>
+                        ) : null}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
           </Panel>
           <Panel title="Курсисти на инструктора" subtitle="Списъкът показва етапа на всеки курсист, максималните часове и колко още часа остават до приключване.">
@@ -204,6 +316,163 @@ export function InstructorDetailPage() {
           </Panel>
         </div>
       </PageSection>
+
+      <Modal
+        isOpen={isDocumentModalOpen}
+        onClose={() => setIsDocumentModalOpen(false)}
+        title="Добави документ към досието"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setIsDocumentModalOpen(false)}>
+              Отказ
+            </Button>
+            <Button
+              variant="primary"
+              icon={<Plus size={16} />}
+              onClick={() => void handleCreateDocument()}
+            >
+              Запази документа
+            </Button>
+          </>
+        }
+      >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <label className="text-sm" style={{ color: 'var(--text-primary)' }}>
+            Име на документа
+            <input
+              value={documentForm.name}
+              onChange={(event) =>
+                setDocumentForm((current) => ({ ...current, name: event.target.value }))
+              }
+              className="mt-2 h-11 w-full rounded-xl px-4 text-sm outline-none"
+              style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}
+            />
+          </label>
+          <label className="text-sm" style={{ color: 'var(--text-primary)' }}>
+            Дата на издаване
+            <DatePickerInput
+              value={documentForm.issueDate}
+              onChange={(value) =>
+                setDocumentForm((current) => ({ ...current, issueDate: value }))
+              }
+              className="mt-2 h-11 w-full rounded-xl px-4 text-sm outline-none"
+              style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}
+            />
+          </label>
+          <label className="text-sm" style={{ color: 'var(--text-primary)' }}>
+            Валиден до
+            <DatePickerInput
+              value={documentForm.expiryDate}
+              onChange={(value) =>
+                setDocumentForm((current) => ({ ...current, expiryDate: value }))
+              }
+              className="mt-2 h-11 w-full rounded-xl px-4 text-sm outline-none"
+              style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}
+            />
+          </label>
+          <label className="text-sm" style={{ color: 'var(--text-primary)' }}>
+            Файл
+            <input
+              id="instructor-document-file"
+              type="file"
+              accept=".pdf,image/*"
+              onChange={(event) => {
+                const selectedFile = event.target.files?.[0] ?? null;
+                setDocumentFile(selectedFile);
+                setDocumentFileName(selectedFile?.name ?? '');
+              }}
+              className="hidden"
+            />
+            <label
+              htmlFor="instructor-document-file"
+              className="mt-2 flex min-h-28 w-full cursor-pointer items-center justify-between gap-4 rounded-2xl border px-4 py-4 transition-all hover:shadow-[var(--glow-indigo)]"
+              style={{
+                background: 'var(--bg-panel)',
+                borderColor: documentFileName
+                  ? 'rgba(59, 130, 246, 0.32)'
+                  : 'var(--ghost-border)',
+              }}
+            >
+              <div className="flex items-center gap-4">
+                <div
+                  className="flex h-12 w-12 items-center justify-center rounded-2xl"
+                  style={{
+                    background: documentFileName
+                      ? 'rgba(59, 130, 246, 0.14)'
+                      : 'rgba(148, 163, 184, 0.12)',
+                    color: documentFileName
+                      ? 'var(--primary-accent)'
+                      : 'var(--text-secondary)',
+                  }}
+                >
+                  <Upload size={20} />
+                </div>
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                    {documentFileName ? 'Файлът е избран' : 'Избери файл от компютъра'}
+                  </p>
+                  <p className="mt-1 text-sm" style={{ color: 'var(--text-secondary)' }}>
+                    {documentFileName || 'PDF, JPG, PNG и други изображения'}
+                  </p>
+                </div>
+              </div>
+              <span
+                className="rounded-xl px-3 py-2 text-xs font-medium"
+                style={{
+                  background: 'rgba(59, 130, 246, 0.12)',
+                  color: 'var(--primary-accent)',
+                }}
+              >
+                Качи файл
+              </span>
+            </label>
+            {documentFileName ? (
+              <span className="mt-2 block text-xs" style={{ color: 'var(--text-secondary)' }}>
+                Избран файл: {documentFileName}
+              </span>
+            ) : null}
+          </label>
+          <label className="text-sm md:col-span-2" style={{ color: 'var(--text-primary)' }}>
+            Бележки
+            <textarea
+              value={documentForm.notes}
+              onChange={(event) =>
+                setDocumentForm((current) => ({ ...current, notes: event.target.value }))
+              }
+              rows={4}
+              className="mt-2 w-full rounded-xl px-4 py-3 text-sm outline-none"
+              style={{ background: 'var(--bg-panel)', color: 'var(--text-primary)' }}
+            />
+          </label>
+        </div>
+        {documentSaveError ? (
+          <p className="mt-4 text-sm" style={{ color: 'var(--status-error)' }}>
+            {documentSaveError}
+          </p>
+        ) : null}
+        <p className="mt-3 text-sm" style={{ color: 'var(--text-secondary)' }}>
+          Статусът се изчислява автоматично от датата на валидност.
+        </p>
+      </Modal>
     </div>
   );
+}
+
+function resolveDocumentStatus(expiryDate: string) {
+  const dayMs = 24 * 60 * 60 * 1000;
+  const remainingDays = Math.ceil(
+    (new Date(`${expiryDate}T00:00:00.000Z`).getTime() -
+      new Date().setHours(0, 0, 0, 0)) /
+      dayMs,
+  );
+
+  if (remainingDays < 0) {
+    return 'EXPIRED' as const;
+  }
+
+  if (remainingDays <= 60) {
+    return 'EXPIRING_SOON' as const;
+  }
+
+  return 'VALID' as const;
 }

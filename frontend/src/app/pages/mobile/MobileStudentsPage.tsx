@@ -62,6 +62,10 @@ export function MobileStudentsPage() {
       }),
     [students, searchValue, showOnlyAttention],
   );
+  const activeStudentsCount = useMemo(
+    () => students.filter(isActiveTrainingStudent).length,
+    [students],
+  );
 
   return (
     <div>
@@ -131,6 +135,21 @@ export function MobileStudentsPage() {
       </div>
 
       <div className="p-4 space-y-3">
+        <div
+          className="rounded-xl p-4"
+          style={{ background: 'var(--bg-card)' }}
+        >
+          <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            Активни курсисти
+          </p>
+          <p className="mt-2 text-3xl font-semibold" style={{ color: 'var(--text-primary)' }}>
+            {activeStudentsCount}
+          </p>
+          <p className="mt-2 text-xs leading-5" style={{ color: 'var(--text-tertiary)' }}>
+            Броят се само курсистите, които още не са завършили теорията или практиката.
+          </p>
+        </div>
+
         {visibleStudents.length === 0 ? (
           <div
             className="rounded-xl p-6 text-center text-sm"
@@ -153,6 +172,14 @@ export function MobileStudentsPage() {
       </div>
     </div>
   );
+}
+
+function isActiveTrainingStudent(student: StudentOperationalRecord) {
+  const hasCompletedTheory = student.theoryCompleted || Boolean(student.theoryCompletedAt);
+  const hasCompletedPractice = Boolean(student.practicalCompletedAt);
+  const isWithdrawn = student.examOutcome === 'withdrawn' || student.courseOutcome === 'withdrawn';
+
+  return !isWithdrawn && (!hasCompletedTheory || !hasCompletedPractice);
 }
 
 function StudentCard({

@@ -5,6 +5,7 @@ import { Modal } from '../../components/ui-system/Modal';
 import { PageHeader } from '../../components/ui-system/PageHeader';
 import { Switch } from '../../components/ui/switch';
 import { useAuthSession } from '../../services/authSession';
+import { hasDeveloperRole } from '../../services/roleUtils';
 import type {
   TenantFeatureKey,
   TenantFeatureSetting,
@@ -85,7 +86,7 @@ export function SettingsPage() {
     <div>
       <PageHeader
         title="Настройки"
-        description="Централен licensing контрол за главния админ на платформата. Оттук определяш кои модули са платени и кои страници да се скриват за конкретната школа."
+        description="Централен licensing контрол за разработчика на платформата. Оттук определяш кои модули са активни и кои страници да се скриват за конкретната школа."
         breadcrumbs={[{ label: 'Начало' }, { label: 'Настройки' }]}
         actions={
           <>
@@ -126,10 +127,10 @@ export function SettingsPage() {
               />
             </div>
           )}
-          {!session?.user.roleKeys.includes('owner') && (
+          {!hasDeveloperRole(session?.user.roleKeys ?? []) && (
             <div className="mb-4">
               <ChecklistItem
-                title="Само owner може да записва пакети"
+                title="Само разработчик може да записва тези настройки"
                 description="Този екран е read-only за текущия потребител."
                 tone="warning"
               />

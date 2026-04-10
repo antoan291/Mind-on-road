@@ -104,6 +104,17 @@ export type TheoryApiStudent = {
   lastAbsenceDate?: string;
 };
 
+export type TheoryGroupCreateInput = {
+  name: string;
+  categoryCode: string;
+  scheduleLabel: string;
+  instructorName: string;
+  daiCode: string;
+  startDate: string;
+  endDate?: string;
+  totalLectures: number;
+};
+
 export async function fetchTheoryGroups() {
   const [response, students] = await Promise.all([
     apiClient.get<{ items: BackendTheoryGroup[] }>('/theory/groups'),
@@ -111,6 +122,24 @@ export async function fetchTheoryGroups() {
   ]);
 
   return response.items.map((group) => mapTheoryGroup(group, students));
+}
+
+export async function createTheoryGroup(
+  payload: TheoryGroupCreateInput,
+  csrfToken: string,
+) {
+  const response = await apiClient.post<{ item: BackendTheoryGroup }>(
+    '/theory/groups',
+    {
+      ...payload,
+      endDate: payload.endDate?.trim() ? payload.endDate : null,
+    },
+    csrfToken,
+  );
+
+  const students = await fetchStudentOperations();
+
+  return mapTheoryGroup(response.item, students);
 }
 
 export async function saveTheoryLectureAttendance(

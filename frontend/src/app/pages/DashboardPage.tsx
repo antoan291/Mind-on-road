@@ -3,7 +3,6 @@ import {
   useEffect,
   useMemo,
   useState,
-  type ReactNode,
 } from "react";
 import { useNavigate } from "react-router";
 import {
@@ -14,6 +13,7 @@ import {
   CardHeader,
   Input,
   Modal,
+  PageContent,
   PageHeader,
   Select,
   StatCard,
@@ -40,6 +40,7 @@ import { dashboardHeader, dashboardSections, dashboardQuickActions, getDashboard
 import {
   type StudentOperationalRecord,
 } from "../content/studentOperations";
+import type { VehicleRow } from "./secondary/secondaryData";
 import { createDocumentRecord } from "../services/documentsApi";
 import {
   fetchExpenseRecords,
@@ -57,6 +58,8 @@ import {
   fetchStudentOperations,
 } from "../services/studentsApi";
 import { useAuthSession } from "../services/authSession";
+import { useNotificationsState } from "../services/notificationsState";
+import { hasFullAccessRole } from "../services/roleUtils";
 import { fetchVehicleRows } from "../services/vehiclesApi";
 
 type QuickActionKey = "newStudent" | "newLesson" | "newDocument" | "registerPayment";
@@ -103,10 +106,20 @@ type DashboardMetricItem = {
 export function DashboardPage() {
   const { session } = useAuthSession();
   const navigate = useNavigate();
+  const roleKeys = session?.user.roleKeys ?? [];
+  const permissionKeys = session?.user.permissionKeys ?? [];
+  const hasInstructorRole =
+    roleKeys.includes("instructor") || roleKeys.includes("simulator_instructor");
+  const hasWideDashboardAccess =
+    hasFullAccessRole(roleKeys) ||
+    roleKeys.includes("administration") ||
+    roleKeys.includes("accountant");
+  const isInstructorDashboard = hasInstructorRole && !hasWideDashboardAccess;
   const [activeQuickAction, setActiveQuickAction] = useState<QuickActionKey | null>(null);
   const [students, setStudents] = useState<StudentOperationalRecord[]>([]);
   const [payments, setPayments] = useState<PaymentRecordView[]>([]);
   const [expenses, setExpenses] = useState<ExpenseRecordView[]>([]);
+  const [vehicles, setVehicles] = useState<VehicleRow[]>([]);
   const [instructorOptions, setInstructorOptions] = useState<
     Array<{ value: string; label: string }>
   >([]);
@@ -118,21 +131,26 @@ export function DashboardPage() {
     string | null
   >(null);
   const [isQuickActionSubmitting, setIsQuickActionSubmitting] = useState(false);
+  const { notifications, refreshNotifications } = useNotificationsState();
 
   const loadDashboardData = useCallback(async () => {
-    const [
-      records,
-      paymentRecords,
-      expenseRecords,
-      instructorRows,
-      vehicleRows,
-    ] = await Promise.all([
-      fetchStudentOperations(),
-      fetchPaymentRecords(),
-      fetchExpenseRecords(),
-      fetchInstructorRows(),
-      fetchVehicleRows(),
-    ]);
+    const canReadStudents =
+      permissionKeys.includes("students.read") || hasFullAccessRole(roleKeys);
+    const canReadPayments =
+      permissionKeys.includes("payments.read") || hasFullAccessRole(roleKeys);
+    const canManageUsers =
+      permissionKeys.includes("users.manage") || hasFullAccessRole(roleKeys);
+    const canReadVehicles =
+      permissionKeys.includes("vehicles.read") || hasFullAccessRole(roleKeys);
+
+    const [records, paymentRecords, expenseRecords, instructorRows, vehicleRows] =
+      await Promise.all([
+        canReadStudents ? fetchStudentOperations() : Promise.resolve([]),
+        canReadPayments ? fetchPaymentRecords() : Promise.resolve([]),
+        canReadPayments ? fetchExpenseRecords() : Promise.resolve([]),
+        canManageUsers ? fetchInstructorRows() : Promise.resolve([]),
+        canReadVehicles ? fetchVehicleRows() : Promise.resolve([]),
+      ]);
 
     setStudents(records);
     setPayments(paymentRecords);
@@ -149,8 +167,9 @@ export function DashboardPage() {
         label: vehicle.vehicle,
       })),
     );
+    setVehicles(vehicleRows);
     setSourceStatus("backend");
-  }, []);
+  }, [permissionKeys, roleKeys]);
 
   useEffect(() => {
     let isMounted = true;
@@ -164,6 +183,7 @@ export function DashboardPage() {
         setStudents([]);
         setPayments([]);
         setExpenses([]);
+        setVehicles([]);
         setInstructorOptions([]);
         setVehicleOptions([]);
         setSourceStatus("fallback");
@@ -173,6 +193,10 @@ export function DashboardPage() {
       isMounted = false;
     };
   }, [loadDashboardData]);
+
+  useEffect(() => {
+    void refreshNotifications();
+  }, [refreshNotifications]);
 
   const quickActionMeta = useMemo<Record<QuickActionKey, QuickActionDialogMeta>>(
     () => ({
@@ -234,6 +258,17 @@ export function DashboardPage() {
       })),
     [students],
   );
+  const dashboardInstructorOptions = useMemo(() => {
+    if (!isInstructorDashboard) {
+      return instructorOptions;
+    }
+
+    const displayName = session?.user.displayName?.trim();
+
+    return displayName
+      ? [{ value: displayName, label: displayName }]
+      : instructorOptions;
+  }, [instructorOptions, isInstructorDashboard, session?.user.displayName]);
   const theoryGroupOptions = useMemo(() => {
     const uniqueGroupNumbers = Array.from(
       new Set(
@@ -284,6 +319,45 @@ export function DashboardPage() {
       actionLabel: "Отвори досие",
       targetPath: `/students/${reminder.studentId}`,
     })),
+    ...notifications
+      .filter((notification) => notification.kind === "INSTRUCTOR_DOCUMENT_EXPIRY")
+      .map((notification) => ({
+        variant:
+          notification.severity === "error"
+            ? ("error" as const)
+            : ("warning" as const),
+        title: notification.title,
+        message: notification.message,
+        actionLabel: "Отвори инструктор",
+        targetPath: notification.actionTarget ?? "/instructors",
+      })),
+  ];
+  const instructorVehicleAlerts = useMemo(
+    () =>
+      vehicles
+        .filter(
+          (vehicle) =>
+            vehicle.status !== "success" ||
+            (vehicle.issue && vehicle.issue !== "Няма активни проблеми"),
+        )
+        .map((vehicle) => ({
+          variant:
+            vehicle.status === "error"
+              ? ("error" as const)
+              : ("warning" as const),
+          title: `Автомобил: ${vehicle.vehicle}`,
+          message:
+            vehicle.issue && vehicle.issue !== "Няма активни проблеми"
+              ? vehicle.issue
+              : `Провери състоянието на автомобила и следващия технически преглед: ${vehicle.nextInspection}.`,
+          actionLabel: "Отвори автомобили",
+          targetPath: "/vehicles",
+        })),
+    [vehicles],
+  );
+  const instructorDashboardAlerts = [
+    ...operationalAlerts,
+    ...instructorVehicleAlerts,
   ];
   const dashboardStudentLessons: LessonItem[] =
     students.length > 0
@@ -357,8 +431,81 @@ export function DashboardPage() {
     [students, payments, sourceStatus, currentInactiveAlerts.length, currentEarlyReminders.length],
   );
 
+  if (isInstructorDashboard) {
+    return (
+      <PageContent className="space-y-6 pb-8">
+        <PageHeader
+          title="Моето табло"
+          subtitle={`Известия за твоите курсисти и автомобили • ${
+            sourceStatus === "backend"
+              ? "Данни от PostgreSQL"
+              : sourceStatus === "fallback"
+                ? "Fallback към локални тестови данни"
+                : "Зареждане..."
+          }`}
+          actions={
+            <Button
+              variant="primary"
+              icon={<Plus size={18} />}
+              onClick={() => setActiveQuickAction("newLesson")}
+            >
+              Запиши час
+            </Button>
+          }
+        />
+
+        <div className="space-y-3">
+          {instructorDashboardAlerts.length ? (
+            instructorDashboardAlerts.map((item) => (
+              <Alert
+                key={`${item.title}-${item.targetPath}`}
+                variant={item.variant as "warning" | "error"}
+                title={item.title}
+                message={item.message}
+                action={{
+                  label: item.actionLabel,
+                  onClick: () => navigate(item.targetPath),
+                }}
+              />
+            ))
+          ) : (
+            <Card>
+              <CardHeader
+                title="Няма нови известия"
+                subtitle="В момента няма сигнали за твоите курсисти или автомобили."
+              />
+            </Card>
+          )}
+        </div>
+
+        <DashboardQuickActionDialog
+          activeAction={activeQuickAction}
+          studentOptions={quickActionStudentOptions}
+          instructorOptions={dashboardInstructorOptions}
+          vehicleOptions={vehicleOptions}
+          theoryGroupOptions={theoryGroupOptions}
+          isSubmitting={isQuickActionSubmitting}
+          submitError={quickActionSubmitError}
+          onClose={() => setActiveQuickAction(null)}
+          onConfirm={(action, formState) =>
+            handleConfirmQuickAction(
+              action,
+              formState,
+              students,
+              session?.csrfToken,
+              loadDashboardData,
+              setQuickActionSubmitError,
+              setIsQuickActionSubmitting,
+              setActiveQuickAction,
+            )
+          }
+        />
+      </PageContent>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <PageContent className="space-y-6 pb-8">
       <PageHeader
         title={dashboardHeader.title}
         subtitle={`${dashboardHeader.subtitle} • ${
@@ -467,7 +614,7 @@ export function DashboardPage() {
       <DashboardQuickActionDialog
         activeAction={activeQuickAction}
         studentOptions={quickActionStudentOptions}
-        instructorOptions={instructorOptions}
+        instructorOptions={dashboardInstructorOptions}
         vehicleOptions={vehicleOptions}
         theoryGroupOptions={theoryGroupOptions}
         isSubmitting={isQuickActionSubmitting}
@@ -486,7 +633,7 @@ export function DashboardPage() {
           )
         }
       />
-    </div>
+    </PageContent>
   );
 }
 

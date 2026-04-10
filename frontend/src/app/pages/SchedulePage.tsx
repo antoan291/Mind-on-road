@@ -10,7 +10,6 @@ import {
   Calendar, DollarSign, FileText, UserCheck, UserX, MapPin
 } from 'lucide-react';
 import type { StudentOperationalRecord } from '../content/studentOperations';
-import { fetchInstructorRows } from '../services/instructorsApi';
 import {
   createPracticalLessonRecord,
   deletePracticalLessonRecord,
@@ -129,6 +128,42 @@ function calculateScheduleDurationMinutes(startTime: string, endTime: string) {
   return endHours * 60 + endMinutes - (startHours * 60 + startMinutes);
 }
 
+function buildScopedInstructors(params: {
+  roleKeys: string[];
+  displayName: string | undefined;
+  students: StudentOperationalRecord[];
+}) {
+  const hasInstructorRole =
+    params.roleKeys.includes('instructor') ||
+    params.roleKeys.includes('simulator_instructor');
+
+  if (hasInstructorRole) {
+    const instructorName = params.displayName?.trim() || 'Инструктор';
+
+    return [
+      {
+        id: 1,
+        name: instructorName,
+        color: '#6366F1',
+      },
+    ];
+  }
+
+  const uniqueInstructorNames = Array.from(
+    new Set(
+      params.students
+        .map((student) => student.instructor?.trim())
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+
+  return uniqueInstructorNames.map((name, index) => ({
+    id: index + 1,
+    name,
+    color: ['#6366F1', '#A78BFA', '#22c55e', '#fb923c'][index % 4],
+  }));
+}
+
 export function SchedulePage() {
   const { session } = useAuthSession();
   const navigate = useNavigate();
@@ -163,24 +198,23 @@ export function SchedulePage() {
 
   useEffect(() => {
     let isMounted = true;
+    const roleKeys = session?.user.roleKeys ?? [];
 
     Promise.all([
-      fetchInstructorRows(),
       fetchPracticalLessonRecords(),
       fetchStudentOperations(),
       fetchVehicleRows(),
     ])
-      .then(([instructorRows, lessonRows, studentRows, vehicleRows]) => {
+      .then(([lessonRows, studentRows, vehicleRows]) => {
         if (!isMounted) {
           return;
         }
 
-        const mappedInstructors =
-          instructorRows.map((row, index) => ({
-            id: row.id,
-            name: row.name,
-            color: ['#6366F1', '#A78BFA', '#22c55e', '#fb923c'][index % 4],
-          }));
+        const mappedInstructors = buildScopedInstructors({
+          roleKeys,
+          displayName: session?.user.displayName,
+          students: studentRows,
+        });
 
         const mappedVehicles = mapVehicleRowsToScheduleVehicles(vehicleRows);
 
@@ -249,7 +283,7 @@ export function SchedulePage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [session?.user.displayName, session?.user.roleKeys]);
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('bg-BG', {
@@ -1259,7 +1293,7 @@ export function SchedulePage() {
                           Създаден от:
                         </span>
                         <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-                          Администратор
+                          Администрация
                         </span>
                       </div>
                       <div className="flex items-center justify-between">

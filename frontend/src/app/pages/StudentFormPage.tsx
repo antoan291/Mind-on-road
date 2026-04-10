@@ -1,17 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
+import { PageContent } from '../components/ui-system/PageContent';
 import { PageHeader } from '../components/ui-system/PageHeader';
 import { Button } from '../components/ui-system/Button';
 import { InputField, SelectField, TextareaField } from '../components/ui-system/FormField';
 import { Alert } from '../components/ui-system/Alert';
-import { User, Mail, Phone, MapPin, Calendar, Car, BookOpen, FileText } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Calendar, Car, BookOpen, FileText, ScanSearch, Upload } from 'lucide-react';
 import { useAuthSession } from '../services/authSession';
 import {
   createStudentRecord,
+  extractStudentAutofillFromDocument,
+  fetchAssignableInstructorOptions,
   fetchStudentOperationalDetail,
+  StudentOcrAutofill,
   StudentMutationPayload,
   updateStudentRecord,
 } from '../services/studentsApi';
+import { fetchTheoryGroups } from '../services/theoryApi';
 
 export function StudentFormPage() {
   const { id } = useParams();
@@ -22,52 +27,65 @@ export function StudentFormPage() {
   );
   const { session } = useAuthSession();
 
-  const [formData, setFormData] = useState({
-    // Personal Information
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    address: '',
-    birthDate: '',
-    idNumber: '',
-    educationLevel: '',
-    
-    // Training Information
-    category: '',
-    studentType: '',
-    previousLicenseCategory: '',
-    instructor: '',
-    theoryGroup: '',
-    startDate: '',
-    expectedArrivalDate: '',
-    groupNumber: '',
-    recordMode: '',
-    insuranceStatus: '',
-    extraHours: '',
-    failedExamAttempts: '',
-    courseOutcome: '',
-    
-    // Parent/Guardian
-    parentName: '',
-    parentPhone: '',
-    parentEmail: '',
-    parentFeedbackEnabled: '',
-    
-    // Lessons & Payments
-    paidAmount: '',
-    completedHours: '0',
-    lessonPackage: '',
-    customPackageHours: '',
-    
-    // Notes
-    notes: '',
-  });
+  const [formData, setFormData] = useState(useStudentFormInitialState);
 
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [ocrStatus, setOcrStatus] = useState<'idle' | 'running' | 'success' | 'error'>('idle');
+  const [ocrMessage, setOcrMessage] = useState('');
+  const [ocrWarnings, setOcrWarnings] = useState<string[]>([]);
+  const [ocrUploadedFileName, setOcrUploadedFileName] = useState('');
+  const [instructorOptions, setInstructorOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
+  const [theoryGroupOptions, setTheoryGroupOptions] = useState<
+    Array<{ value: string; label: string }>
+  >([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    Promise.all([
+      fetchAssignableInstructorOptions(),
+      fetchTheoryGroups(),
+    ])
+      .then(([instructors, theoryGroups]) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setInstructorOptions(
+          instructors.map((instructor) => ({
+            value: instructor.displayName,
+            label: buildInstructorOptionLabel(instructor),
+          })),
+        );
+        setTheoryGroupOptions(
+          theoryGroups.map((group) => ({
+            value: group.name,
+            label: `${group.name} - ${group.schedule}`,
+          })),
+        );
+      })
+      .catch((error) => {
+        if (!isMounted) {
+          return;
+        }
+
+        setSubmitError(
+          error instanceof Error
+            ? error.message
+            : 'Неуспешно зареждане на инструктори и групи.',
+        );
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isEdit || !id) {
@@ -118,7 +136,7 @@ export function StudentFormPage() {
           parentPhone: record.parentPhone ?? '',
           parentEmail: record.parentEmail ?? '',
           parentFeedbackEnabled: record.parentFeedbackEnabled ? 'enabled' : 'disabled',
-          paidAmount: extractPaidAmount(record.notes ?? ''),
+          paidAmount: '',
           completedHours: String(record.used ?? 0),
           lessonPackage: mapPackageHoursToFormValue(
             record.maxTrainingHours - (record.extraHours ?? 0),
@@ -128,7 +146,7 @@ export function StudentFormPage() {
           )
             ? ''
             : String(record.maxTrainingHours - (record.extraHours ?? 0)),
-          notes: stripPaidAmountNote(record.notes ?? ''),
+          notes: record.notes ?? '',
         }));
       })
       .catch((error) => {
@@ -148,13 +166,67 @@ export function StudentFormPage() {
     };
   }, [id, isBackendStudentId, isEdit]);
 
+  const handleOcrDocumentSelected = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const selectedFile = event.target.files?.[0];
+
+    if (!selectedFile) {
+      return;
+    }
+
+    if (!session?.csrfToken) {
+      setOcrStatus('error');
+      setOcrMessage('Липсва активна сесия за сканиране на документа.');
+      event.target.value = '';
+      return;
+    }
+
+    setOcrStatus('running');
+    setOcrUploadedFileName(selectedFile.name);
+    setOcrWarnings([]);
+    setOcrMessage(`Сканиране на документа ${selectedFile.name}...`);
+
+    try {
+      const extraction = await extractStudentAutofillFromDocument(
+        selectedFile,
+        session.csrfToken,
+      );
+
+      setFormData((current) => applyOcrAutofillToStudentForm(current, extraction));
+      setOcrWarnings(extraction.warnings);
+      setOcrStatus('success');
+      setOcrMessage(buildStudentOcrSuccessMessage(extraction));
+    } catch (error) {
+      setOcrStatus('error');
+      setOcrWarnings([]);
+      setOcrMessage(
+        error instanceof Error
+          ? error.message
+          : 'Сканирането е неуспешно.',
+      );
+    } finally {
+      event.target.value = '';
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
     setIsSubmitting(true);
 
     try {
-      const payload = toStudentMutationPayload(formData);
+      if (!isEdit) {
+        if ((formData.portalPassword || '').trim().length < 8) {
+          throw new Error('Паролата за курсиста трябва да е поне 8 символа.');
+        }
+
+        if (formData.portalPassword !== formData.portalPasswordConfirm) {
+          throw new Error('Паролите за курсиста не съвпадат.');
+        }
+      }
+
+      const payload = toStudentMutationPayload(formData, !isEdit);
 
       if (isEdit && isBackendStudentId && id && session?.csrfToken) {
         const updatedStudent = await updateStudentRecord(
@@ -202,7 +274,8 @@ export function StudentFormPage() {
         ]}
       />
 
-      <form onSubmit={handleSubmit} className="p-6 lg:p-8 max-w-5xl">
+      <PageContent className="pb-8">
+        <form onSubmit={handleSubmit} className="max-w-5xl">
         {/* Success Alert */}
         {showSuccess && (
           <div className="mb-6">
@@ -229,6 +302,85 @@ export function StudentFormPage() {
           <h3 className="mb-6" style={{ color: 'var(--text-primary)' }}>
             Лична информация
           </h3>
+
+          <div
+            className="rounded-xl border p-4 mb-6"
+            style={{
+              background: 'var(--bg-panel)',
+              borderColor: 'var(--ghost-border-medium)',
+            }}
+          >
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--text-primary)' }}>
+                  <ScanSearch size={18} />
+                  <span className="font-medium">Сканиране на документ</span>
+                </div>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                  Качи PDF или снимка на българска лична карта или шофьорска книжка. Формата ще попълни разпознатите полета.
+                </p>
+                {ocrUploadedFileName ? (
+                  <p className="text-xs mt-2" style={{ color: 'var(--text-tertiary)' }}>
+                    Последен файл: {ocrUploadedFileName}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,image/*"
+                  className="hidden"
+                  onChange={handleOcrDocumentSelected}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  icon={<Upload size={16} />}
+                  disabled={ocrStatus === 'running'}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {ocrStatus === 'running' ? 'Сканиране...' : 'Качи документ'}
+                </Button>
+              </div>
+            </div>
+
+            {ocrMessage ? (
+              <div className="mt-4">
+                <Alert
+                  type={
+                    ocrStatus === 'error'
+                      ? 'error'
+                      : ocrStatus === 'success'
+                        ? 'success'
+                        : 'info'
+                  }
+                  title={
+                    ocrStatus === 'error'
+                      ? 'Сканирането е неуспешно'
+                      : ocrStatus === 'success'
+                        ? 'Сканирането е готово'
+                        : 'Сканиране на документа'
+                  }
+                  message={ocrMessage}
+                />
+              </div>
+            ) : null}
+
+            {ocrWarnings.length > 0 ? (
+              <div className="mt-3 rounded-lg px-4 py-3" style={{ background: 'rgba(245, 158, 11, 0.12)' }}>
+                <p className="text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
+                  Провери внимателно попълнените данни
+                </p>
+                <ul className="text-sm space-y-1" style={{ color: 'var(--text-secondary)' }}>
+                  {ocrWarnings.map((warning) => (
+                    <li key={warning}>• {warning}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <InputField
@@ -258,6 +410,29 @@ export function StudentFormPage() {
               icon={<Mail size={18} />}
               required
             />
+
+            {!isEdit ? (
+              <InputField
+                label="Парола за вход на курсиста"
+                type="password"
+                placeholder="Поне 8 символа"
+                value={formData.portalPassword}
+                onChange={(value) => setFormData({ ...formData, portalPassword: value })}
+                helpText="Курсистът ще влиза с този email и тази парола, след което ще я смени."
+                required
+              />
+            ) : null}
+
+            {!isEdit ? (
+              <InputField
+                label="Повтори парола"
+                type="password"
+                placeholder="Повторете паролата"
+                value={formData.portalPasswordConfirm}
+                onChange={(value) => setFormData({ ...formData, portalPasswordConfirm: value })}
+                required
+              />
+            ) : null}
 
             <InputField
               label="Телефон"
@@ -357,14 +532,17 @@ export function StudentFormPage() {
               label="Инструктор"
               value={formData.instructor}
               onChange={(value) => setFormData({ ...formData, instructor: value })}
-              options={[
-                { value: '', label: 'Изберете инструктор...' },
-                { value: 'Георги Петров', label: 'Георги Петров' },
-                { value: 'Иван Димитров', label: 'Иван Димитров' },
-                { value: 'Стоян Василев', label: 'Стоян Василев' },
-                { value: 'Мария Петкова', label: 'Мария Петкова' },
-              ]}
+              options={buildSelectOptions(
+                'Изберете инструктор...',
+                instructorOptions,
+                formData.instructor,
+              )}
               icon={<User size={18} />}
+              helpText={
+                instructorOptions.length === 0
+                  ? 'Няма налични инструктори в персонала.'
+                  : undefined
+              }
               required
             />
 
@@ -372,31 +550,33 @@ export function StudentFormPage() {
               label="Група за теория"
               value={formData.theoryGroup}
               onChange={(value) => setFormData({ ...formData, theoryGroup: value })}
-              options={[
-                { value: '', label: 'Изберете група...' },
-                { value: '315003', label: 'Група 315003 - Понеделник и Сряда 18:00' },
-                { value: '315004', label: 'Група 315004 - Вторник и Четвъртък 18:00' },
-                { value: '224110', label: 'Група 224110 - Събота 10:00' },
-                { value: '315010', label: 'Група 315010 - Неделя 10:00' },
-              ]}
+              options={buildSelectOptions(
+                'Изберете група...',
+                theoryGroupOptions,
+                formData.theoryGroup,
+              )}
               icon={<BookOpen size={18} />}
+              helpText={
+                theoryGroupOptions.length === 0
+                  ? 'Няма активни групи за теория в системата.'
+                  : undefined
+              }
               required
             />
 
             <InputField
               label="Дата на начало"
-              type="text"
-              placeholder="ДД.ММ.ГГГГ"
+              type="date"
               value={formData.startDate}
               onChange={(value) => setFormData({ ...formData, startDate: value })}
               icon={<Calendar size={18} />}
+              helpText="Изберете датата от календара."
               required
             />
 
             <InputField
               label="Дата на идване при ранно записване"
-              type="text"
-              placeholder="ДД.ММ.ГГГГ"
+              type="date"
               value={formData.expectedArrivalDate}
               onChange={(value) => setFormData({ ...formData, expectedArrivalDate: value })}
               icon={<Calendar size={18} />}
@@ -502,15 +682,21 @@ export function StudentFormPage() {
               required
             />
 
-            <InputField
-              label="Платена сума"
-              type="number"
-              placeholder="0"
-              value={formData.paidAmount}
-              onChange={(value) => setFormData({ ...formData, paidAmount: value })}
-              helpText="Реално платената сума при записване. Не променя часовете по пакета."
-              required
-            />
+            {!isEdit ? (
+              <InputField
+                label="Първоначално платена сума"
+                type="number"
+                placeholder="0"
+                value={formData.paidAmount}
+                onChange={(value) => setFormData({ ...formData, paidAmount: value })}
+                helpText="При добавяне на курсиста сумата ще се запише като реално плащане."
+                required
+              />
+            ) : (
+              <div className="rounded-lg border px-4 py-3 text-sm" style={{ background: 'var(--bg-panel)', borderColor: 'var(--ghost-border-medium)', color: 'var(--text-secondary)' }}>
+                Плащанията на вече създаден курсист се управляват от секция „Плащания“, не от редакцията на профила.
+              </div>
+            )}
 
             {formData.lessonPackage === 'custom' && (
               <InputField
@@ -616,7 +802,8 @@ export function StudentFormPage() {
             Отказ
           </Button>
         </div>
-      </form>
+        </form>
+      </PageContent>
     </div>
   );
 }
@@ -649,6 +836,10 @@ function buildStudentSaveMessage(
     return `${baseMessage} Portal вход: ${portalAccess.loginIdentifier}. Временна парола: ${portalAccess.temporaryPassword}. Смяната на паролата е задължителна при първи вход.`;
   }
 
+  if (portalAccess.status === 'created') {
+    return `${baseMessage} Portal вход: ${portalAccess.loginIdentifier}. Използвайте зададената при регистрацията парола. Смяната на паролата е задължителна при първи вход.`;
+  }
+
   if (portalAccess.status === 'linked_existing') {
     return `${baseMessage} Курсистът беше свързан с вече съществуващ portal акаунт. Вход: ${portalAccess.loginIdentifier}.`;
   }
@@ -662,6 +853,7 @@ function buildStudentSaveMessage(
 
 function toStudentMutationPayload(
   formData: ReturnType<typeof useStudentFormInitialState>,
+  isCreateMode: boolean,
 ): StudentMutationPayload {
   const studentStatus = mapFormCourseOutcomeToStudentStatus(formData.courseOutcome);
   const enrollmentStatus = mapFormCourseOutcomeToEnrollmentStatus(
@@ -677,12 +869,17 @@ function toStudentMutationPayload(
     Number(formData.completedHours || 0),
     packageHours + additionalHours,
   );
+  const initialPaidAmount = Number(formData.paidAmount || 0);
+  const normalizedEnrollmentDate =
+    normalizeFormDate(formData.startDate) ??
+    new Date().toISOString().slice(0, 10);
 
   return {
     firstName: formData.firstName,
     lastName: formData.lastName,
     phone: formData.phone,
     email: formData.email || null,
+    portalPassword: isCreateMode ? formData.portalPassword || null : null,
     nationalId: formData.idNumber || null,
     birthDate: normalizeFormDate(formData.birthDate),
     address: formData.address || null,
@@ -708,9 +905,7 @@ function toStudentMutationPayload(
             : 'ELECTRONIC',
       theoryGroupNumber: formData.groupNumber || formData.theoryGroup || null,
       assignedInstructorName: formData.instructor || null,
-      enrollmentDate:
-        normalizeFormDate(formData.startDate) ??
-        new Date().toISOString().slice(0, 10),
+      enrollmentDate: normalizedEnrollmentDate,
       expectedArrivalDate: normalizeFormDate(formData.expectedArrivalDate),
       previousLicenseCategory: formData.previousLicenseCategory || null,
       packageHours,
@@ -719,8 +914,19 @@ function toStudentMutationPayload(
       failedExamAttempts: Number(formData.failedExamAttempts || 0),
       lastPracticeAt:
         completedHours > 0 ? new Date().toISOString() : null,
-      notes: buildEnrollmentNotes(formData.notes, formData.paidAmount),
+      notes: formData.notes.trim() || null,
     },
+    initialPayment:
+      isCreateMode && Number.isFinite(initialPaidAmount) && initialPaidAmount > 0
+        ? {
+            amount: initialPaidAmount,
+            paidAmount: initialPaidAmount,
+            method: 'В брой',
+            status: 'PAID',
+            paidAt: normalizedEnrollmentDate,
+            note: 'Първоначално плащане при записване',
+          }
+        : null,
   };
 }
 
@@ -729,6 +935,8 @@ function useStudentFormInitialState() {
     firstName: '',
     lastName: '',
     email: '',
+    portalPassword: '',
+    portalPasswordConfirm: '',
     phone: '',
     address: '',
     birthDate: '',
@@ -787,45 +995,40 @@ function resolvePackageHours(lessonPackage: string, customPackageHours: string) 
   return Number(lessonPackage || 0);
 }
 
-function buildEnrollmentNotes(notes: string, paidAmount: string) {
-  const trimmedNotes = stripPaidAmountNote(notes).trim();
-  const numericAmount = Number(paidAmount || 0);
-  const paidAmountLine =
-    Number.isFinite(numericAmount) && numericAmount > 0
-      ? `Платена сума при записване: ${numericAmount.toFixed(2)} €`
-      : '';
-
-  return [trimmedNotes, paidAmountLine].filter(Boolean).join('\n') || null;
-}
-
-function extractPaidAmount(notes: string) {
-  const match = /Платена сума при записване:\s*([0-9]+(?:[.,][0-9]{1,2})?)/i.exec(
-    notes,
-  );
-
-  if (!match) {
-    return '';
-  }
-
-  return match[1].replace(',', '.');
-}
-
-function stripPaidAmountNote(notes: string) {
-  return notes
-    .split('\n')
-    .filter(
-      (line) => !line.toLowerCase().includes('платена сума при записване:'),
-    )
-    .join('\n')
-    .trim();
-}
-
 function mapPackageHoursToFormValue(packageHours: number) {
   return isPresetPackageHours(packageHours) ? String(packageHours) : 'custom';
 }
 
 function isPresetPackageHours(packageHours: number) {
   return [10, 15, 20, 25].includes(packageHours);
+}
+
+function buildSelectOptions(
+  placeholderLabel: string,
+  options: Array<{ value: string; label: string }>,
+  currentValue: string,
+) {
+  if (
+    currentValue &&
+    !options.some((option) => option.value === currentValue)
+  ) {
+    return [
+      { value: '', label: placeholderLabel },
+      { value: currentValue, label: currentValue },
+      ...options,
+    ];
+  }
+
+  return [{ value: '', label: placeholderLabel }, ...options];
+}
+
+function buildInstructorOptionLabel(instructor: {
+  displayName: string;
+  roleLabels: string[];
+  assignedStudentsCount: number;
+}) {
+  const rolesLabel = instructor.roleLabels.join(' + ');
+  return `${instructor.displayName} · ${rolesLabel} · ${instructor.assignedStudentsCount} курсисти`;
 }
 
 function mapEducationLevelToBackendLabel(value: string) {
@@ -909,4 +1112,40 @@ function mapFormCourseOutcomeToEnrollmentStatus(
   }
 
   return 'ACTIVE';
+}
+
+function applyOcrAutofillToStudentForm(
+  current: ReturnType<typeof useStudentFormInitialState>,
+  extraction: StudentOcrAutofill,
+) {
+  return {
+    ...current,
+    firstName: extraction.firstName ?? current.firstName,
+    lastName: extraction.lastName ?? current.lastName,
+    idNumber: extraction.nationalId ?? current.idNumber,
+    birthDate: extraction.birthDate ?? current.birthDate,
+    address: extraction.address ?? current.address,
+    previousLicenseCategory:
+      extraction.previousLicenseCategory ?? current.previousLicenseCategory,
+    studentType:
+      extraction.previousLicenseCategory && !current.studentType
+        ? 'licensed-manual-hours'
+        : current.studentType,
+  };
+}
+
+function buildStudentOcrSuccessMessage(extraction: StudentOcrAutofill) {
+  const filledFields = [
+    extraction.firstName ? 'име' : null,
+    extraction.lastName ? 'фамилия' : null,
+    extraction.nationalId ? 'ЕГН' : null,
+    extraction.birthDate ? 'дата на раждане' : null,
+    extraction.address ? 'адрес' : null,
+    extraction.previousLicenseCategory ? 'предходна категория' : null,
+  ].filter(Boolean);
+
+  const fieldsLabel =
+    filledFields.length > 0 ? filledFields.join(', ') : 'няма сигурно разпознати полета';
+
+  return `Разпознат документ: ${extraction.documentType}. Попълнени: ${fieldsLabel}.`;
 }

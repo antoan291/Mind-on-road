@@ -2,6 +2,7 @@
 // Based on "The Obsidian Navigator" creative direction
 
 export { PageHeader } from "./PageHeader";
+export { PageContent } from "./PageContent";
 export { Card, CardHeader, SectionHeader } from "./Card";
 export { Button, IconButton } from "./Button";
 export { Badge, StatusBadge } from "./Badge";

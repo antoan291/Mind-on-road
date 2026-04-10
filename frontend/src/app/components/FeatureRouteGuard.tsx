@@ -3,17 +3,22 @@ import { ShieldAlert } from 'lucide-react';
 import type { TenantFeatureKey } from '../services/featureSettings';
 import { useFeatureSettings } from '../services/featureSettings';
 import { useAuthSession } from '../services/authSession';
+import { hasDeveloperRole, hasFullAccessRole } from '../services/roleUtils';
 import { Button } from './ui-system/Button';
 
 export function FeatureRouteGuard({
   featureKey,
   permissionKey,
   ownerOnly = false,
+  developerOnly = false,
+  allowedRoleKeys,
   children,
 }: {
   featureKey?: TenantFeatureKey;
   permissionKey?: string;
   ownerOnly?: boolean;
+  developerOnly?: boolean;
+  allowedRoleKeys?: string[];
   children: React.ReactNode;
 }) {
   const { authState, session } = useAuthSession();
@@ -30,14 +35,25 @@ export function FeatureRouteGuard({
     );
   }
 
-  if (ownerOnly && !session?.user.roleKeys.includes('owner')) {
+  if (ownerOnly && !hasFullAccessRole(session?.user.roleKeys ?? [])) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (developerOnly && !hasDeveloperRole(session?.user.roleKeys ?? [])) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (
+    allowedRoleKeys &&
+    !allowedRoleKeys.some((roleKey) => session?.user.roleKeys.includes(roleKey))
+  ) {
     return <Navigate to="/" replace />;
   }
 
   if (
     permissionKey &&
     !session?.user.permissionKeys.includes(permissionKey) &&
-    !session?.user.roleKeys.includes('owner')
+    !hasFullAccessRole(session?.user.roleKeys ?? [])
   ) {
     return <Navigate to="/" replace />;
   }

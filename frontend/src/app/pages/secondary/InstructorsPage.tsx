@@ -5,10 +5,11 @@ import { Button } from '../../components/ui-system/Button';
 import { FilterBar } from '../../components/ui-system/FilterBar';
 import { PageHeader } from '../../components/ui-system/PageHeader';
 import { StatusBadge } from '../../components/ui-system/StatusBadge';
+import { useAuthSession } from '../../services/authSession';
 import {
-  buildInstructorRows,
   fetchInstructorRows,
 } from '../../services/instructorsApi';
+import { hasPersonnelAccessRole } from '../../services/roleUtils';
 import {
   type InstructorRow,
 } from './secondaryData';
@@ -16,6 +17,7 @@ import { InfoLine, MetricCard, MetricGrid, PageSection, Panel } from './secondar
 
 export function InstructorsPage() {
   const navigate = useNavigate();
+  const { session } = useAuthSession();
   const [searchValue, setSearchValue] = useState('');
   const [instructors, setInstructors] =
     useState<InstructorRow[]>([]);
@@ -73,13 +75,15 @@ export function InstructorsPage() {
             >
               Експорт
             </Button>
-            <Button
-              variant="primary"
-              icon={<Plus size={18} />}
-              onClick={() => navigate('/students/new')}
-            >
-              Добави инструктор
-            </Button>
+            {hasPersonnelAccessRole(session?.user.roleKeys ?? []) ? (
+              <Button
+                variant="primary"
+                icon={<Plus size={18} />}
+                onClick={() => navigate('/personnel')}
+              >
+                Добави инструктор
+              </Button>
+            ) : null}
           </>
         }
       />
@@ -97,7 +101,7 @@ export function InstructorsPage() {
             icon={<UserCircle size={18} />}
             label="Активни инструктори"
             value={String(instructors.length)}
-            detail="DB-derived от курсистите"
+            detail="Регистрирани в персонала"
           />
           <MetricCard
             icon={<Users size={18} />}

@@ -76,6 +76,7 @@ export function Button({
         ${fullWidth ? 'w-full' : ''}
         rounded-xl font-medium
         flex items-center justify-center gap-2
+        cursor-pointer
         transition-all
         disabled:opacity-50 disabled:cursor-not-allowed
         hover:opacity-90 active:scale-95
@@ -149,6 +150,7 @@ export function IconButton({
         ${sizeClasses[size]}
         rounded-lg
         flex items-center justify-center
+        cursor-pointer
         transition-all
         disabled:opacity-50 disabled:cursor-not-allowed
         hover:opacity-80 active:scale-95

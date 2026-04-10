@@ -171,3 +171,64 @@
 
 ## 2026-03-28 - Root cleanup
 - Removed temporary helper scripts and text files that had been left in the project root during earlier frontend fixes.
+
+## 2026-04-08 - Personnel and role model refactor
+- Replaced the old school-level `admin` role with the clearer split `Собственик`, `Администрация`, `Инструктор`, and `Инструктор симулатор`.
+- Added a full-access `developer` role intended for platform development and debugging without overloading the owner position.
+- Introduced a shared `Персонал` management flow for school staff creation and multi-specialty assignments.
+- Updated the tenant bootstrap/runtime setup so the owner keeps full school access and a separate developer account can also access all modules.
+
+## 2026-04-08 - Personnel password ownership
+- Locked the `Персонал` edit flow so owners and developers can no longer change an employee password from the management screen.
+- Kept password entry only on staff creation and made edit mode explicitly instruct the employee to change their own password after login.
+- Added backend protection and integration coverage so `PUT /personnel/:membershipId` rejects password updates and preserves the existing login credentials.
+
+## 2026-04-08 - Personnel deletion removes login access
+- Added owner/developer staff deletion through `Персонал` with a dedicated destructive action in the employee edit modal.
+- Deleting a staff member now removes the tenant membership, revokes their active session in that school, and deletes the underlying user/login record when no other memberships remain.
+- Added integration coverage that confirms a deleted employee can no longer log in with the old credentials.
+
+## 2026-04-08 - Determinator restricted to administration
+- Removed `Детерминатор` access for `Инструктор` and `Инструктор симулатор`.
+- The screen is now hidden from instructor navigation and student detail tabs, and the route/UI guard allows only `Собственик`, `Разработчик`, and `Администрация`.
+- Backend authorization now returns `403` for instructor calls to the determinator endpoints, with integration coverage for both GET and POST access attempts.
+
+## 2026-04-08 - Instructor dashboard reduced to operational alerts
+- Reworked the instructor dashboard into a minimal operational view with only instructor-relevant alerts for assigned students and scoped vehicles.
+- Removed school-wide financial overview, profit statistics, and the extra dashboard quick actions from the instructor experience.
+- Kept a single quick action `Запиши час`, with the lesson dialog constrained to the instructor’s own context.
+
+## 2026-04-08 - Frontend route code splitting
+- Reworked the frontend router to lazy-load page modules instead of shipping all screens in the initial bundle.
+- Added explicit Vite vendor chunk splitting for router, MUI, Radix, charts, and icons so heavy dependencies no longer accumulate in one monolithic JS file.
+- Removed the oversized frontend bundle warning from the production build and reduced initial entry cost to a small shell plus route chunks.
+
+## 2026-04-08 - Administration access narrowed
+- Removed `Администрация` access to `Персонал` and `AI център` in both the navigation and route guards.
+- Locked backend `personnel` and `ai/business-assistant` endpoints to `Собственик` and `Разработчик`, so legacy permissions in older seeded roles no longer bypass the product rule.
+- Removed `users.manage` from the administration role template for future tenant seeds and added integration coverage for `403` on both restricted areas.
+
+## 2026-04-08 - Student form uses live instructors and theory groups
+- Replaced the hardcoded instructor names in the student create/edit form with tenant-scoped API data.
+- Added a dedicated `GET /students/instructor-options` endpoint so `Собственик`, `Разработчик`, and `Администрация` can assign instructors without exposing the full `Персонал` registry.
+- Replaced the hardcoded theory group list in the same form with live theory groups and added integration coverage for the new instructor-options endpoint.
+
+## 2026-04-08 - Instructor document expiry notifications
+- Extended the generated notifications feed with `INSTRUCTOR_DOCUMENT_EXPIRY` signals sourced from live document records instead of frontend-only heuristics.
+- Synced the notifications repository to delete stale generated rows so the bell state and notifications page reflect the current source-of-truth state.
+- Wired the dashboard and top bell to the real notifications feed, so expiring instructor documents now surface in both places and the bell turns red only when pending notifications exist.
+
+## 2026-04-08 - Shared frontend notifications state
+- Added a dedicated frontend notifications provider so the bell, dashboard, notifications pages, and portal views all consume the same cached notification state.
+- Replaced repeated page-level notification fetches with one shared refresh/polling flow to reduce drift between screens.
+- Kept the unread bell indicator driven by the real backend `PENDING` notifications instead of local component state.
+
+## 2026-04-08 - Student registration dates and initial payment flow
+- Replaced scattered native/browser date inputs in the shared and ui-system field layers with one reusable calendar popover component, so student registration and theory-group dialogs now use the same date picker behavior.
+- Changed student registration so the initial paid amount creates a real payment record during `POST /students`, instead of being hidden inside enrollment notes.
+- Updated the student dossier to show unmasked EGN, correct hour labels (`Закупени`, `Проведени`, `Остават`), and real paid/remaining euro totals from payment records.
+
+## 2026-04-08 - Student portal credentials set at registration
+- Changed student registration so the owner/developer sets the course participant's portal email and password explicitly during `POST /students`, instead of relying on an autogenerated temporary password.
+- Kept the security rule that the student must change that password after the first successful login, while blocking owner-side password changes during later student edits.
+- Fixed the identity-linking bug that could overwrite an instructor account when a student reused the same phone number, by allowing account reuse only by exact email and never by phone.

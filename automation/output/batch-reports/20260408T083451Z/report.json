@@ -1,0 +1,338 @@
+{
+  "generatedAtUtc": "20260408T083451Z",
+  "inputDir": "/test-docs",
+  "summary": {
+    "total": 10,
+    "ok": 3,
+    "review": 7,
+    "failed": 0,
+    "documentTypes": {
+      "bulgarian_driving_licence": 5,
+      "bulgarian_identity_card": 5
+    }
+  },
+  "entries": [
+    {
+      "filePath": "bad-images/antoan-driving-license/photo_2026-04-08_10-54-08.jpg",
+      "documentType": "bulgarian_driving_licence",
+      "expectedDocumentType": "bulgarian_driving_licence",
+      "status": "ok",
+      "reasons": [],
+      "confidence": 0.927,
+      "warnings": [
+        "Мястото на раждане липсва или не се вижда достатъчно ясно.",
+        "Датите към категориите не бяха разпознати сигурно."
+      ],
+      "firstName": "АНТОАН",
+      "middleName": "СТЕФАНОВ",
+      "lastName": "ДОНЧЕВ",
+      "egn": "0047291463",
+      "documentNumber": "283841384",
+      "placeOfBirth": null,
+      "permanentAddress": null,
+      "drivingCategories": [
+        {
+          "category": "AM",
+          "date": null
+        },
+        {
+          "category": "B1",
+          "date": null
+        }
+      ],
+      "outputJson": "json/bad-images/antoan-driving-license/photo_2026-04-08_10-54-08.json"
+    },
+    {
+      "filePath": "bad-images/antoan-driving-license/photo_2026-04-08_10-54-16.jpg",
+      "documentType": "bulgarian_driving_licence",
+      "expectedDocumentType": "bulgarian_driving_licence",
+      "status": "review",
+      "reasons": [
+        "last name missing",
+        "egn missing",
+        "document number missing",
+        "driving categories missing",
+        "many warnings (5)"
+      ],
+      "confidence": 0.8653,
+      "warnings": [
+        "Фамилията не беше разпозната сигурно.",
+        "ЕГН не беше разпознато сигурно.",
+        "Номерът на документа не беше разпознат сигурно.",
+        "Мястото на раждане липсва или не се вижда достатъчно ясно.",
+        "Категориите на книжката не бяха разпознати сигурно."
+      ],
+      "firstName": "сеb",
+      "middleName": "ТКТ",
+      "lastName": null,
+      "egn": null,
+      "documentNumber": null,
+      "placeOfBirth": null,
+      "permanentAddress": null,
+      "drivingCategories": [],
+      "outputJson": "json/bad-images/antoan-driving-license/photo_2026-04-08_10-54-16.json"
+    },
+    {
+      "filePath": "bad-images/antoan-id/photo_2026-04-08_10-53-14.jpg",
+      "documentType": "bulgarian_identity_card",
+      "expectedDocumentType": "bulgarian_identity_card",
+      "status": "review",
+      "reasons": [
+        "place of birth missing",
+        "permanent address missing"
+      ],
+      "confidence": 0.9202,
+      "warnings": [
+        "Мястото на раждане липсва или не се вижда достатъчно ясно.",
+        "Постоянният адрес липсва или не се вижда достатъчно ясно."
+      ],
+      "firstName": "АНТОАН",
+      "middleName": "СТЕФАНОВ",
+      "lastName": "ДОНЧЕВ",
+      "egn": "0047291463",
+      "documentNumber": "652068169",
+      "placeOfBirth": null,
+      "permanentAddress": null,
+      "drivingCategories": [],
+      "outputJson": "json/bad-images/antoan-id/photo_2026-04-08_10-53-14.json"
+    },
+    {
+      "filePath": "bad-images/antoan-id/photo_2026-04-08_10-53-22.jpg",
+      "documentType": "bulgarian_identity_card",
+      "expectedDocumentType": "bulgarian_identity_card",
+      "status": "review",
+      "reasons": [
+        "first name missing",
+        "egn missing",
+        "document number missing",
+        "permanent address missing",
+        "many warnings (4)"
+      ],
+      "confidence": 0.8386,
+      "warnings": [
+        "Името не беше разпознато сигурно.",
+        "ЕГН не беше разпознато сигурно.",
+        "Номерът на документа не беше разпознат сигурно.",
+        "Постоянният адрес липсва или не се вижда достатъчно ясно."
+      ],
+      "firstName": null,
+      "middleName": null,
+      "lastName": "Фамипия/Сигпате",
+      "egn": null,
+      "documentNumber": null,
+      "placeOfBirth": "Г.ОРЯХОВИЦА",
+      "permanentAddress": null,
+      "drivingCategories": [],
+      "outputJson": "json/bad-images/antoan-id/photo_2026-04-08_10-53-22.json"
+    },
+    {
+      "filePath": "bad-images/emanuela/IMG_0390.JPG",
+      "documentType": "bulgarian_identity_card",
+      "expectedDocumentType": null,
+      "status": "review",
+      "reasons": [
+        "place of birth missing",
+        "permanent address missing"
+      ],
+      "confidence": 0.8881,
+      "warnings": [
+        "Мястото на раждане липсва или не се вижда достатъчно ясно.",
+        "Постоянният адрес липсва или не се вижда достатъчно ясно."
+      ],
+      "firstName": "ЕМАНУЕЛА",
+      "middleName": "ТОДОРОВА",
+      "lastName": "СТОЙЧЕВА",
+      "egn": "9603149070",
+      "documentNumber": "646500499",
+      "placeOfBirth": null,
+      "permanentAddress": null,
+      "drivingCategories": [],
+      "outputJson": "json/bad-images/emanuela/IMG_0390.json"
+    },
+    {
+      "filePath": "bad-images/emanuela/photo_2026-04-08_10-31-18.jpg",
+      "documentType": "bulgarian_identity_card",
+      "expectedDocumentType": null,
+      "status": "review",
+      "reasons": [
+        "first name missing",
+        "egn missing",
+        "document number missing",
+        "permanent address missing",
+        "many warnings (4)"
+      ],
+      "confidence": 0.8575,
+      "warnings": [
+        "Името не беше разпознато сигурно.",
+        "ЕГН не беше разпознато сигурно.",
+        "Номерът на документа не беше разпознат сигурно.",
+        "Постоянният адрес липсва или не се вижда достатъчно ясно."
+      ],
+      "firstName": null,
+      "middleName": null,
+      "lastName": "Су",
+      "egn": null,
+      "documentNumber": null,
+      "placeOfBirth": "обл. ЯМБОЛ",
+      "permanentAddress": null,
+      "drivingCategories": [],
+      "outputJson": "json/bad-images/emanuela/photo_2026-04-08_10-31-18.json"
+    },
+    {
+      "filePath": "images/driver-license-1024x637.webp",
+      "documentType": "bulgarian_driving_licence",
+      "expectedDocumentType": "bulgarian_driving_licence",
+      "status": "ok",
+      "reasons": [],
+      "confidence": 0.9506,
+      "warnings": [
+        "Мястото на раждане липсва или не се вижда достатъчно ясно.",
+        "Датите към категориите не бяха разпознати сигурно."
+      ],
+      "firstName": "МАРИЦА",
+      "middleName": "РАДНЕВА",
+      "lastName": "ИВАНОВА",
+      "egn": "8508010133",
+      "documentNumber": "280000000",
+      "placeOfBirth": null,
+      "permanentAddress": null,
+      "drivingCategories": [
+        {
+          "category": "AM",
+          "date": null
+        },
+        {
+          "category": "A1",
+          "date": null
+        },
+        {
+          "category": "A2",
+          "date": null
+        },
+        {
+          "category": "A",
+          "date": null
+        },
+        {
+          "category": "B1",
+          "date": null
+        },
+        {
+          "category": "B",
+          "date": null
+        },
+        {
+          "category": "C1",
+          "date": null
+        },
+        {
+          "category": "C",
+          "date": null
+        },
+        {
+          "category": "D1",
+          "date": null
+        },
+        {
+          "category": "D",
+          "date": null
+        },
+        {
+          "category": "BE",
+          "date": null
+        },
+        {
+          "category": "C1E",
+          "date": null
+        },
+        {
+          "category": "CE",
+          "date": null
+        },
+        {
+          "category": "D1E",
+          "date": null
+        },
+        {
+          "category": "DE",
+          "date": null
+        }
+      ],
+      "outputJson": "json/images/driver-license-1024x637.json"
+    },
+    {
+      "filePath": "images/maxresdefault.jpg",
+      "documentType": "bulgarian_driving_licence",
+      "expectedDocumentType": null,
+      "status": "review",
+      "reasons": [
+        "egn missing",
+        "driving categories missing"
+      ],
+      "confidence": 0.9295,
+      "warnings": [
+        "ЕГН не беше разпознато сигурно.",
+        "Категориите на книжката не бяха разпознати сигурно."
+      ],
+      "firstName": "SLАDURО",
+      "middleName": "LUDИQ",
+      "lastName": "ЦУРО",
+      "egn": null,
+      "documentNumber": "853333333",
+      "placeOfBirth": "СОФИЯ",
+      "permanentAddress": null,
+      "drivingCategories": [],
+      "outputJson": "json/images/maxresdefault.json"
+    },
+    {
+      "filePath": "pdf/car-card.pdf",
+      "documentType": "bulgarian_driving_licence",
+      "expectedDocumentType": "bulgarian_driving_licence",
+      "status": "review",
+      "reasons": [
+        "document number missing"
+      ],
+      "confidence": 0.8547,
+      "warnings": [
+        "Номерът на документа не беше разпознат сигурно.",
+        "Датите за категориите бяха свързани по ред на OCR, защото гърбът на книжката не се разчете достатъчно ясно по колони."
+      ],
+      "firstName": "ДИЯНА",
+      "middleName": "АТАНАСОВА",
+      "lastName": "ДИМИТРОВА",
+      "egn": "8111161052",
+      "documentNumber": null,
+      "placeOfBirth": "ВАРНА",
+      "permanentAddress": null,
+      "drivingCategories": [
+        {
+          "category": "AM",
+          "date": "09.03.05"
+        },
+        {
+          "category": "B",
+          "date": "09.03.05"
+        }
+      ],
+      "outputJson": "json/pdf/car-card.json"
+    },
+    {
+      "filePath": "pdf/id-card.pdf",
+      "documentType": "bulgarian_identity_card",
+      "expectedDocumentType": "bulgarian_identity_card",
+      "status": "ok",
+      "reasons": [],
+      "confidence": 0.8879,
+      "warnings": [],
+      "firstName": "ДИЯНА",
+      "middleName": "АТАНАСОВА",
+      "lastName": "ДИМИТРОВА",
+      "egn": "8111161052",
+      "documentNumber": "650564596",
+      "placeOfBirth": "ВАРНА",
+      "permanentAddress": "Общ. ВАРНА гр.ВАРНА, ЖК.МЛАДОСТ 123 вх.1 ет.5 ап.15",
+      "drivingCategories": [],
+      "outputJson": "json/pdf/id-card.json"
+    }
+  ]
+}

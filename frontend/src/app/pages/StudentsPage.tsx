@@ -82,14 +82,13 @@ export function StudentsPage() {
     return value;
   };
 
-  const maskNationalId = (value?: string) => {
-    if (!value) return 'Няма';
-    return `${value.slice(0, 2)}******${value.slice(-2)}`;
-  };
-
   const selectedStudent = useMemo(
     () => students.find((student) => student.id === selectedStudentId) ?? students[0] ?? null,
     [selectedStudentId, students],
+  );
+  const activeStudentsCount = useMemo(
+    () => studentRecords.filter(isActiveTrainingStudent).length,
+    [studentRecords],
   );
 
   const columns = [
@@ -327,6 +326,29 @@ export function StudentsPage() {
       )}
 
       <div className="p-6 lg:p-8">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div
+            className="rounded-[24px] p-5"
+            style={{
+              background: 'linear-gradient(180deg, rgba(18, 27, 50, 0.96), rgba(14, 22, 42, 0.98))',
+              border: '1px solid var(--ghost-border)',
+            }}
+          >
+            <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl" style={{ background: 'rgba(99, 102, 241, 0.16)', color: 'var(--primary-accent)' }}>
+              <UserCheck size={18} />
+            </div>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              Активни курсисти
+            </p>
+            <p className="mt-2 text-3xl font-semibold" style={{ color: 'var(--text-primary)' }}>
+              {activeStudentsCount}
+            </p>
+            <p className="mt-2 text-xs leading-5" style={{ color: 'var(--text-tertiary)' }}>
+              Броят се само курсистите, които още не са завършили теорията или практиката.
+            </p>
+          </div>
+        </div>
+
         <div className="mb-4 flex items-center justify-between">
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             Показани {students.length} курсисти
@@ -392,7 +414,7 @@ export function StudentsPage() {
 
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <StudentDetailTile label="Телефон" value={selectedStudent.phone} />
-                <StudentDetailTile label="ЕГН" value={maskNationalId(selectedStudent.nationalId)} />
+                <StudentDetailTile label="ЕГН" value={selectedStudent.nationalId || 'Няма'} />
                 <StudentDetailTile label="Група" value={selectedStudent.groupNumber || 'Индивидуална'} />
                 <StudentDetailTile label="Старт" value={selectedStudent.trainingStartDate || selectedStudent.startDate} />
                 <StudentDetailTile label="Тип курсист" value={selectedStudent.studentTypeLabel} />
@@ -464,6 +486,14 @@ export function StudentsPage() {
       </div>
     </div>
   );
+}
+
+function isActiveTrainingStudent(student: StudentOperationalRecord) {
+  const hasCompletedTheory = student.theoryCompleted || Boolean(student.theoryCompletedAt);
+  const hasCompletedPractice = Boolean(student.practicalCompletedAt);
+  const isWithdrawn = student.examOutcome === 'withdrawn' || student.courseOutcome === 'withdrawn';
+
+  return !isWithdrawn && (!hasCompletedTheory || !hasCompletedPractice);
 }
 
 function StudentDetailTile({ label, value }: { label: string; value: string }) {

@@ -4,11 +4,11 @@ import { StatusBadge } from '../../components/ui-system/StatusBadge';
 import { useIsMobile } from '../../components/ui/use-mobile';
 
 export function PageSection({ children }: { children: React.ReactNode }) {
-  return <div className="space-y-6 p-6 lg:space-y-8 lg:p-8">{children}</div>;
+  return <div className="space-y-5 px-4 py-5 sm:px-6 lg:space-y-8 lg:px-8 lg:py-8">{children}</div>;
 }
 
 export function MetricGrid({ children }: { children: React.ReactNode }) {
-  return <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{children}</div>;
+  return <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">{children}</div>;
 }
 
 export function TwoColumnGrid({ children }: { children: React.ReactNode }) {
@@ -25,7 +25,7 @@ export function Panel({ title, subtitle, children }: { title: string; subtitle: 
 
 export function MetricCard({ icon, label, value, detail, tone = 'neutral' }: { icon: React.ReactNode; label: string; value: string; detail: string; tone?: StatusTone }) {
   const accent = tone === 'warning' ? 'var(--status-warning)' : tone === 'error' ? 'var(--status-error)' : tone === 'success' ? 'var(--status-success)' : tone === 'info' ? 'var(--status-info)' : 'var(--primary-accent)';
-  return <div className="rounded-3xl p-5" style={{ background: 'var(--bg-card)', border: '1px solid var(--ghost-border)' }}><div className="flex items-center justify-between"><div className="flex h-10 w-10 items-center justify-center rounded-2xl" style={{ background: 'var(--bg-card-elevated)', color: accent }}>{icon}</div></div><p className="mt-4 text-sm" style={{ color: 'var(--text-secondary)' }}>{label}</p><p className="mt-2 text-3xl font-semibold" style={{ color: 'var(--text-primary)' }}>{value}</p><p className="mt-2 text-sm" style={{ color: 'var(--text-tertiary)' }}>{detail}</p></div>;
+  return <div className="rounded-3xl p-4 sm:p-5" style={{ background: 'var(--bg-card)', border: '1px solid var(--ghost-border)' }}><div className="flex items-center justify-between"><div className="flex h-10 w-10 items-center justify-center rounded-2xl" style={{ background: 'var(--bg-card-elevated)', color: accent }}>{icon}</div></div><p className="mt-4 text-sm" style={{ color: 'var(--text-secondary)' }}>{label}</p><p className="mt-2 text-2xl font-semibold sm:text-3xl" style={{ color: 'var(--text-primary)' }}>{value}</p><p className="mt-2 text-sm leading-6" style={{ color: 'var(--text-tertiary)' }}>{detail}</p></div>;
 }
 
 export function InsightCard({ icon, title, body, tone = 'neutral' }: { icon: React.ReactNode; title: string; body: string; tone?: StatusTone }) {
@@ -58,7 +58,7 @@ export function ProgressRow({ label, value, tone = 'neutral' }: { label: string;
 }
 
 export function InfoStack({ items }: { items: [string, string][] }) {
-  return <div className="space-y-4">{items.map(([label, value]) => <div key={label} className="flex items-start justify-between gap-4 rounded-2xl p-4" style={{ background: 'var(--bg-card-elevated)', border: '1px solid var(--ghost-border)' }}><span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{label}</span><span className="text-sm text-right font-medium" style={{ color: 'var(--text-primary)' }}>{value}</span></div>)}</div>;
+  return <div className="space-y-4">{items.map(([label, value]) => <div key={label} className="flex flex-col gap-2 rounded-2xl p-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4" style={{ background: 'var(--bg-card-elevated)', border: '1px solid var(--ghost-border)' }}><span className="text-sm" style={{ color: 'var(--text-secondary)' }}>{label}</span><span className="text-sm font-medium sm:text-right" style={{ color: 'var(--text-primary)' }}>{value}</span></div>)}</div>;
 }
 
 export function ToggleLine({ label, state, tone = 'neutral' }: { label: string; state: string; tone?: StatusTone }) {

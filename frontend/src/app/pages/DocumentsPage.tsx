@@ -5,6 +5,7 @@ import { FilterBar } from '../components/ui-system/FilterBar';
 import { DataTable } from '../components/ui-system/DataTable';
 import { StatusBadge } from '../components/ui-system/StatusBadge';
 import { Button } from '../components/ui-system/Button';
+import { DatePickerInput } from '../components/date/DatePickerInput';
 import { 
   Plus, Download, Upload, X, FileText, AlertCircle,
   CheckCircle, Calendar, User, Car, Building, Eye,
@@ -22,6 +23,7 @@ import {
   updateDocumentRecord,
 } from '../services/documentsApi';
 import { useAuthSession } from '../services/authSession';
+import { hasFullAccessRole } from '../services/roleUtils';
 import {
   type StudentOperationalRecord,
 } from '../content/studentOperations';
@@ -75,8 +77,8 @@ export function DocumentsPage() {
     'loading' | 'backend' | 'fallback'
   >('loading');
   const canDeleteDocuments = Boolean(
-    session?.user.roleKeys.includes('owner') ||
-      session?.user.roleKeys.includes('admin'),
+    hasFullAccessRole(session?.user.roleKeys ?? []) ||
+      session?.user.roleKeys.includes('administration'),
   );
 
   useEffect(() => {
@@ -1396,10 +1398,9 @@ function UploadModal({
                   <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                     Дата на издаване
                   </label>
-                  <input
-                    type="date"
+                  <DatePickerInput
                     value={issueDate}
-                    onChange={(event) => setIssueDate(event.target.value)}
+                    onChange={setIssueDate}
                     className="w-full h-12 rounded-lg px-4 border-none outline-none"
                     style={{
                       background: 'var(--bg-panel)',
@@ -1412,10 +1413,9 @@ function UploadModal({
                   <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                     Валиден до
                   </label>
-                  <input
-                    type="date"
+                  <DatePickerInput
                     value={expiryDate}
-                    onChange={(event) => setExpiryDate(event.target.value)}
+                    onChange={setExpiryDate}
                     className="w-full h-12 rounded-lg px-4 border-none outline-none"
                     style={{
                       background: 'var(--bg-panel)',
@@ -1674,10 +1674,9 @@ function OcrApplyModal({
                 <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Дата на издаване
                 </label>
-                <input
-                  type="date"
+                <DatePickerInput
                   value={issueDate}
-                  onChange={(event) => setIssueDate(event.target.value)}
+                  onChange={setIssueDate}
                   className="w-full h-12 rounded-lg px-4 border-none outline-none"
                   style={{
                     background: 'var(--bg-panel)',
@@ -1690,10 +1689,9 @@ function OcrApplyModal({
                 <label className="block text-sm mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Валиден до
                 </label>
-                <input
-                  type="date"
+                <DatePickerInput
                   value={expiryDate}
-                  onChange={(event) => setExpiryDate(event.target.value)}
+                  onChange={setExpiryDate}
                   className="w-full h-12 rounded-lg px-4 border-none outline-none"
                   style={{
                     background: 'var(--bg-panel)',
