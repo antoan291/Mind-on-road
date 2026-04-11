@@ -222,7 +222,7 @@ export function MobileLayout() {
       permissionKey: "reports.read",
     },
     {
-      path: "/ai",
+      path: "/ai/center",
       label: "AI Център",
       icon: <Bot size={20} />,
       shortLabel: "AI Център",
@@ -252,10 +252,10 @@ export function MobileLayout() {
 
   const visibleBottomNavItems = bottomNavItems.filter(
     (item) =>
-      (!('featureKey' in item) ||
+      (!("featureKey" in item) ||
         !item.featureKey ||
         isFeatureEnabled(item.featureKey)) &&
-      (!('permissionKey' in item) ||
+      (!("permissionKey" in item) ||
         !item.permissionKey ||
         session?.user.permissionKeys.includes(item.permissionKey) ||
         hasFullAccessRole(session?.user.roleKeys ?? [])),
@@ -327,12 +327,9 @@ export function MobileLayout() {
             <div
               className="text-sm font-semibold truncate"
               style={{ color: "var(--text-primary)" }}
-            >
-            </div>
+            ></div>
           </div>
         </div>
-
-      
       </header>
 
       <main className="flex-1 overflow-auto pb-24">
@@ -449,7 +446,10 @@ export function MobileLayout() {
                 >
                   Навигация
                 </p>
-                <h2 className="mt-1 text-lg font-semibold" style={{ color: "var(--text-primary)" }}>
+                <h2
+                  className="mt-1 text-lg font-semibold"
+                  style={{ color: "var(--text-primary)" }}
+                >
                   Меню
                 </h2>
               </div>
@@ -485,9 +485,7 @@ export function MobileLayout() {
                   >
                     {initials || "U"}
                   </div>
-                  <div
-                    className="min-w-0"
-                  >
+                  <div className="min-w-0">
                     <div
                       className="text-sm font-medium truncate"
                       style={{ color: "var(--text-primary)" }}
@@ -587,7 +585,9 @@ function MenuShortcut({
       <button
         className="w-full rounded-2xl px-3 py-3 text-left"
         style={{
-          background: active ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.06)",
+          background: active
+            ? "rgba(255,255,255,0.14)"
+            : "rgba(255,255,255,0.06)",
           color: "#ffffff",
         }}
       >
@@ -633,12 +633,17 @@ function MenuRow({
         >
           {icon}
         </span>
-        <span className="min-w-0 flex-1 text-sm font-medium" style={{ color: "var(--text-primary)" }}>
+        <span
+          className="min-w-0 flex-1 text-sm font-medium"
+          style={{ color: "var(--text-primary)" }}
+        >
           {label}
         </span>
         <ChevronRight
           size={16}
-          style={{ color: active ? "var(--primary-accent)" : "var(--text-dim)" }}
+          style={{
+            color: active ? "var(--primary-accent)" : "var(--text-dim)",
+          }}
         />
       </button>
     </Link>
@@ -646,5 +651,7 @@ function MenuRow({
 }
 
 function matchesPath(currentPath: string, itemPath: string) {
-  return itemPath === "/" ? currentPath === "/" : currentPath.startsWith(itemPath);
+  return itemPath === "/"
+    ? currentPath === "/"
+    : currentPath.startsWith(itemPath);
 }

@@ -320,14 +320,6 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: "ai",
-        element: renderRoute(
-          <FeatureRouteGuard featureKey="ai" permissionKey="reports.read" allowedRoleKeys={["owner", "developer"]}>
-            <AICenterChatPage />
-          </FeatureRouteGuard>,
-        ),
-      },
-      {
         path: "ai/center",
         element: renderRoute(
           <FeatureRouteGuard featureKey="ai" permissionKey="reports.read" allowedRoleKeys={["owner", "developer"]}>

@@ -221,14 +221,12 @@ export async function extractStudentAutofillFromDocument(
         throw new Error('Твърде много опити за сканиране. Изчакайте малко и опитайте пак.');
       }
 
-      if (error.statusCode === 400) {
-        throw new Error('Сканирането е неуспешно.');
-      }
-
-      throw new Error('Сканирането е неуспешно.');
+      throw new Error(`Сканирането е неуспешно. (${error.statusCode}: ${error.message})`);
     }
 
-    throw new Error('Сканирането е неуспешно.');
+    throw error instanceof Error
+      ? error
+      : new Error('Сканирането е неуспешно.');
   }
 }
 

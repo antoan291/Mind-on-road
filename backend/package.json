@@ -23,7 +23,6 @@
     "typescript": "5.6.3"
   },
   "scripts": {
-    "start": "nodemon --watch src --ext ts,json --signal SIGTERM --exec \"node --env-file-if-exists=.env --import tsx ./src/main.ts\"",
     "start:dev": "nodemon --watch src --ext ts,json --signal SIGTERM --exec \"node --env-file-if-exists=.env --import tsx ./src/main.ts\"",
     "start:prod": "node --env-file-if-exists=.env dist/main.js",
     "build": "tsc -p tsconfig.build.json",

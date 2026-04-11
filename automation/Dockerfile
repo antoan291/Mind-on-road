@@ -15,6 +15,11 @@ RUN apt-get update \
     libglib2.0-0 \
     libgl1 \
     libgomp1 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libfontconfig1 \
+    libice6 \
   && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml README.md ./

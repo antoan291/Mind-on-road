@@ -203,7 +203,7 @@ export function AppLayout() {
       developerOnly: true,
     },
     {
-      path: "/ai",
+      path: "/ai/center",
       icon: Bot,
       label: "AI Център",
       featureKey: "ai",
