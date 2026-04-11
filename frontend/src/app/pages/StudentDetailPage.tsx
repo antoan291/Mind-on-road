@@ -355,7 +355,7 @@ export function StudentDetailPage() {
     }
 
     try {
-      await deleteStudentRecord(student.id, session?.csrfToken ?? "");
+      await deleteStudentRecord(String(student.id), session?.csrfToken ?? "");
       navigate("/students");
     } catch (error) {
       const message =

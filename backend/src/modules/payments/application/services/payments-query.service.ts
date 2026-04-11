@@ -1,3 +1,4 @@
+import type { QueryReadAccessScope } from '../../../shared/query/read-access-scope';
 import type {
   PaymentRecord,
   PaymentsRepository
@@ -6,9 +7,13 @@ import type {
 export class PaymentsQueryService {
   public constructor(private readonly paymentsRepository: PaymentsRepository) {}
 
-  public async listPayments(params: { tenantId: string }) {
+  public async listPayments(params: {
+    tenantId: string;
+    scope?: QueryReadAccessScope;
+  }) {
     const payments = await this.paymentsRepository.listByTenant({
-      tenantId: params.tenantId
+      tenantId: params.tenantId,
+      scope: params.scope
     });
 
     return payments.map((payment) => toPaymentResponse(payment));

@@ -107,7 +107,10 @@ export interface PracticalLessonCreateInput {
 }
 
 export interface PracticalLessonsRepository {
-  listByTenant(params: { tenantId: string }): Promise<PracticalLessonRecord[]>;
+  listByTenant(params: {
+    tenantId: string;
+    scope?: QueryReadAccessScope;
+  }): Promise<PracticalLessonRecord[]>;
   createForTenant(params: {
     tenantId: string;
     lesson: PracticalLessonCreateInput;
@@ -122,3 +125,4 @@ export interface PracticalLessonsRepository {
     lessonId: string;
   }): Promise<boolean>;
 }
+import type { QueryReadAccessScope } from '../../../shared/query/read-access-scope';

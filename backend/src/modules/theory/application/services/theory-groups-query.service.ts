@@ -1,3 +1,4 @@
+import type { QueryReadAccessScope } from '../../../shared/query/read-access-scope';
 import type {
   TheoryGroupRecord,
   TheoryGroupsRepository,
@@ -9,13 +10,40 @@ export class TheoryGroupsQueryService {
     private readonly theoryGroupsRepository: TheoryGroupsRepository
   ) {}
 
-  public async listGroups(params: { tenantId: string }) {
+  public async listGroups(params: {
+    tenantId: string;
+    scope?: QueryReadAccessScope;
+  }) {
     const groups = await this.theoryGroupsRepository.listByTenant({
-      tenantId: params.tenantId
+      tenantId: params.tenantId,
+      scope: params.scope
     });
 
-    return groups.map((group) => toTheoryGroupResponse(group));
+    return groups.map((group) =>
+      toTheoryGroupResponse(filterTheoryGroupForScope(group, params.scope))
+    );
   }
+}
+
+function filterTheoryGroupForScope(
+  group: TheoryGroupRecord,
+  scope?: QueryReadAccessScope
+) {
+  if (!scope || scope.mode === 'tenant' || scope.mode === 'instructor') {
+    return group;
+  }
+
+  return {
+    ...group,
+    lectures: group.lectures
+      .map((lecture) => ({
+        ...lecture,
+        attendanceRecords: lecture.attendanceRecords.filter((attendance) =>
+          scope.studentIds.includes(attendance.studentId)
+        )
+      }))
+      .filter((lecture) => lecture.attendanceRecords.length > 0)
+  };
 }
 
 export function toTheoryGroupResponse(group: TheoryGroupRecord) {

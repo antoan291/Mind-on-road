@@ -221,7 +221,10 @@ export function ExpensesPage() {
   const handleCreateExpense = async () => {
     const payload: ExpenseCreatePayload = {
       title: draftExpense.title,
-      type: draftExpense.type,
+      type:
+        draftExpense.type === 'friend-vat-expense'
+          ? 'friend-vat-expense'
+          : 'expense',
       category: draftExpense.category,
       amount: Number(draftExpense.amount) || 0,
       vatAmount:

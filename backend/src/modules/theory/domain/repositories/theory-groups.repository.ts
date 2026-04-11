@@ -3,6 +3,7 @@ import type {
   TheoryLectureAttendanceStatus,
   TheoryLectureStatus
 } from '@prisma/client';
+import type { QueryReadAccessScope } from '../../../shared/query/read-access-scope';
 
 export interface TheoryLectureAttendanceRecord {
   studentId: string;
@@ -47,7 +48,10 @@ export interface TheoryGroupRecord {
 }
 
 export interface TheoryGroupsRepository {
-  listByTenant(params: { tenantId: string }): Promise<TheoryGroupRecord[]>;
+  listByTenant(params: {
+    tenantId: string;
+    scope?: QueryReadAccessScope;
+  }): Promise<TheoryGroupRecord[]>;
   createForTenant(params: {
     tenantId: string;
     group: {

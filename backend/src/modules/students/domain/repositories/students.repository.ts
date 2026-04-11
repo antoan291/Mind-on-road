@@ -118,10 +118,33 @@ export interface StudentWriteInput {
 }
 
 export interface StudentsRepository {
-  listByTenant(params: { tenantId: string }): Promise<StudentProfileRecord[]>;
+  listByTenant(params: {
+    tenantId: string;
+    scope?: QueryReadAccessScope;
+  }): Promise<StudentProfileRecord[]>;
+  listAccessibleStudentIds(params: {
+    tenantId: string;
+    actor:
+      | {
+          mode: 'instructor';
+          membershipId: string;
+          instructorName: string;
+        }
+      | {
+          mode: 'student';
+          membershipId: string;
+          email: string;
+        }
+      | {
+          mode: 'parent';
+          membershipId: string;
+          email: string;
+        };
+  }): Promise<string[]>;
   findByTenantAndId(params: {
     tenantId: string;
     studentId: string;
+    scope?: QueryReadAccessScope;
   }): Promise<StudentProfileRecord | null>;
   createForTenant(params: {
     tenantId: string;
@@ -139,9 +162,11 @@ export interface StudentsRepository {
   listDeterminatorSessionsByTenant(params: {
     tenantId: string;
     studentId?: string;
+    scope?: QueryReadAccessScope;
   }): Promise<DeterminatorSessionRecord[]>;
   createDeterminatorSession(params: {
     tenantId: string;
     session: DeterminatorSessionCreateInput;
   }): Promise<DeterminatorSessionRecord | null>;
 }
+import type { QueryReadAccessScope } from '../../../shared/query/read-access-scope';

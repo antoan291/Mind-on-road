@@ -3,6 +3,7 @@ import { apiClient } from './apiClient';
 export type PaymentRecordView = {
   id: string | number;
   paymentNumber: string;
+  number?: string;
   date: string;
   student: string;
   studentId: string | number;
@@ -13,6 +14,7 @@ export type PaymentRecordView = {
   remainingAmount: number;
   paymentMethod: string;
   paymentStatus: 'paid' | 'partial' | 'overdue' | 'pending' | 'canceled';
+  status?: 'paid' | 'partial' | 'overdue' | 'pending' | 'canceled';
   invoiceStatus: 'issued' | 'pending' | 'none';
   invoiceNumber?: string;
   lastUpdatedBy: string;
@@ -131,6 +133,7 @@ function mapBackendPayment(payment: BackendPaymentRecord): PaymentRecordView {
   return {
     id: payment.id,
     paymentNumber: payment.paymentNumber,
+    number: payment.paymentNumber,
     date: payment.paidAt,
     student: payment.studentName,
     studentId: payment.studentId,
@@ -141,6 +144,7 @@ function mapBackendPayment(payment: BackendPaymentRecord): PaymentRecordView {
     remainingAmount,
     paymentMethod: payment.method,
     paymentStatus,
+    status: paymentStatus,
     invoiceStatus: 'issued',
     invoiceNumber: `INV-${payment.paymentNumber}`,
     lastUpdatedBy: 'Система',

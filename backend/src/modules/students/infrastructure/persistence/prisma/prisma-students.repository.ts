@@ -7,6 +7,7 @@ import {
   StudentStatus,
   StudentTrainingMode
 } from '@prisma/client';
+import type { QueryReadAccessScope } from '../../../../shared/query/read-access-scope';
 
 import { StudentAlreadyExistsError } from '../../../domain/students.errors';
 import type {
@@ -22,11 +23,10 @@ export class PrismaStudentsRepository implements StudentsRepository {
 
   public async listByTenant(params: {
     tenantId: string;
+    scope?: QueryReadAccessScope;
   }): Promise<StudentProfileRecord[]> {
     return this.prisma.student.findMany({
-      where: {
-        tenantId: params.tenantId
-      },
+      where: buildStudentReadWhere(params.tenantId, params.scope),
       orderBy: {
         createdAt: 'desc'
       },
@@ -34,14 +34,44 @@ export class PrismaStudentsRepository implements StudentsRepository {
     });
   }
 
+  public async listAccessibleStudentIds(params: {
+    tenantId: string;
+    actor:
+      | {
+          mode: 'instructor';
+          membershipId: string;
+          instructorName: string;
+        }
+      | {
+          mode: 'student';
+          membershipId: string;
+          email: string;
+        }
+      | {
+          mode: 'parent';
+          membershipId: string;
+          email: string;
+        };
+  }): Promise<string[]> {
+    const students = await this.prisma.student.findMany({
+      where: buildAccessibleStudentIdsWhere(params.tenantId, params.actor),
+      select: {
+        id: true
+      }
+    });
+
+    return students.map((student) => student.id);
+  }
+
   public async findByTenantAndId(params: {
     tenantId: string;
     studentId: string;
+    scope?: QueryReadAccessScope;
   }): Promise<StudentProfileRecord | null> {
     return this.prisma.student.findFirst({
       where: {
-        id: params.studentId,
-        tenantId: params.tenantId
+        ...buildStudentReadWhere(params.tenantId, params.scope),
+        id: params.studentId
       },
       select: studentSelection
     });
@@ -220,12 +250,10 @@ export class PrismaStudentsRepository implements StudentsRepository {
   public async listDeterminatorSessionsByTenant(params: {
     tenantId: string;
     studentId?: string;
+    scope?: QueryReadAccessScope;
   }): Promise<DeterminatorSessionRecord[]> {
     return this.prisma.determinatorSession.findMany({
-      where: {
-        tenantId: params.tenantId,
-        ...(params.studentId ? { studentId: params.studentId } : {})
-      },
+      where: buildDeterminatorReadWhere(params),
       orderBy: {
         measuredAt: 'desc'
       },
@@ -297,6 +325,112 @@ export class PrismaStudentsRepository implements StudentsRepository {
       });
     });
   }
+}
+
+function buildStudentReadWhere(
+  tenantId: string,
+  scope?: QueryReadAccessScope
+): Prisma.StudentWhereInput {
+  if (!scope || scope.mode === 'tenant') {
+    return { tenantId };
+  }
+
+  return {
+    tenantId,
+    id: {
+      in: scope.studentIds
+    }
+  };
+}
+
+function buildAccessibleStudentIdsWhere(
+  tenantId: string,
+  actor:
+    | {
+        mode: 'instructor';
+        membershipId: string;
+        instructorName: string;
+      }
+    | {
+        mode: 'student';
+        membershipId: string;
+        email: string;
+      }
+    | {
+        mode: 'parent';
+        membershipId: string;
+        email: string;
+      }
+): Prisma.StudentWhereInput {
+  if (actor.mode === 'instructor') {
+    return {
+      tenantId,
+      enrollments: {
+        some: {
+          tenantId,
+          OR: [
+            {
+              instructorMembershipId: actor.membershipId
+            },
+            {
+              assignedInstructorName: actor.instructorName
+            }
+          ]
+        }
+      }
+    };
+  }
+
+  if (actor.mode === 'student') {
+    return {
+      tenantId,
+      OR: [
+        {
+          userMembershipId: actor.membershipId
+        },
+        {
+          email: actor.email
+        }
+      ]
+    };
+  }
+
+  return {
+    tenantId,
+    parentContactStatus: ParentContactStatus.ENABLED,
+    OR: [
+      {
+        parentMembershipId: actor.membershipId
+      },
+      {
+        parentEmail: actor.email
+      }
+    ]
+  };
+}
+
+function buildDeterminatorReadWhere(params: {
+  tenantId: string;
+  studentId?: string;
+  scope?: QueryReadAccessScope;
+}): Prisma.DeterminatorSessionWhereInput {
+  if (!params.scope || params.scope.mode === 'tenant') {
+    return {
+      tenantId: params.tenantId,
+      ...(params.studentId ? { studentId: params.studentId } : {})
+    };
+  }
+
+  return {
+    tenantId: params.tenantId,
+    studentId: params.studentId
+      ? params.scope.studentIds.includes(params.studentId)
+        ? params.studentId
+        : '__forbidden__'
+      : {
+          in: params.scope.studentIds
+        }
+  };
 }
 
 function buildInitialPaymentNumber() {

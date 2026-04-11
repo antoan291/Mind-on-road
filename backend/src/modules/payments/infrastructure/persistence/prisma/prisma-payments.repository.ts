@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 
+import type { QueryReadAccessScope } from '../../../../shared/query/read-access-scope';
 import type {
   PaymentRecord,
   PaymentUpdateInput,
@@ -27,11 +28,10 @@ export class PrismaPaymentsRepository implements PaymentsRepository {
 
   public async listByTenant(params: {
     tenantId: string;
+    scope?: QueryReadAccessScope;
   }): Promise<PaymentRecord[]> {
     return this.prisma.paymentRecord.findMany({
-      where: {
-        tenantId: params.tenantId
-      },
+      where: buildPaymentReadWhere(params.tenantId, params.scope),
       orderBy: {
         paidAt: 'desc'
       },
@@ -153,6 +153,22 @@ export class PrismaPaymentsRepository implements PaymentsRepository {
       studentName: student.displayName
     };
   }
+}
+
+function buildPaymentReadWhere(
+  tenantId: string,
+  scope?: QueryReadAccessScope
+): Prisma.PaymentRecordWhereInput {
+  if (!scope || scope.mode === 'tenant') {
+    return { tenantId };
+  }
+
+  return {
+    tenantId,
+    studentId: {
+      in: scope.studentIds
+    }
+  };
 }
 
 function derivePaidAmountFromStatus(status: string, amount: number) {

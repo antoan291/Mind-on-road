@@ -33,7 +33,7 @@ export function InputField({
         {label}
         {required && <span style={{ color: 'var(--status-error)' }}>*</span>}
       </label>
-      
+
       <div className="relative">
         {icon && (
           <div className="absolute left-4 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-tertiary)' }}>
@@ -83,7 +83,7 @@ export function InputField({
           {error}
         </p>
       )}
-      
+
       {helpText && !error && (
         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
           {helpText}
@@ -98,6 +98,7 @@ interface SelectFieldProps extends BaseFieldProps {
   onChange?: (value: string) => void;
   options: { value: string; label: string }[];
   placeholder?: string;
+  icon?: React.ReactNode;
 }
 
 export function SelectField({
@@ -105,7 +106,8 @@ export function SelectField({
   value,
   onChange,
   options,
-  placeholder = 'Изберете...',
+  placeholder = 'Select...',
+  icon,
   error,
   required,
   helpText,
@@ -116,14 +118,20 @@ export function SelectField({
         {label}
         {required && <span style={{ color: 'var(--status-error)' }}>*</span>}
       </label>
-      
+
       <div className="relative">
+        {icon && (
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-tertiary)' }}>
+            {icon}
+          </div>
+        )}
         <select
           value={value}
           onChange={(e) => onChange?.(e.target.value)}
           className={`
             w-full h-12 rounded-lg px-4 pr-10 border transition-all appearance-none
             focus:outline-none focus:shadow-[var(--glow-indigo)]
+            ${icon ? 'pl-12' : ''}
             ${error ? 'border-[var(--status-error)]' : ''}
           `}
           style={{
@@ -151,7 +159,7 @@ export function SelectField({
           {error}
         </p>
       )}
-      
+
       {helpText && !error && (
         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
           {helpText}
@@ -184,7 +192,7 @@ export function TextareaField({
         {label}
         {required && <span style={{ color: 'var(--status-error)' }}>*</span>}
       </label>
-      
+
       <textarea
         placeholder={placeholder}
         value={value}
@@ -207,7 +215,7 @@ export function TextareaField({
           {error}
         </p>
       )}
-      
+
       {helpText && !error && (
         <p className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
           {helpText}

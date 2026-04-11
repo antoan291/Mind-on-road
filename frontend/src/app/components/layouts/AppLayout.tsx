@@ -27,6 +27,7 @@ import {
   FileSignature,
   FileCheck2,
   BrainCircuit,
+  type LucideIcon,
 } from "lucide-react";
 import { useAuthSession } from "../../services/authSession";
 import type { TenantFeatureKey } from "../../services/featureSettings";
@@ -44,7 +45,7 @@ import {
 
 type NavigationItem = {
   path: string;
-  icon: React.ComponentType<{ size?: number }>;
+  icon: LucideIcon;
   label: string;
   featureKey?: TenantFeatureKey;
   permissionKey?: string;
@@ -210,7 +211,8 @@ export function AppLayout() {
       permissionKey: "reports.read",
       visible: hasAiCenterAccessRole(session?.user.roleKeys ?? []),
     },
-  ].filter(
+  ];
+  const visibleNavigationItems = navigationItems.filter(
     (item) =>
       (!item.featureKey || isFeatureEnabled(item.featureKey)) &&
       (!item.permissionKey ||
@@ -291,7 +293,7 @@ export function AppLayout() {
 
           {/* Navigation Items */}
           <nav className="flex-1 overflow-y-auto px-3 py-6">
-            {navigationItems.map((item) => {
+            {visibleNavigationItems.map((item) => {
               const isActive =
                 location.pathname === item.path ||
                 (item.path !== "/" && location.pathname.startsWith(item.path));

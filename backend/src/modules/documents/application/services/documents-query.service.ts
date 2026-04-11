@@ -1,3 +1,4 @@
+import type { QueryReadAccessScope } from '../../../shared/query/read-access-scope';
 import type {
   DocumentRecord,
   DocumentsRepository
@@ -6,9 +7,13 @@ import type {
 export class DocumentsQueryService {
   public constructor(private readonly documentsRepository: DocumentsRepository) {}
 
-  public async listDocuments(params: { tenantId: string }) {
+  public async listDocuments(params: {
+    tenantId: string;
+    scope?: QueryReadAccessScope;
+  }) {
     const documents = await this.documentsRepository.listByTenant({
-      tenantId: params.tenantId
+      tenantId: params.tenantId,
+      scope: params.scope
     });
 
     return documents.map((document) => toDocumentResponse(document));

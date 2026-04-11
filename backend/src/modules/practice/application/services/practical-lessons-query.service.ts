@@ -1,3 +1,4 @@
+import type { QueryReadAccessScope } from '../../../shared/query/read-access-scope';
 import type {
   PracticalLessonRecord,
   PracticalLessonsRepository
@@ -8,9 +9,13 @@ export class PracticalLessonsQueryService {
     private readonly practicalLessonsRepository: PracticalLessonsRepository
   ) {}
 
-  public async listLessons(params: { tenantId: string }) {
+  public async listLessons(params: {
+    tenantId: string;
+    scope?: QueryReadAccessScope;
+  }) {
     const lessons = await this.practicalLessonsRepository.listByTenant({
-      tenantId: params.tenantId
+      tenantId: params.tenantId,
+      scope: params.scope
     });
 
     return lessons.map((lesson) => toPracticalLessonResponse(lesson));

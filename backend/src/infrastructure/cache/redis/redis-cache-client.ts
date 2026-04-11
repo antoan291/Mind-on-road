@@ -73,6 +73,21 @@ export async function deleteCacheByPrefix(cacheKeyPrefix: string) {
   }
 }
 
+export async function disconnectRedisClient() {
+  if (!redisClient) {
+    return;
+  }
+
+  try {
+    await redisClient.quit();
+  } catch {
+    redisClient.disconnect();
+  } finally {
+    redisClient = null;
+    redisEventHandlersAttached = false;
+  }
+}
+
 function getRedisClient() {
   if (!redisClient) {
     redisClient = new Redis(appConfig.redisUrl, {

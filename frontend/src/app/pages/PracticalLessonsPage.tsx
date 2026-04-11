@@ -424,7 +424,7 @@ export function PracticalLessonsPage() {
         if (studentRows[0]) {
           setCreateForm((current) => ({
             ...current,
-            studentId: studentRows[0].id,
+            studentId: String(studentRows[0].id),
             studentName: studentRows[0].name,
             instructor: studentRows[0].instructor || current.instructor,
             category: studentRows[0].category || current.category,
@@ -811,7 +811,7 @@ export function PracticalLessonsPage() {
     try {
       const createdLesson = await createPracticalLessonRecord(
         {
-          studentId: selectedStudent.id,
+          studentId: String(selectedStudent.id),
           studentName: selectedStudent.name,
           instructorName:
             createForm.instructor.trim() ||

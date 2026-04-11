@@ -1,3 +1,4 @@
+import type { QueryReadAccessScope } from '../../../shared/query/read-access-scope';
 import type {
   StudentProfileRecord,
   StudentsRepository
@@ -6,17 +7,44 @@ import type {
 export class StudentsQueryService {
   public constructor(private readonly studentsRepository: StudentsRepository) {}
 
-  public async listStudents(params: { tenantId: string }) {
+  public async listStudents(params: {
+    tenantId: string;
+    scope?: QueryReadAccessScope;
+  }) {
     const students = await this.studentsRepository.listByTenant({
-      tenantId: params.tenantId
+      tenantId: params.tenantId,
+      scope: params.scope
     });
 
     return students.map((student) => toStudentSummary(student));
   }
 
+  public async listAccessibleStudentIds(params: {
+    tenantId: string;
+    actor:
+      | {
+          mode: 'instructor';
+          membershipId: string;
+          instructorName: string;
+        }
+      | {
+          mode: 'student';
+          membershipId: string;
+          email: string;
+        }
+      | {
+          mode: 'parent';
+          membershipId: string;
+          email: string;
+        };
+  }) {
+    return this.studentsRepository.listAccessibleStudentIds(params);
+  }
+
   public async getStudentById(params: {
     tenantId: string;
     studentId: string;
+    scope?: QueryReadAccessScope;
   }) {
     const student = await this.studentsRepository.findByTenantAndId(params);
 

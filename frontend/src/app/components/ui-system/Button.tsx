@@ -3,7 +3,7 @@ interface ButtonProps {
   variant?: 'primary' | 'secondary' | 'ghost' | 'destructive';
   size?: 'small' | 'medium' | 'large';
   icon?: React.ReactNode;
-  onClick?: () => void;
+  onClick?: React.MouseEventHandler<HTMLButtonElement>;
   type?: 'button' | 'submit' | 'reset';
   disabled?: boolean;
   className?: string;

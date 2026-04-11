@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 
+import type { QueryReadAccessScope } from '../../../../shared/query/read-access-scope';
 import type {
   TheoryGroupRecord,
   TheoryGroupsRepository
@@ -63,11 +64,10 @@ export class PrismaTheoryGroupsRepository implements TheoryGroupsRepository {
 
   public async listByTenant(params: {
     tenantId: string;
+    scope?: QueryReadAccessScope;
   }): Promise<TheoryGroupRecord[]> {
     const groups = await this.prisma.theoryGroupRecord.findMany({
-      where: {
-        tenantId: params.tenantId
-      },
+      where: buildTheoryGroupReadWhere(params.tenantId, params.scope),
       orderBy: {
         startDate: 'desc'
       },
@@ -299,8 +299,39 @@ export class PrismaTheoryGroupsRepository implements TheoryGroupsRepository {
       });
     });
 
-    return updatedGroup ? mapTheoryGroupRow(updatedGroup) : null;
+  return updatedGroup ? mapTheoryGroupRow(updatedGroup) : null;
   }
+}
+
+function buildTheoryGroupReadWhere(
+  tenantId: string,
+  scope?: QueryReadAccessScope
+): Prisma.TheoryGroupRecordWhereInput {
+  if (!scope || scope.mode === 'tenant') {
+    return { tenantId };
+  }
+
+  if (scope.mode === 'instructor') {
+    return {
+      tenantId,
+      instructorName: scope.instructorName
+    };
+  }
+
+  return {
+    tenantId,
+    lectures: {
+      some: {
+        attendanceRecords: {
+          some: {
+            studentId: {
+              in: scope.studentIds
+            }
+          }
+        }
+      }
+    }
+  };
 }
 
 function mapTheoryGroupRow(group: TheoryGroupRow): TheoryGroupRecord {

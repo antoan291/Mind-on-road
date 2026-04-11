@@ -1,4 +1,5 @@
 import type { StudentOperationalRecord } from '../content/studentOperations';
+export type { StudentOperationalRecord } from '../content/studentOperations';
 import { ApiClientError, apiClient } from './apiClient';
 
 type BackendStudentEnrollmentSummary = {
@@ -12,6 +13,7 @@ type BackendStudentEnrollmentSummary = {
   enrollmentDate: string;
   expectedArrivalDate: string | null;
   previousLicenseCategory: string | null;
+  notes: string | null;
   packageHours: number;
   additionalHours: number;
   completedHours: number;
@@ -86,6 +88,7 @@ export async function fetchStudentOperationalDetail(studentId: string) {
     parentName: student.parentName ?? '',
     parentPhone: student.parentPhone ?? '',
     parentEmail: student.parentEmail ?? '',
+    notes: student.enrollments[0]?.notes ?? '',
   };
 }
 
@@ -278,6 +281,8 @@ function mapStudentSummaryToOperationalRecord(
     total: totalHours,
     used: usedHours,
     remaining: enrollment?.remainingHours ?? Math.max(totalHours - usedHours, 0),
+    remainingHours:
+      enrollment?.remainingHours ?? Math.max(totalHours - usedHours, 0),
     progress,
     studentTypeLabel:
       enrollment?.trainingMode === 'LICENSED_MANUAL_HOURS'
@@ -308,6 +313,7 @@ function mapStudentSummaryToOperationalRecord(
     expectedArrivalDate,
     adminReminderDue,
     parentFeedbackEnabled: student.parentContactEnabled,
+    notes: enrollment?.notes ?? null,
     latestParentFeedbackStatus: student.parentContactEnabled
       ? fallback.latestParentFeedbackStatus
       : 'Няма активиран родителски контакт',
@@ -342,6 +348,7 @@ function buildNeutralStudentFallback(
     paid: student.enrollment?.packageHours ?? 0,
     used: student.enrollment?.completedHours ?? 0,
     remaining: student.enrollment?.remainingHours ?? 0,
+    remainingHours: student.enrollment?.remainingHours ?? 0,
     nextLesson: 'Няма насрочен час',
     startDate: student.enrollment?.enrollmentDate ?? '',
     status: 'info',
@@ -371,6 +378,7 @@ function buildNeutralStudentFallback(
     expectedArrivalDate: student.enrollment?.expectedArrivalDate ?? '',
     adminReminderDue: false,
     parentFeedbackEnabled: student.parentContactEnabled,
+    notes: null,
     latestParentFeedbackStatus: student.parentContactEnabled
       ? 'Може да се изпрати ръчно след урок'
       : 'Няма активиран родителски контакт',
@@ -468,7 +476,7 @@ function mapExamOutcomeLabel(
   return 'Активен курс';
 }
 
-function calculateDaysWithoutPractice(lastPracticeAt: string | null) {
+function calculateDaysWithoutPractice(lastPracticeAt: string | null | undefined) {
   if (!lastPracticeAt) {
     return 0;
   }

@@ -1,3 +1,4 @@
+import type { QueryReadAccessScope } from '../../../shared/query/read-access-scope';
 import type { DocumentsQueryService } from '../../../documents/application/services/documents-query.service';
 import type { PracticalLessonsQueryService } from '../../../practice/application/services/practical-lessons-query.service';
 import type { StudentsQueryService } from '../../../students/application/services/students-query.service';
@@ -17,27 +18,35 @@ export class NotificationsQueryService {
     private readonly documentsQueryService: DocumentsQueryService
   ) {}
 
-  public async listNotifications(params: { tenantId: string }) {
-    const [students, lessons, documents] = await Promise.all([
-      this.studentsQueryService.listStudents({ tenantId: params.tenantId }),
-      this.practicalLessonsQueryService.listLessons({ tenantId: params.tenantId }),
-      this.documentsQueryService.listDocuments({ tenantId: params.tenantId })
-    ]);
+  public async listNotifications(params: {
+    tenantId: string;
+    scope?: QueryReadAccessScope;
+  }) {
+    const scope = params.scope ?? { mode: 'tenant' as const };
 
-    const notifications = buildSystemNotifications({
-      students,
-      lessons,
-      documents,
-      now: new Date()
-    });
+    if (scope.mode === 'tenant') {
+      const [students, lessons, documents] = await Promise.all([
+        this.studentsQueryService.listStudents({ tenantId: params.tenantId }),
+        this.practicalLessonsQueryService.listLessons({ tenantId: params.tenantId }),
+        this.documentsQueryService.listDocuments({ tenantId: params.tenantId })
+      ]);
 
-    await this.notificationsRepository.upsertManyForTenant({
-      tenantId: params.tenantId,
-      notifications
-    });
+      const notifications = buildSystemNotifications({
+        students,
+        lessons,
+        documents,
+        now: new Date()
+      });
+
+      await this.notificationsRepository.upsertManyForTenant({
+        tenantId: params.tenantId,
+        notifications
+      });
+    }
 
     const records = await this.notificationsRepository.listByTenant({
-      tenantId: params.tenantId
+      tenantId: params.tenantId,
+      scope
     });
 
     return records.map((record) => toNotificationResponse(record));

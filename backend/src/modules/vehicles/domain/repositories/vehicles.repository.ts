@@ -34,7 +34,10 @@ export interface VehicleUpdateInput {
 }
 
 export interface VehiclesRepository {
-  listByTenant(params: { tenantId: string }): Promise<VehicleRecord[]>;
+  listByTenant(params: {
+    tenantId: string;
+    scope?: QueryReadAccessScope;
+  }): Promise<VehicleRecord[]>;
   createForTenant(params: {
     tenantId: string;
     vehicle: VehicleWriteInput;
@@ -45,3 +48,4 @@ export interface VehiclesRepository {
     vehicle: VehicleUpdateInput;
   }): Promise<VehicleRecord | null>;
 }
+import type { QueryReadAccessScope } from '../../../shared/query/read-access-scope';

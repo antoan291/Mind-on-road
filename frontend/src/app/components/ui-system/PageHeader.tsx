@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react';
 interface Breadcrumb {
   label: string;
   path?: string;
+  onClick?: () => void;
 }
 
 interface PageHeaderProps {
@@ -16,7 +17,6 @@ export function PageHeader({ title, description, breadcrumbs, actions }: PageHea
   return (
     <div className="border-b" style={{ borderColor: 'var(--ghost-border)' }}>
       <div className="px-4 py-6 sm:px-6 lg:px-8">
-        {/* Breadcrumbs */}
         {breadcrumbs && breadcrumbs.length > 0 && (
           <div className="mb-3 flex flex-wrap items-center gap-2 overflow-x-auto pb-1">
             {breadcrumbs.map((crumb, index) => (
@@ -24,22 +24,36 @@ export function PageHeader({ title, description, breadcrumbs, actions }: PageHea
                 {index > 0 && (
                   <ChevronRight size={14} style={{ color: 'var(--text-dim)' }} />
                 )}
-                <span 
-                  className="max-w-full truncate text-sm"
-                  style={{ 
-                    color: index === breadcrumbs.length - 1 
-                      ? 'var(--text-secondary)' 
-                      : 'var(--text-tertiary)' 
-                  }}
-                >
-                  {crumb.label}
-                </span>
+                {crumb.onClick || crumb.path ? (
+                  <button
+                    type="button"
+                    className="max-w-full truncate text-sm hover:opacity-80"
+                    style={{
+                      color: index === breadcrumbs.length - 1
+                        ? 'var(--text-secondary)'
+                        : 'var(--text-tertiary)'
+                    }}
+                    onClick={() => crumb.onClick?.()}
+                  >
+                    {crumb.label}
+                  </button>
+                ) : (
+                  <span
+                    className="max-w-full truncate text-sm"
+                    style={{
+                      color: index === breadcrumbs.length - 1
+                        ? 'var(--text-secondary)'
+                        : 'var(--text-tertiary)'
+                    }}
+                  >
+                    {crumb.label}
+                  </span>
+                )}
               </div>
             ))}
           </div>
         )}
 
-        {/* Title and Actions */}
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 flex-1">
             <h1 style={{ color: 'var(--text-primary)' }}>{title}</h1>

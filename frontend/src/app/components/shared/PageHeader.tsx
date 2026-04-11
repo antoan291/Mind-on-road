@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router';
 interface PageHeaderProps {
   title: string;
   subtitle?: string;
+  description?: string;
   badge?: {
     label: string;
     variant?: 'primary' | 'success' | 'warning' | 'error' | 'info';
@@ -12,17 +13,25 @@ interface PageHeaderProps {
   actions?: ReactNode;
   backButton?: boolean;
   backPath?: string;
+  breadcrumbs?: Array<{
+    label: string;
+    path?: string;
+    onClick?: () => void;
+  }>;
 }
 
 export function PageHeader({ 
   title, 
   subtitle, 
+  description,
   badge, 
   actions,
   backButton,
-  backPath 
+  backPath,
+  breadcrumbs,
 }: PageHeaderProps) {
   const navigate = useNavigate();
+  const supportingText = description ?? subtitle;
 
   const getBadgeColor = (variant: string = 'primary') => {
     switch (variant) {
@@ -47,6 +56,50 @@ export function PageHeader({
         </button>
       )}
 
+      {breadcrumbs && breadcrumbs.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+          {breadcrumbs.map((crumb, index) => {
+            const isLast = index === breadcrumbs.length - 1;
+            const content = (
+              <>
+                {index > 0 && <span style={{ color: 'var(--text-tertiary)' }}>/</span>}
+                <span
+                  style={{
+                    color: isLast ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  }}
+                >
+                  {crumb.label}
+                </span>
+              </>
+            );
+
+            if (crumb.onClick || crumb.path) {
+              return (
+                <button
+                  key={`${crumb.label}-${index}`}
+                  type="button"
+                  className="flex items-center gap-2 hover:opacity-80"
+                  onClick={() => {
+                    crumb.onClick?.();
+                    if (!crumb.onClick && crumb.path) {
+                      navigate(crumb.path);
+                    }
+                  }}
+                >
+                  {content}
+                </button>
+              );
+            }
+
+            return (
+              <div key={`${crumb.label}-${index}`} className="flex items-center gap-2">
+                {content}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex items-center gap-3">
@@ -65,9 +118,9 @@ export function PageHeader({
               </span>
             )}
           </div>
-          {subtitle && (
+          {supportingText && (
             <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-              {subtitle}
+              {supportingText}
             </p>
           )}
         </div>

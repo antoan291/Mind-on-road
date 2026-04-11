@@ -37,7 +37,10 @@ export interface DocumentWriteInput {
 }
 
 export interface DocumentsRepository {
-  listByTenant(params: { tenantId: string }): Promise<DocumentRecord[]>;
+  listByTenant(params: {
+    tenantId: string;
+    scope?: QueryReadAccessScope;
+  }): Promise<DocumentRecord[]>;
   createForTenant(params: {
     tenantId: string;
     document: DocumentWriteInput;
@@ -52,3 +55,4 @@ export interface DocumentsRepository {
     documentId: string;
   }): Promise<boolean>;
 }
+import type { QueryReadAccessScope } from '../../../shared/query/read-access-scope';

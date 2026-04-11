@@ -1,5 +1,6 @@
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 
+import type { QueryReadAccessScope } from '../../../../shared/query/read-access-scope';
 import type {
   DocumentRecord,
   DocumentWriteInput,
@@ -29,11 +30,10 @@ export class PrismaDocumentsRepository implements DocumentsRepository {
 
   public async listByTenant(params: {
     tenantId: string;
+    scope?: QueryReadAccessScope;
   }): Promise<DocumentRecord[]> {
     return this.prisma.documentRecord.findMany({
-      where: {
-        tenantId: params.tenantId
-      },
+      where: buildDocumentReadWhere(params.tenantId, params.scope),
       orderBy: [
         {
           status: 'asc'
@@ -154,4 +154,36 @@ export class PrismaDocumentsRepository implements DocumentsRepository {
       ownerRef: student.id
     };
   }
+}
+
+function buildDocumentReadWhere(
+  tenantId: string,
+  scope?: QueryReadAccessScope
+): Prisma.DocumentRecordWhereInput {
+  if (!scope || scope.mode === 'tenant') {
+    return { tenantId };
+  }
+
+  if (scope.mode === 'instructor') {
+    return {
+      tenantId,
+      OR: [
+        {
+          studentId: {
+            in: scope.studentIds
+          }
+        },
+        {
+          ownerName: scope.instructorName
+        }
+      ]
+    };
+  }
+
+  return {
+    tenantId,
+    studentId: {
+      in: scope.studentIds
+    }
+  };
 }

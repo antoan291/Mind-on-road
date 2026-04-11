@@ -66,7 +66,7 @@ export function ExamApplicationsPage() {
 
         setApplications(applicationRows);
         setStudents(studentRows);
-        setSelectedStudentId((current) => current || studentRows[0]?.id || '');
+        setSelectedStudentId((current) => current || String(studentRows[0]?.id ?? ''));
         setSelectedApplicationId((current) =>
           current || applicationRows[0]?.id || '',
         );
@@ -158,7 +158,7 @@ export function ExamApplicationsPage() {
               setApplications(applicationRows);
               setStudents(studentRows);
               setSelectedStudentId((current) =>
-                current || studentRows[0]?.id || '',
+                current || String(studentRows[0]?.id ?? ''),
               );
               setActionState('success');
               setActionMessage('Списъкът със заявления е обновен.');

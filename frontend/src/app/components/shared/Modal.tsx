@@ -8,9 +8,18 @@ interface ModalProps {
   children: ReactNode;
   footer?: ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  maxWidth?: 'md' | 'lg' | 'xl' | '2xl' | '3xl';
 }
 
-export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  title,
+  children,
+  footer,
+  size = 'md',
+  maxWidth,
+}: ModalProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -31,6 +40,15 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
     lg: 'max-w-4xl',
     xl: 'max-w-6xl',
   };
+  const widthClass = maxWidth
+    ? {
+        md: 'max-w-md',
+        lg: 'max-w-lg',
+        xl: 'max-w-xl',
+        '2xl': 'max-w-2xl',
+        '3xl': 'max-w-3xl',
+      }[maxWidth]
+    : sizeClasses[size];
 
   return (
     <div
@@ -45,7 +63,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md' }:
 
       {/* Modal */}
       <div
-        className={`relative w-full ${sizeClasses[size]} max-h-[90vh] rounded-2xl overflow-hidden flex flex-col`}
+        className={`relative w-full ${widthClass} max-h-[90vh] rounded-2xl overflow-hidden flex flex-col`}
         style={{
           background: 'var(--bg-panel)',
           border: '1px solid var(--ghost-border)',

@@ -56,6 +56,26 @@ type ScheduleBlock = {
   note?: string;
 };
 
+function mapLessonStatusToScheduleStatus(
+  status: 'scheduled' | 'in-progress' | 'completed' | 'late' | 'canceled' | 'no-show',
+): LessonStatus {
+  return status === 'in-progress' ? 'confirmed' : status;
+}
+
+function mapPaymentStatusToSchedulePaymentStatus(
+  status: 'paid' | 'pending' | 'overdue' | 'not-required',
+): ScheduleBlock['paymentStatus'] {
+  if (status === 'not-required') {
+    return 'paid';
+  }
+
+  if (status === 'overdue') {
+    return 'missing';
+  }
+
+  return status;
+}
+
 // Generate time slots from 08:00 to 24:00 (every 30 minutes)
 const generateTimeSlots = () => {
   const slots: string[] = [];
@@ -225,7 +245,7 @@ export function SchedulePage() {
           ...current,
           instructorId: mappedInstructors[0]?.id ?? 1,
           vehicleId: mappedVehicles[0]?.id ?? current.vehicleId,
-          studentId: studentRows[0]?.id ?? current.studentId,
+          studentId: studentRows[0] ? String(studentRows[0].id) : current.studentId,
           studentName: studentRows[0]?.name ?? current.studentName,
           category: studentRows[0]?.category ?? current.category,
         }));
@@ -244,21 +264,11 @@ export function SchedulePage() {
           startTime: lesson.time,
           endTime: lesson.endTime,
           studentName: lesson.student,
-          studentId: lesson.studentId,
+          studentId: String(lesson.studentId),
           vehicleId: resolveVehicleIdByLabel(mappedVehicles, lesson.vehicle),
           category: lesson.category,
-          status:
-            lesson.status === 'in-progress'
-              ? 'confirmed'
-              : lesson.status === 'no-show'
-                ? 'no-show'
-                : lesson.status,
-          paymentStatus:
-            lesson.paymentStatus === 'not-required'
-              ? 'paid'
-              : lesson.paymentStatus === 'overdue'
-                ? 'missing'
-                : lesson.paymentStatus,
+          status: mapLessonStatusToScheduleStatus(lesson.status),
+          paymentStatus: mapPaymentStatusToSchedulePaymentStatus(lesson.paymentStatus),
         }));
 
         setStudents(studentRows);
@@ -399,12 +409,12 @@ export function SchedulePage() {
       setSchedule((current) =>
         current.map((block) =>
           block.id === selectedBlock.id
-            ? { ...block, status: updatedLesson.status }
+            ? { ...block, status: mapLessonStatusToScheduleStatus(updatedLesson.status) }
             : block,
         ),
       );
       setSelectedBlock((current) =>
-        current ? { ...current, status: updatedLesson.status } : current,
+        current ? { ...current, status: mapLessonStatusToScheduleStatus(updatedLesson.status) } : current,
       );
       setActionMessage(
         `Часът на ${selectedBlock.studentName ?? 'курсиста'} е отменен и записан в PostgreSQL.`,
@@ -439,7 +449,7 @@ export function SchedulePage() {
     try {
       const createdLesson = await createPracticalLessonRecord(
         {
-          studentId: selectedStudent.id,
+          studentId: String(selectedStudent.id),
           studentName: selectedStudent.name,
           instructorName: selectedInstructor.name,
           vehicleLabel: formatVehicleLabel(selectedVehicle),

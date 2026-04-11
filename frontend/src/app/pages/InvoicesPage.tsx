@@ -43,7 +43,7 @@ type Invoice = InvoiceRecordView & {
   invoiceStatus: 'draft' | 'issued' | 'canceled' | 'corrected' | 'overdue';
   paymentLinkStatus: 'linked' | 'not_linked' | 'partial';
   paymentNumber?: string;
-  paymentStatus?: 'paid' | 'partial' | 'overdue' | 'pending';
+  paymentStatus?: 'paid' | 'partial' | 'overdue' | 'pending' | 'canceled';
   createdBy: string;
   createdDate: string;
   lastUpdatedBy: string;
@@ -107,8 +107,9 @@ const getPaymentLinkStatusVariant = (status: Invoice['paymentLinkStatus']): 'suc
   }
 };
 
-const getPaymentStatusLabel = (status?: Invoice['paymentStatus']) => {
+const getPaymentStatusLabel = (status?: string) => {
   if (!status) return '-';
+  if (status === 'canceled') return 'Canceled';
   switch (status) {
     case 'paid': return 'Платено';
     case 'partial': return 'Частично';

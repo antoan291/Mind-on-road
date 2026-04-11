@@ -51,13 +51,13 @@ export const mockPayments = [
 ];
 export const mockInvoices = [
   {
-    ...mockDb.invoices[0],
+    ...(mockDb.invoices[0] as MockInvoice),
     id: 1,
     invoiceNumber: 'INV-TEST-0001',
     student: testStudent.name,
     studentId: testStudent.id,
     recipientName: testStudent.name,
-    items: [{ ...(mockDb.invoices[0]?.items?.[0] ?? {}), category: testStudent.category }],
+    items: [{ ...((mockDb.invoices[0] as MockInvoice | undefined)?.items?.[0] ?? {}), category: testStudent.category }],
   },
 ];
 export const mockDocuments = [
@@ -72,3 +72,6 @@ export const mockInvoiceFormStudents = [
   { id: testStudent.id, name: testStudent.name, category: testStudent.category },
 ];
 export const mockInvoicePackages = mockDb.invoiceForm.packages;
+type MockInvoice = MockDb['invoices'][number] & {
+  items?: Array<Record<string, unknown> & { category?: string }>;
+};

@@ -1,3 +1,4 @@
+import type { QueryReadAccessScope } from '../../../shared/query/read-access-scope';
 import type {
   VehicleRecord,
   VehiclesRepository
@@ -6,9 +7,13 @@ import type {
 export class VehiclesQueryService {
   public constructor(private readonly vehiclesRepository: VehiclesRepository) {}
 
-  public async listVehicles(params: { tenantId: string }) {
+  public async listVehicles(params: {
+    tenantId: string;
+    scope?: QueryReadAccessScope;
+  }) {
     const vehicles = await this.vehiclesRepository.listByTenant({
-      tenantId: params.tenantId
+      tenantId: params.tenantId,
+      scope: params.scope
     });
 
     return vehicles.map((vehicle) => toVehicleResponse(vehicle));

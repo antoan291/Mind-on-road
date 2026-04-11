@@ -143,6 +143,8 @@ type StaticStudentOperationalRecord = (typeof studentOperationalRecords)[number]
 
 export type StudentOperationalRecord = Omit<StaticStudentOperationalRecord, 'id'> & {
   id: string | number;
+  remainingHours?: number;
+  notes?: string | null;
   firstName?: string;
   lastName?: string;
   birthDate?: string | null;

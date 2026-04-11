@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 
+import type { QueryReadAccessScope } from '../../../../shared/query/read-access-scope';
 import type {
   VehicleRecord,
   VehiclesRepository,
@@ -25,11 +26,10 @@ export class PrismaVehiclesRepository implements VehiclesRepository {
 
   public async listByTenant(params: {
     tenantId: string;
+    scope?: QueryReadAccessScope;
   }): Promise<VehicleRecord[]> {
     return this.prisma.vehicleRecord.findMany({
-      where: {
-        tenantId: params.tenantId
-      },
+      where: buildVehicleReadWhere(params.tenantId, params.scope),
       orderBy: {
         nextInspection: 'asc'
       },
@@ -74,4 +74,22 @@ export class PrismaVehiclesRepository implements VehiclesRepository {
       select: vehicleRecordSelect
     });
   }
+}
+
+function buildVehicleReadWhere(
+  tenantId: string,
+  scope?: QueryReadAccessScope
+): Prisma.VehicleRecordWhereInput {
+  if (!scope || scope.mode === 'tenant') {
+    return { tenantId };
+  }
+
+  if (scope.mode === 'instructor') {
+    return {
+      tenantId,
+      instructorName: scope.instructorName
+    };
+  }
+
+  return { tenantId };
 }

@@ -1,3 +1,4 @@
+import type { QueryReadAccessScope } from '../../../shared/query/read-access-scope';
 import type {
   DeterminatorSessionCreateInput,
   DeterminatorSessionRecord,
@@ -7,7 +8,11 @@ import type {
 export class StudentsDeterminatorService {
   public constructor(private readonly studentsRepository: StudentsRepository) {}
 
-  public async listSessions(params: { tenantId: string; studentId?: string }) {
+  public async listSessions(params: {
+    tenantId: string;
+    studentId?: string;
+    scope?: QueryReadAccessScope;
+  }) {
     const sessions =
       await this.studentsRepository.listDeterminatorSessionsByTenant(params);
 

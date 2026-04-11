@@ -56,6 +56,7 @@ type TheoryLecture = {
     studentName: string;
     status: AttendanceStatus;
     notes?: string;
+    viberSent?: boolean;
   }>;
 };
 

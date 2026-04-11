@@ -113,6 +113,10 @@ class InMemoryStudentsRepository implements StudentsRepository {
     return this.student ? [this.student] : [];
   }
 
+  public async listAccessibleStudentIds(): Promise<string[]> {
+    return this.student ? [this.student.id] : [];
+  }
+
   public async findByTenantAndId(): Promise<StudentProfileRecord | null> {
     return this.student;
   }

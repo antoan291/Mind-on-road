@@ -187,7 +187,7 @@ export function PortalDashboardPage() {
       <div className="grid gap-4 lg:grid-cols-4">
         <StatCard
           label="Оставащи часове"
-          value={primaryStudent?.remainingHours ?? 0}
+          value={primaryStudent?.remainingHours ?? primaryStudent?.remaining ?? 0}
           trend={primaryStudent?.name ?? 'Няма свързан курсист'}
           icon={<CalendarDays size={20} />}
           color="var(--primary-accent)"

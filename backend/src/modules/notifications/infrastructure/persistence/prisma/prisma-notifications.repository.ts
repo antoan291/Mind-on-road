@@ -1,5 +1,6 @@
 import { Prisma, type PrismaClient } from '@prisma/client';
 
+import type { QueryReadAccessScope } from '../../../../shared/query/read-access-scope';
 import type {
   NotificationRecord,
   NotificationsRepository,
@@ -99,11 +100,10 @@ export class PrismaNotificationsRepository implements NotificationsRepository {
 
   public async listByTenant(params: {
     tenantId: string;
+    scope?: QueryReadAccessScope;
   }): Promise<NotificationRecord[]> {
     const records = await this.prisma.notificationRecord.findMany({
-      where: {
-        tenantId: params.tenantId
-      },
+      where: buildNotificationReadWhere(params.tenantId, params.scope),
       orderBy: [
         {
           eventTime: 'desc'
@@ -123,4 +123,54 @@ export class PrismaNotificationsRepository implements NotificationsRepository {
           : null
     }));
   }
+}
+
+function buildNotificationReadWhere(
+  tenantId: string,
+  scope?: QueryReadAccessScope
+): Prisma.NotificationRecordWhereInput {
+  if (!scope || scope.mode === 'tenant') {
+    return { tenantId };
+  }
+
+  if (scope.mode === 'instructor') {
+    return {
+      tenantId,
+      OR: [
+        {
+          studentId: {
+            in: scope.studentIds
+          }
+        },
+        {
+          AND: [
+            {
+              metadata: {
+                path: ['ownerType'],
+                equals: 'INSTRUCTOR'
+              }
+            },
+            {
+              metadata: {
+                path: ['ownerName'],
+                equals: scope.instructorName
+              }
+            }
+          ]
+        },
+        {
+          practicalLesson: {
+            instructorName: scope.instructorName
+          }
+        }
+      ]
+    };
+  }
+
+  return {
+    tenantId,
+    studentId: {
+      in: scope.studentIds
+    }
+  };
 }

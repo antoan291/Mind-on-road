@@ -12,6 +12,7 @@ interface InputProps {
   required?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
+  min?: string | number;
 }
 
 export function Input({
@@ -25,6 +26,7 @@ export function Input({
   required,
   disabled,
   fullWidth = true,
+  min,
 }: InputProps) {
   return (
     <div className={fullWidth ? 'w-full' : ''}>
@@ -72,6 +74,7 @@ export function Input({
             onChange={(e) => onChange(e.target.value)}
             placeholder={placeholder}
             disabled={disabled}
+            min={min}
             className={`
               w-full h-11 rounded-xl px-4
               ${icon ? 'pl-10' : ''}
@@ -159,12 +162,13 @@ interface SelectProps {
   label?: string;
   value: string;
   onChange: (value: string) => void;
-  options: { value: string; label: string }[];
+  options: readonly { value: string; label: string }[];
   placeholder?: string;
   error?: string;
   required?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
+  icon?: ReactNode;
 }
 
 export function Select({
@@ -177,6 +181,7 @@ export function Select({
   required,
   disabled,
   fullWidth = true,
+  icon,
 }: SelectProps) {
   return (
     <div className={fullWidth ? 'w-full' : ''}>
@@ -186,36 +191,46 @@ export function Select({
           {required && <span style={{ color: 'var(--status-error)' }}> *</span>}
         </label>
       )}
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        className="w-full h-11 rounded-xl px-4 text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-sky-500/20 appearance-none bg-no-repeat bg-right pr-10"
-        style={{
-          backgroundColor: 'rgba(15, 23, 42, 0.22)',
-          color: 'var(--text-primary)',
-          border: error
-            ? '1px solid var(--status-error)'
-            : '1px solid rgba(148, 163, 184, 0.32)',
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
-          backgroundPosition: 'right 1rem center',
-          backgroundRepeat: 'no-repeat',
-          backgroundSize: '12px 8px',
-          boxShadow:
-            'inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 24px rgba(15, 23, 42, 0.08)',
-        }}
-      >
-        {placeholder && (
-          <option value="" disabled>
-            {placeholder}
-          </option>
+      <div className="relative">
+        {icon && (
+          <div
+            className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+            style={{ color: 'var(--text-tertiary)' }}
+          >
+            {icon}
+          </div>
         )}
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+        <select
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={disabled}
+          className={`w-full h-11 rounded-xl px-4 text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-sky-500/20 appearance-none bg-no-repeat bg-right pr-10 ${icon ? 'pl-10' : ''}`}
+          style={{
+            backgroundColor: 'rgba(15, 23, 42, 0.22)',
+            color: 'var(--text-primary)',
+            border: error
+              ? '1px solid var(--status-error)'
+              : '1px solid rgba(148, 163, 184, 0.32)',
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%239CA3AF' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+            backgroundPosition: 'right 1rem center',
+            backgroundRepeat: 'no-repeat',
+            backgroundSize: '12px 8px',
+            boxShadow:
+              'inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 24px rgba(15, 23, 42, 0.08)',
+          }}
+        >
+          {placeholder && (
+            <option value="" disabled>
+              {placeholder}
+            </option>
+          )}
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
       {error && (
         <p className="mt-1.5 text-xs" style={{ color: 'var(--status-error)' }}>
           {error}

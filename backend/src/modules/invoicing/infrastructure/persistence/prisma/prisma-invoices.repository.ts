@@ -1,5 +1,6 @@
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 
+import type { QueryReadAccessScope } from '../../../../shared/query/read-access-scope';
 import type {
   InvoiceCreateInput,
   InvoiceRecord,
@@ -41,11 +42,10 @@ export class PrismaInvoicesRepository implements InvoicesRepository {
 
   public async listByTenant(params: {
     tenantId: string;
+    scope?: QueryReadAccessScope;
   }): Promise<InvoiceRecord[]> {
     return this.prisma.invoiceRecord.findMany({
-      where: {
-        tenantId: params.tenantId
-      },
+      where: buildInvoiceReadWhere(params.tenantId, params.scope),
       orderBy: {
         invoiceDate: 'desc'
       },
@@ -122,4 +122,20 @@ export class PrismaInvoicesRepository implements InvoicesRepository {
 
     return deletedRows.count > 0;
   }
+}
+
+function buildInvoiceReadWhere(
+  tenantId: string,
+  scope?: QueryReadAccessScope
+): Prisma.InvoiceRecordWhereInput {
+  if (!scope || scope.mode === 'tenant') {
+    return { tenantId };
+  }
+
+  return {
+    tenantId,
+    studentId: {
+      in: scope.studentIds
+    }
+  };
 }

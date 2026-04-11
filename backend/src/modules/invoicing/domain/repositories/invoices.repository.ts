@@ -2,6 +2,7 @@ import type {
   InvoiceLifecycleStatus,
   InvoicePaymentLinkStatus
 } from '@prisma/client';
+import type { QueryReadAccessScope } from '../../../shared/query/read-access-scope';
 
 export interface InvoiceRecord {
   id: string;
@@ -80,7 +81,10 @@ export interface InvoiceUpdateInput {
 }
 
 export interface InvoicesRepository {
-  listByTenant(params: { tenantId: string }): Promise<InvoiceRecord[]>;
+  listByTenant(params: {
+    tenantId: string;
+    scope?: QueryReadAccessScope;
+  }): Promise<InvoiceRecord[]>;
   createForTenant(params: {
     tenantId: string;
     invoice: InvoiceCreateInput;

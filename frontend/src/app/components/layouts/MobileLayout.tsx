@@ -22,6 +22,7 @@ import {
   UserCircle,
   LogOut,
   ChevronRight,
+  type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuthSession } from "../../services/authSession";
@@ -50,6 +51,15 @@ type MobileMenuItem = {
   visible?: boolean;
 };
 
+type MobileBottomNavItem = {
+  path: string;
+  icon: LucideIcon;
+  label: string;
+  action?: () => void;
+  featureKey?: TenantFeatureKey;
+  permissionKey?: string;
+};
+
 export function MobileLayout() {
   const { session, logout } = useAuthSession();
   const { isFeatureEnabled } = useFeatureSettings();
@@ -65,7 +75,7 @@ export function MobileLayout() {
     .join("")
     .toUpperCase();
 
-  const bottomNavItems = [
+  const bottomNavItems: MobileBottomNavItem[] = [
     { path: "/", icon: LayoutDashboard, label: "Табло" },
     {
       path: "/students",
@@ -239,7 +249,8 @@ export function MobileLayout() {
       section: "system",
       developerOnly: true,
     },
-  ].filter(
+  ];
+  const visibleMenuItems = menuItems.filter(
     (item) =>
       (!item.featureKey || isFeatureEnabled(item.featureKey)) &&
       (!item.permissionKey ||
@@ -247,7 +258,7 @@ export function MobileLayout() {
         hasFullAccessRole(session?.user.roleKeys ?? [])) &&
       item.visible !== false &&
       (!item.ownerOnly || hasFullAccessRole(session?.user.roleKeys ?? [])) &&
-      (!item.developerOnly || hasDeveloperRole(session?.user.roleKeys ?? [])),
+       (!item.developerOnly || hasDeveloperRole(session?.user.roleKeys ?? [])),
   );
 
   const visibleBottomNavItems = bottomNavItems.filter(
@@ -261,32 +272,32 @@ export function MobileLayout() {
         hasFullAccessRole(session?.user.roleKeys ?? [])),
   );
   const currentPageLabel =
-    [...visibleBottomNavItems, ...menuItems].find((item) =>
+    [...visibleBottomNavItems, ...visibleMenuItems].find((item) =>
       item.path === "/"
         ? location.pathname === "/"
         : location.pathname.startsWith(item.path),
     )?.label ?? "MindOnRoad";
-  const quickMenuItems = menuItems.slice(0, 4);
+  const quickMenuItems = visibleMenuItems.slice(0, 4);
   const menuSections = [
     {
       key: "finance",
       label: "Финанси",
-      items: menuItems.filter((item) => item.section === "finance"),
+      items: visibleMenuItems.filter((item) => item.section === "finance"),
     },
     {
       key: "training",
       label: "Обучение",
-      items: menuItems.filter((item) => item.section === "training"),
+      items: visibleMenuItems.filter((item) => item.section === "training"),
     },
     {
       key: "operations",
       label: "Операции",
-      items: menuItems.filter((item) => item.section === "operations"),
+      items: visibleMenuItems.filter((item) => item.section === "operations"),
     },
     {
       key: "system",
       label: "Система",
-      items: menuItems.filter((item) => item.section === "system"),
+      items: visibleMenuItems.filter((item) => item.section === "system"),
     },
   ].filter((section) => section.items.length > 0);
 

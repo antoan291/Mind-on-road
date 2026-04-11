@@ -103,13 +103,17 @@ export function FinanceOverviewCard({
         ? buildReportEntriesFromFinanceRecords(payments ?? [], expenses ?? [])
         : reportEntries;
 
-    return sourceEntries
-      .filter((entry) => entry.type !== 'friend-vat-expense')
-      .map((entry) => ({
+    return sourceEntries.flatMap((entry) => {
+      if (entry.type === 'friend-vat-expense') {
+        return [];
+      }
+
+      return [{
         date: entry.date,
         type: entry.type,
         amount: entry.amount,
-      }));
+      }];
+    });
   }, [expenses, payments]);
   const financeAnchorDate = useMemo(
     () =>

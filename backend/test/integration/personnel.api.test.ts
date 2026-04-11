@@ -12,6 +12,7 @@ import {
 } from '@prisma/client';
 
 import { createHttpApp } from '../../src/bootstrap/http/create-http-app';
+import { disconnectRedisClient } from '../../src/infrastructure/cache/redis/redis-cache-client';
 import { hashPassword } from '../../src/modules/identity/domain/services/password-security';
 import { seedPermissions, seedRolesForTenant } from '../../prisma/identity-seed-service';
 
@@ -36,8 +37,11 @@ before(async () => {
 });
 
 after(async () => {
+  server.closeIdleConnections?.();
+  server.closeAllConnections?.();
   server.close();
   await once(server, 'close');
+  await disconnectRedisClient();
   await prisma.$disconnect();
 });
 

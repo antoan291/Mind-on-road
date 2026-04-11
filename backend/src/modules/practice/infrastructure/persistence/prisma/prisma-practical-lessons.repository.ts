@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 
+import type { QueryReadAccessScope } from '../../../../shared/query/read-access-scope';
 import type {
   PracticalLessonCreateInput,
   PracticalLessonRecord,
@@ -76,11 +77,10 @@ export class PrismaPracticalLessonsRepository
 
   public async listByTenant(params: {
     tenantId: string;
+    scope?: QueryReadAccessScope;
   }): Promise<PracticalLessonRecord[]> {
     return this.prisma.practicalLessonRecord.findMany({
-      where: {
-        tenantId: params.tenantId
-      },
+      where: buildPracticalLessonReadWhere(params.tenantId, params.scope),
       orderBy: [
         {
           lessonDate: 'desc'
@@ -481,6 +481,38 @@ function mapPracticalLessonRow(
     updatedBy: lesson.updatedBy,
     createdAt: lesson.createdAt,
     updatedAt: lesson.updatedAt
+  };
+}
+
+function buildPracticalLessonReadWhere(
+  tenantId: string,
+  scope?: QueryReadAccessScope
+): Prisma.PracticalLessonRecordWhereInput {
+  if (!scope || scope.mode === 'tenant') {
+    return { tenantId };
+  }
+
+  if (scope.mode === 'instructor') {
+    return {
+      tenantId,
+      OR: [
+        {
+          studentId: {
+            in: scope.studentIds
+          }
+        },
+        {
+          instructorName: scope.instructorName
+        }
+      ]
+    };
+  }
+
+  return {
+    tenantId,
+    studentId: {
+      in: scope.studentIds
+    }
   };
 }
 

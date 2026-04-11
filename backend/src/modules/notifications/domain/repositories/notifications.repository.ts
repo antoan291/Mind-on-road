@@ -58,5 +58,9 @@ export interface NotificationsRepository {
     tenantId: string;
     notifications: NotificationWriteInput[];
   }): Promise<void>;
-  listByTenant(params: { tenantId: string }): Promise<NotificationRecord[]>;
+  listByTenant(params: {
+    tenantId: string;
+    scope?: QueryReadAccessScope;
+  }): Promise<NotificationRecord[]>;
 }
+import type { QueryReadAccessScope } from '../../../shared/query/read-access-scope';

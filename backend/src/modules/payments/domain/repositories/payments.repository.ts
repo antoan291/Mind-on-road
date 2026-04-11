@@ -38,7 +38,10 @@ export interface PaymentUpdateInput {
 }
 
 export interface PaymentsRepository {
-  listByTenant(params: { tenantId: string }): Promise<PaymentRecord[]>;
+  listByTenant(params: {
+    tenantId: string;
+    scope?: QueryReadAccessScope;
+  }): Promise<PaymentRecord[]>;
   createForTenant(params: {
     tenantId: string;
     payment: PaymentWriteInput;
@@ -53,3 +56,4 @@ export interface PaymentsRepository {
     paymentId: string;
   }): Promise<boolean>;
 }
+import type { QueryReadAccessScope } from '../../../shared/query/read-access-scope';
